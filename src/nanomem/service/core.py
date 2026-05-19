@@ -3,7 +3,7 @@ from __future__ import annotations
 from nanomem.extraction.base import MemoryUnitExtractor
 from nanomem.extraction.heuristic import HeuristicMemoryUnitExtractor
 from nanomem.index.base import MemoryUnitIndex
-from nanomem.index.lexical import LexicalMemoryUnitIndex
+from nanomem.index.dense import DenseMemoryUnitIndex
 from nanomem.render.context import EvidenceContextRenderer
 from nanomem.ranking.ranker import MemoryUnitRanker
 from nanomem.service.capture import CapturePipeline
@@ -24,7 +24,7 @@ class NanoMemService:
         default_max_units: int = 10,
     ) -> None:
         self.store = store or SQLiteMemoryUnitStore()
-        self.index = index or LexicalMemoryUnitIndex()
+        self.index = index or DenseMemoryUnitIndex()
         self.extractor = extractor or HeuristicMemoryUnitExtractor()
         self.default_recency_policy = default_recency_policy
         self.default_max_units = default_max_units

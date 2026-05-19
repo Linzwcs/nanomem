@@ -162,8 +162,8 @@ Current index backends:
 
 | Backend | Purpose | Durability | Role |
 | --- | --- | --- | --- |
-| `lexical` | deterministic token overlap | in-memory derived index | current baseline / fallback |
-| `dense` | bounded local vector scan after scope filtering | in-memory derived index | dev, tests, evaluation |
+| `dense` | bounded local embedding retrieval after scope filtering | in-memory derived index | default local baseline |
+| `lexical` | deterministic token overlap | in-memory derived index | fallback / debugging baseline |
 | `hybrid` | lexical + bounded dense merge | in-memory derived index | local experiments |
 | LanceDB adapter | embedded ANN for local persistence | local vector-native store | future local extension |
 | Postgres + pgvector | fact store plus ANN-capable vector index | server database | future managed extension |

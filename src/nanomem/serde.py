@@ -5,7 +5,6 @@ from typing import Any
 
 from nanomem.contracts import (
     CaptureDialogue,
-    CaptureOptions,
     CaptureRequest,
     CaptureResult,
     CaptureSkip,
@@ -42,7 +41,6 @@ def capture_request_from_json(payload: dict[str, Any]) -> CaptureRequest:
         scope=memory_scope_from_json(payload.get("scope")),
         dialogue=capture_dialogue_from_json(payload),
         capture_time=str(payload.get("capture_time", "")),
-        options=capture_options_from_json(payload.get("options")),
     )
 
 
@@ -136,11 +134,6 @@ def dialogue_message_from_json(value: Any) -> DialogueMessage:
         speaker_id=_optional_str(payload.get("speaker_id") or payload.get("speaker")),
         metadata=_mapping(payload.get("metadata")),
     )
-
-
-def capture_options_from_json(value: Any) -> CaptureOptions:
-    payload = _mapping(value)
-    return CaptureOptions(chunk_size=_optional_int(payload.get("chunk_size")))
 
 
 def time_range_from_json(value: Any) -> TimeRange | None:

@@ -168,10 +168,6 @@ def _tools() -> list[dict[str, Any]]:
                     "capture_time": {
                         "type": "string",
                     },
-                    "options": {
-                        "type": "object",
-                        "description": "Capture options such as chunk_size.",
-                    },
                 },
                 "required": ["scope", "dialogue", "capture_time"],
             },

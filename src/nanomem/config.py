@@ -28,7 +28,7 @@ class EmbeddingConfig:
 
 @dataclass(frozen=True)
 class IndexConfig:
-    backend: str = "lexical"
+    backend: str = "dense"
     embedding: EmbeddingConfig = field(default_factory=EmbeddingConfig)
     lexical_weight: float = 0.5
     dense_weight: float = 0.5
@@ -125,7 +125,7 @@ def config_from_mapping(payload: dict[str, Any]) -> NanoMemConfig:
             path=store_path or _default_sqlite_path(data_dir),
         ),
         index=IndexConfig(
-            backend=str(index_payload.get("backend", "lexical")),
+            backend=str(index_payload.get("backend", "dense")),
             embedding=EmbeddingConfig(
                 backend=str(embedding_payload.get("backend", "hashing")),
                 model=_optional_str(embedding_payload.get("model")),

@@ -23,7 +23,7 @@ store:
   backend: sqlite
 
 index:
-  backend: lexical
+  backend: dense
 
 extraction:
   backend: heuristic
@@ -79,7 +79,7 @@ files.
 
 ```yaml
 index:
-  backend: hybrid
+  backend: dense
   dense_scan_limit: 2000
   metadata_filter_keys: []
   embedding:
@@ -89,8 +89,8 @@ index:
 
 Backend choices:
 
-- `lexical`: simplest local default;
-- `dense`: bounded in-memory vector scan;
+- `dense`: default bounded in-memory embedding retrieval;
+- `lexical`: deterministic token fallback and debugging baseline;
 - `hybrid`: lexical + dense merge;
 - `lancedb`: future local persistent ANN;
 - `pgvector`: future managed vector index.
@@ -104,7 +104,6 @@ those metadata fields copied into the index for filtering.
 ```yaml
 extraction:
   backend: heuristic
-  chunk_size: 512
   confidence_threshold: 0.5
 ```
 
@@ -117,7 +116,8 @@ extraction:
   api_key_env: NANOMEM_LLM_API_KEY
 ```
 
-`chunk_size` controls extraction windows, not storage units.
+Extractor implementations may have their own chunking policy, but chunk size is
+not part of `CaptureDialogue` or the public capture request.
 
 ## 7. Read And Render Config
 

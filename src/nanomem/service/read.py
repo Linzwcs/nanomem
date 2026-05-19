@@ -13,7 +13,7 @@ from nanomem.contracts import (
     ReadRequest,
     ReadResult,
 )
-from nanomem.ids import stable_id
+from nanomem.ids import new_id
 from nanomem.index.base import MemoryUnitIndex
 from nanomem.index.lexical import tokenize
 from nanomem.ranking.ranker import MemoryUnitRanker
@@ -120,15 +120,7 @@ class ReadPipeline:
         created_at = now_utc_iso()
         self.store.append_operation_log(
             OperationLogEntry(
-                log_id=stable_id(
-                    "oplog",
-                    {
-                        "operation_type": "read",
-                        "owner_id": request.owner_id,
-                        "created_at": created_at,
-                        "query": query,
-                    },
-                ),
+                log_id=new_id("oplog"),
                 operation_type="read",
                 created_at=created_at,
                 scope=None,

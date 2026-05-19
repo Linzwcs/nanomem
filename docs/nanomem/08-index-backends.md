@@ -30,8 +30,8 @@ the store and ranker enforce final behavior.
 
 Current local backends:
 
-- `lexical`: deterministic token overlap over MemoryUnit text;
-- `dense`: bounded in-memory vector scan after owner/namespace filtering;
+- `dense`: default bounded embedding retrieval after owner/namespace filtering;
+- `lexical`: deterministic token fallback over MemoryUnit text;
 - `hybrid`: merge of lexical and dense scores.
 
 `dense` must use `index.dense_scan_limit` or equivalent to cap per-query
@@ -102,8 +102,8 @@ Do not:
 
 | Scenario | Fact store | Index backend |
 | --- | --- | --- |
-| Unit tests | in-memory or SQLite | lexical / dense |
-| Local single-user sidecar | SQLite | lexical / hybrid |
+| Unit tests | in-memory or SQLite | dense / lexical |
+| Local single-user sidecar | SQLite | dense / hybrid |
 | Local sidecar with persistent ANN | SQLite | LanceDB |
 | Managed multi-user service | Postgres | pgvector |
 

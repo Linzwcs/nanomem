@@ -159,7 +159,7 @@ store:
   backend: sqlite
 
 index:
-  backend: hybrid
+  backend: dense
   dense_scan_limit: 2000
   metadata_filter_keys: []
   embedding:

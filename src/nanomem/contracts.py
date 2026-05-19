@@ -66,16 +66,10 @@ class MemoryUnit:
 
 
 @dataclass(frozen=True)
-class CaptureOptions:
-    chunk_size: int | None = None
-
-
-@dataclass(frozen=True)
 class CaptureRequest:
     scope: MemoryScope
     dialogue: CaptureDialogue
     capture_time: str
-    options: CaptureOptions = field(default_factory=CaptureOptions)
 
 
 @dataclass(frozen=True)
@@ -138,7 +132,6 @@ class ReadResult:
 class ExtractionRequest:
     scope: MemoryScope
     dialogue: DialogueRecord
-    options: CaptureOptions = field(default_factory=CaptureOptions)
 
 
 @dataclass(frozen=True)

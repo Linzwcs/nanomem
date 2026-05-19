@@ -34,7 +34,6 @@ from nanomem.config import (
 )
 from nanomem.contracts import (
     CaptureDialogue,
-    CaptureOptions,
     CaptureRequest,
     CaptureResult,
     CaptureSkip,
@@ -81,7 +80,6 @@ __all__ = [
     "BackupConfig",
     "BackupResult",
     "CaptureDialogue",
-    "CaptureOptions",
     "CaptureRequest",
     "CaptureResult",
     "CaptureSkip",

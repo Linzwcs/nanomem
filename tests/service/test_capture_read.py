@@ -5,6 +5,7 @@ from nanomem.contracts import (
     CaptureRequest,
     DialogueMessage,
     MemoryScope,
+    OperationLogSelector,
     ReadRequest,
 )
 from nanomem.service.core import NanoMemService
@@ -80,3 +81,20 @@ def test_read_namespace_filter_excludes_other_namespaces() -> None:
 
     assert read.ranked_units == ()
     assert read.context.unit_count == 0
+
+
+def test_repeated_reads_do_not_collide_operation_log_ids() -> None:
+    service = NanoMemService()
+    request = ReadRequest(
+        owner_id="user-1",
+        namespaces=None,
+        query="same query",
+        query_time="2026-01-02T00:00:00+00:00",
+    )
+
+    service.read(request)
+    service.read(request)
+
+    logs = service.store.list_operation_logs(OperationLogSelector(limit=None))
+    assert len(logs) == 2
+    assert logs[0].log_id != logs[1].log_id

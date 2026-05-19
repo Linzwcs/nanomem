@@ -218,7 +218,6 @@ CaptureRequest:
   scope: MemoryScope
   dialogue: CaptureDialogue
   capture_time: str
-  options: dict
 ```
 
 Conceptual dialogue:

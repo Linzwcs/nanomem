@@ -34,8 +34,8 @@ class MemoryUnitIndex:
 
 Current backends:
 
-- `lexical`: deterministic token-overlap retrieval;
-- `dense`: bounded similarity scan after owner/namespace scope filtering;
+- `dense`: default bounded embedding retrieval after owner/namespace filtering;
+- `lexical`: deterministic token-overlap fallback and debugging baseline;
 - `hybrid`: merge of lexical and dense scores.
 
 The local dense index uses `index.dense_scan_limit` to cap per-query similarity
@@ -104,7 +104,7 @@ Do not:
 
 | Scenario | Fact store | Index backend |
 | --- | --- | --- |
-| Unit tests | in-memory or SQLite | lexical / dense |
-| Local single-user sidecar | SQLite | lexical / hybrid |
+| Unit tests | in-memory or SQLite | dense / lexical |
+| Local single-user sidecar | SQLite | dense / hybrid |
 | Local sidecar with persistent ANN | SQLite | LanceDB adapter |
 | Managed multi-user service | Postgres | pgvector adapter |

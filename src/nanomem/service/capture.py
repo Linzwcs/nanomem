@@ -12,7 +12,7 @@ from nanomem.contracts import (
     OperationLogEntry,
 )
 from nanomem.extraction.base import MemoryUnitExtractor
-from nanomem.ids import stable_id
+from nanomem.ids import new_id, stable_id
 from nanomem.index.base import MemoryUnitIndex
 from nanomem.store.base import MemoryStore
 from nanomem.time import now_utc_iso
@@ -43,7 +43,6 @@ class CapturePipeline:
             ExtractionRequest(
                 scope=scope,
                 dialogue=dialogue,
-                options=request.options,
             )
         )
         self.store.append_units(extraction.units)
@@ -73,14 +72,7 @@ class CapturePipeline:
         created_at = now_utc_iso()
         self.store.append_operation_log(
             OperationLogEntry(
-                log_id=stable_id(
-                    "oplog",
-                    {
-                        "operation_type": "capture",
-                        "dialogue_id": dialogue.dialogue_id,
-                        "created_at": created_at,
-                    },
-                ),
+                log_id=new_id("oplog"),
                 operation_type="capture",
                 created_at=created_at,
                 scope=scope,

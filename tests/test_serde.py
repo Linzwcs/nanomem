@@ -22,7 +22,6 @@ def test_capture_request_from_dialogue_json() -> None:
                 "metadata": {"channel": "chat"},
             },
             "capture_time": "2026-01-05T00:00:01+00:00",
-            "options": {"chunk_size": 512},
         }
     )
 
@@ -30,7 +29,6 @@ def test_capture_request_from_dialogue_json() -> None:
     assert request.scope.namespace == "personal"
     assert request.dialogue.messages[0].speaker_id == "user-1"
     assert request.dialogue.metadata == {"channel": "chat"}
-    assert request.options.chunk_size == 512
 
 
 def test_read_request_uses_owner_namespace_and_optional_recency_policy() -> None:

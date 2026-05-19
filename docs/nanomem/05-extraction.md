@@ -20,7 +20,6 @@ grounded in `DialogueRef`s.
 ExtractionRequest:
   scope: MemoryScope
   dialogue: DialogueRecord
-  options: CaptureOptions
 ```
 
 ```python
@@ -50,10 +49,11 @@ DialogueRecord
   -> return units and skip reasons
 ```
 
-`chunk = n` is an extraction window, not a storage unit. First-version
-`chunk_size` should be interpreted as an approximate token budget over
-normalized dialogue text. Implementations may choose the tokenizer, but must
-record enough stats to compare quality and cost.
+`chunk = n` is an extraction window, not a storage unit. Chunk sizing is an
+extractor configuration or implementation policy; it must not appear in
+`CaptureDialogue` or per-request capture payloads. Implementations may choose
+the tokenizer and windowing strategy, but should record enough stats to compare
+quality and cost.
 
 Chunking is internal to extraction. It does not create session, turn, or
 conversation objects in the data model.

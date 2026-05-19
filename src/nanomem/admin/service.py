@@ -11,7 +11,7 @@ from nanomem.contracts import (
     TimeRange,
 )
 from nanomem.index.base import MemoryUnitIndex
-from nanomem.index.lexical import LexicalMemoryUnitIndex
+from nanomem.index.dense import DenseMemoryUnitIndex
 from nanomem.store.sqlite import SQLiteMemoryUnitStore
 
 
@@ -144,7 +144,7 @@ class NanoMemAdminService:
         index: MemoryUnitIndex | None = None,
     ) -> None:
         self.store = store
-        self.index = index or LexicalMemoryUnitIndex()
+        self.index = index or DenseMemoryUnitIndex()
 
     def stats(self) -> DatabaseStats:
         payload = self.store.stats()

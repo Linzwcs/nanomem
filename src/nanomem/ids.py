@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 from typing import Any
+from uuid import uuid4
 
 from nanomem.contracts import DialogueRef, MemoryScope
 
@@ -11,6 +12,10 @@ def stable_id(prefix: str, payload: Any) -> str:
     encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True, default=str)
     digest = hashlib.sha256(encoded.encode("utf-8")).hexdigest()[:24]
     return f"{prefix}_{digest}"
+
+
+def new_id(prefix: str) -> str:
+    return f"{prefix}_{uuid4().hex[:24]}"
 
 
 def scope_payload(scope: MemoryScope) -> dict[str, Any]:

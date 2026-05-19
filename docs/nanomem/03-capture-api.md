@@ -20,7 +20,6 @@ CaptureRequest:
   scope: MemoryScope
   dialogue: CaptureDialogue
   capture_time: str
-  options: CaptureOptions
 ```
 
 ```python
@@ -44,11 +43,6 @@ DialogueMessage:
   timestamp: str
 ```
 
-```python
-CaptureOptions:
-  chunk_size: int | None
-```
-
 ## 3. Core Invariants
 
 Capture has these first-version invariants:
@@ -57,6 +51,9 @@ Capture has these first-version invariants:
   required ISO 8601 timestamps with timezone.
 - `dialogue.messages` must contain at least one non-empty user-visible message.
 - `metadata` is caller-defined JSON and must not replace core fields.
+- Capture inputs describe what happened, not how extraction should chunk or
+  process the dialogue. Algorithm parameters belong to extractor configuration,
+  not `CaptureDialogue` or `CaptureRequest`.
 - message `role` must describe a visible dialogue function; hidden system,
   developer, tool, and raw result messages are rejected before extraction.
 - Capture archives a `DialogueRecord` before extraction.

@@ -43,8 +43,8 @@ copied into the index.
 
 First-version backends:
 
-- `lexical`: deterministic local token overlap;
-- `dense`: bounded in-memory similarity scan after owner/namespace filtering;
+- `dense`: default bounded embedding retrieval after owner/namespace filtering;
+- `lexical`: deterministic local token fallback and debugging baseline;
 - `hybrid`: lexical and dense score merge.
 
 Future ANN backends:

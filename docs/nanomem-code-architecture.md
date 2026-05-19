@@ -265,7 +265,6 @@ CaptureRequest:
   scope: MemoryScope
   dialogue: CaptureDialogue
   capture_time: str
-  options: dict
 
 ReadRequest:
   owner_id: str
@@ -505,9 +504,8 @@ class MemoryUnitIndex:
 
 Supported first-slice indexes:
 
-- `lexical`: token-overlap retrieval;
-- `dense`: scope-filtered, bounded in-memory vector scan over unit text for
-  development, evaluation, and tests;
+- `dense`: default scope-filtered, bounded embedding retrieval over unit text;
+- `lexical`: token-overlap fallback and debugging baseline;
 - `hybrid`: weighted lexical+dense retrieval.
 
 The default dense embedding model is deterministic local hashing, so the system
@@ -840,7 +838,7 @@ store:
   backend: sqlite
 
 index:
-  backend: hybrid
+  backend: dense
   metadata_filter_keys: []
   embedding:
     backend: hashing
