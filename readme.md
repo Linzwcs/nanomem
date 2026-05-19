@@ -72,7 +72,7 @@ user-visible dialogue
 
 ## 当前状态
 
-本仓库处于早期实现阶段，当前包含 Python 源码、HTTP 服务、MCP 服务、CLI 管理命令、SQLite 存储、词法/向量/混合索引、启发式与 LLM 记忆提取器。仓库暂未包含 `pyproject.toml`、依赖锁文件或正式测试目录。
+本仓库处于早期实现阶段，当前包含 Python 源码、HTTP 服务、MCP 服务、CLI 管理命令、SQLite 存储、词法/向量/混合索引、启发式与 LLM 记忆提取器。项目已提供 `pyproject.toml`、pytest 回归测试和 GitHub Actions CI；依赖锁文件仍未引入。
 
 ## 目录结构
 
@@ -91,16 +91,19 @@ src/nanomem/
   cli/                # 管理命令
   admin/maintenance/  # 统计、迁移、备份、导出、保留策略
 docs/                 # 产品与架构文档
+tests/                # pytest 回归测试
+.github/workflows/    # CI
 ```
 
 ## 快速开始
 
-由于当前没有安装配置文件，先通过 `PYTHONPATH=src` 从源码运行：
+建议先在本地虚拟环境中安装开发依赖：
 
 ```bash
-PYTHONPATH=src python -m nanomem.cli --help
-PYTHONPATH=src python -m nanomem.server --help
-PYTHONPATH=src python -m nanomem.mcp --help
+python -m pip install -e ".[dev]"
+nanomem --help
+nanomem-server --help
+nanomem-mcp --help
 ```
 
 创建一个最小配置文件 `nanomem.json`：
@@ -108,24 +111,18 @@ PYTHONPATH=src python -m nanomem.mcp --help
 ```json
 {
   "data_dir": ".nanomem",
-  "scope": {
-    "default_namespace": "personal",
-    "allowed_namespaces": ["personal", "work", "research"]
-  },
   "store": {
     "backend": "sqlite"
   },
   "index": {
-    "backend": "lexical",
-    "metadata_filter_keys": []
+    "backend": "lexical"
   },
   "extraction": {
     "backend": "heuristic"
   },
   "read": {
     "default_recency_policy": "balanced",
-    "default_max_units": 10,
-    "default_context_budget_tokens": 1200
+    "default_max_units": 10
   }
 }
 ```
@@ -143,7 +140,7 @@ PYTHONPATH=src python -m nanomem.mcp --help
 启动 HTTP 服务：
 
 ```bash
-PYTHONPATH=src python -m nanomem.server --config nanomem.json --host 127.0.0.1 --port 8765
+nanomem-server --config nanomem.json --host 127.0.0.1 --port 8765
 ```
 
 健康检查：

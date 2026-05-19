@@ -626,7 +626,7 @@ def _row_to_operation_log(row: sqlite3.Row) -> OperationLogEntry:
         created_at=row["created_at"],
         scope=(
             MemoryScope(owner_id=owner_id, namespace=namespace)
-            if owner_id and namespace
+            if owner_id
             else None
         ),
         status=row["status"],

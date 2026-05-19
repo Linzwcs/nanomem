@@ -27,7 +27,7 @@ class LexicalMemoryUnitIndex:
     def clear(self) -> None:
         self._documents.clear()
         self._tokens.clear()
-        self._scope_index.clear()
+        self._owner_index.clear()
 
     def document_count(self) -> int:
         return len(self._documents)

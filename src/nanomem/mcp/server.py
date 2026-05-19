@@ -150,7 +150,7 @@ def _tools() -> list[dict[str, Any]]:
                         "type": "object",
                     },
                 },
-                "required": ["owner_id", "query"],
+                "required": ["owner_id", "query", "query_time"],
             },
         },
         {
