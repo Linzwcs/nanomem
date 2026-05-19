@@ -1,0 +1,155 @@
+# Extraction
+
+Status: draft
+
+This document defines how NanoMem turns user-visible dialogue into durable
+personal MemoryUnits.
+
+## 1. Purpose
+
+Extraction is responsible for finding long-term personal facts in a
+`CaptureDialogue`. It is not a summarizer, document ingester, profile writer,
+or truth-maintenance system.
+
+Extraction output must be fine-grained, third-person, timestamped, scoped, and
+grounded in `DialogueRef`s.
+
+## 2. Inputs And Outputs
+
+```python
+ExtractionRequest:
+  scope: MemoryScope
+  dialogue: DialogueRecord
+  options: CaptureOptions
+```
+
+```python
+ExtractionResult:
+  units: tuple[MemoryUnit, ...]
+  skipped: tuple[ExtractionSkip, ...]
+  stats: dict
+```
+
+`DialogueRecord` is already archived before extraction. Extractors read it as
+evidence, but they must not expose raw dialogue through agent-facing read.
+The record represents one capture payload, not a whole host session.
+
+## 3. Pipeline
+
+```text
+DialogueRecord
+  -> normalize visible messages
+  -> chunk = n over normalized dialogue text
+  -> annotate role and speaker_id
+  -> extract candidate personal facts
+  -> convert to third-person MemoryUnit text
+  -> assign owner and namespace
+  -> assign timestamp and DialogueRef
+  -> classify memory_type
+  -> apply quality gates
+  -> return units and skip reasons
+```
+
+`chunk = n` is an extraction window, not a storage unit. First-version
+`chunk_size` should be interpreted as an approximate token budget over
+normalized dialogue text. Implementations may choose the tokenizer, but must
+record enough stats to compare quality and cost.
+
+Chunking is internal to extraction. It does not create session, turn, or
+conversation objects in the data model.
+
+## 4. What To Extract
+
+Extract durable user-related facts:
+
+- stable preferences and communication style;
+- user corrections to agent behavior;
+- repeated habits and workflows;
+- user background and relationship facts;
+- important user events or decisions;
+- user-visible agent actions that affect future collaboration.
+
+Examples:
+
+```text
+The user said they prefer concise Chinese answers.
+The user asked the agent not to auto-commit code.
+The user decided NanoMem should store fact-level personal memory.
+The agent auto-committed code and the user reacted negatively.
+```
+
+## 5. What To Skip
+
+Skip:
+
+- workspace-local facts that the agent can reread from files or tools;
+- raw tool calls, tool results, hidden reasoning, and intermediate plans;
+- current task progress with no long-term user relevance;
+- raw external resources or asset references;
+- vague, unsupported, or duplicate candidate facts;
+- facts that cannot be assigned an owner, timestamp, and DialogueRef.
+
+Skipping is expected behavior. A narrow memory system should skip more than it
+stores.
+
+## 6. Speaker And Scope
+
+Extraction must preserve who said, asked, decided, corrected, or experienced a
+fact.
+
+Default capture writes units under `CaptureRequest.scope`. `speaker_id` is
+evidence metadata for attribution, not a replacement for the request owner. If
+a candidate cannot be clearly attributed to the requested owner, another named
+speaker, or an agent interaction that matters to the owner, extraction should
+skip it.
+
+Extractors must not invent namespaces. If a namespace is omitted, capture policy
+resolves it to the configured default before storage. Accepted units must carry
+a non-null namespace.
+
+## 7. Time Assignment
+
+Every MemoryUnit needs `timestamp` and `available_at`.
+
+- `timestamp` is the evidence time for the fact.
+- If a fact comes from one message, use that message timestamp.
+- If a fact spans multiple messages, use the latest message timestamp in the
+  `DialogueRef.message_range`.
+- If exact message time is unavailable, use `DialogueRecord.occurred_at`.
+- `available_at` is assigned by capture when the unit is accepted.
+
+All timestamps must be ISO 8601 with timezone.
+
+## 8. Quality Gates
+
+A candidate becomes a MemoryUnit only if it satisfies all gates:
+
+- personal and durable;
+- grounded in visible dialogue;
+- third-person and evidence phrased;
+- not an instruction masquerading as memory;
+- not workspace-local source-of-truth content;
+- owner and namespace resolved;
+- `memory_type` is in the first-version allowed set;
+- timestamp assigned;
+- at least one `DialogueRef`;
+- no redacted dialogue evidence is referenced;
+- confidence above configured threshold, if a threshold is enabled.
+
+Quality gates should return explicit skip reasons for inspection and tuning.
+
+## 9. Deduplication
+
+First-version capture does not provide request idempotency. Extraction may
+suppress exact duplicates from the same dialogue, but it should not perform
+semantic truth-maintenance deduplication.
+
+Do not automatically replace:
+
+```text
+The user said they prefer pip.
+The user later said this project should use uv.
+```
+
+Both can be useful evidence. Read and render should preserve time and context so
+the downstream agent can reason.
