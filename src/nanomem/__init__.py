@@ -10,7 +10,6 @@ from nanomem.admin.service import (
     OperationLogRetentionPolicy,
     OperationLogRetentionPreview,
     PendingSchemaMigration,
-    ReindexResult,
     RetentionApplyResult,
     RetentionPolicy,
     RetentionPreview,
@@ -47,6 +46,7 @@ from nanomem.contracts import (
     RankedMemoryUnit,
     ReadRequest,
     ReadResult,
+    ReindexResult,
     TimeRange,
 )
 from nanomem.extraction.heuristic import HeuristicMemoryUnitExtractor

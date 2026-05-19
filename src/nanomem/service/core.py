@@ -4,13 +4,21 @@ from nanomem.extraction.base import MemoryUnitExtractor
 from nanomem.extraction.heuristic import HeuristicMemoryUnitExtractor
 from nanomem.index.base import MemoryUnitIndex
 from nanomem.index.dense import DenseMemoryUnitIndex
+from nanomem.index.rebuild import rebuild_index
 from nanomem.render.context import EvidenceContextRenderer
 from nanomem.ranking.ranker import MemoryUnitRanker
 from nanomem.service.capture import CapturePipeline
 from nanomem.service.read import ReadPipeline
 from nanomem.store.base import MemoryStore
 from nanomem.store.sqlite import SQLiteMemoryUnitStore
-from nanomem.contracts import CaptureRequest, CaptureResult, ReadRequest, ReadResult
+from nanomem.contracts import (
+    CaptureRequest,
+    CaptureResult,
+    MemoryUnitSelector,
+    ReadRequest,
+    ReadResult,
+    ReindexResult,
+)
 
 
 class NanoMemService:
@@ -49,3 +57,13 @@ class NanoMemService:
 
     def read(self, request: ReadRequest) -> ReadResult:
         return self._read_pipeline.run(request)
+
+    def reindex(
+        self,
+        selector: MemoryUnitSelector | None = None,
+    ) -> ReindexResult:
+        return rebuild_index(
+            store=self.store,
+            index=self.index,
+            selector=selector,
+        )

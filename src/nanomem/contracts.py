@@ -129,6 +129,13 @@ class ReadResult:
 
 
 @dataclass(frozen=True)
+class ReindexResult:
+    indexed_unit_count: int
+    index_backend: str
+    stats: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
 class ExtractionRequest:
     scope: MemoryScope
     dialogue: DialogueRecord

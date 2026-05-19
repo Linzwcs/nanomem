@@ -22,3 +22,4 @@ implementation.
 - `11-behavior-cases.md`: expected behavior in concrete product scenarios.
 - `12-operations-privacy.md`: operations, privacy, export, and delete.
 - `13-roadmap.md`: staged implementation plan.
+- `14-contract-freeze-review.md`: field-by-field review before v1 contract freeze.

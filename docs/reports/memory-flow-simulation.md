@@ -130,11 +130,9 @@ This keeps stable ids for durable domain records such as `MemoryUnit` and
 
 ## 8. Recommended Next Steps
 
-1. Add an explicit `reindex` helper at the service/factory layer for reopening a
-   SQLite store and rebuilding the active dense index.
-2. Add tests for render budget behavior, especially small budgets and
+1. Add tests for render budget behavior, especially small budgets and
    "maximize fact count under budget".
-3. Add tests for workspace skip, tool-role skip, correction ranking, and
+2. Add tests for workspace skip, tool-role skip, correction ranking, and
    DialogueRef integrity as permanent regression cases.
-4. Decide whether direct manual unit insertion should be a first-class admin API
+3. Decide whether direct manual unit insertion should be a first-class admin API
    or remain a low-level store operation.

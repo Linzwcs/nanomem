@@ -6,12 +6,15 @@ from typing import Any
 from nanomem.contracts import (
     MemoryScope,
     MemoryUnit,
+    MemoryUnitSelector,
     OperationLogEntry,
     OperationLogSelector,
+    ReindexResult,
     TimeRange,
 )
 from nanomem.index.base import MemoryUnitIndex
 from nanomem.index.dense import DenseMemoryUnitIndex
+from nanomem.index.rebuild import rebuild_index
 from nanomem.store.sqlite import SQLiteMemoryUnitStore
 
 
@@ -59,13 +62,6 @@ class SchemaStatus:
     needs_migration: bool
     applied: tuple[SchemaMigrationRecord, ...] = ()
     pending: tuple[PendingSchemaMigration, ...] = ()
-
-
-@dataclass(frozen=True)
-class ReindexResult:
-    indexed_unit_count: int
-    index_backend: str
-    stats: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -278,20 +274,19 @@ class NanoMemAdminService:
         scope: MemoryScope | None = None,
         time_range: TimeRange | None = None,
     ) -> ReindexResult:
-        units = self.store.list_units(
-            scope=scope,
-            time_range=time_range,
-            limit=None,
-        )
-        self.index.clear()
-        self.index.upsert(units)
-        return ReindexResult(
-            indexed_unit_count=len(units),
-            index_backend=getattr(self.index, "name", type(self.index).__name__),
-            stats={
-                "scope_filtered": scope is not None,
-                "time_range_filtered": time_range is not None,
-            },
+        return rebuild_index(
+            store=self.store,
+            index=self.index,
+            selector=MemoryUnitSelector(
+                owner_id=scope.owner_id if scope else None,
+                namespaces=(
+                    (scope.namespace,)
+                    if scope and scope.namespace is not None
+                    else None
+                ),
+                time_range=time_range,
+                limit=None,
+            ),
         )
 
     def retention_preview(
