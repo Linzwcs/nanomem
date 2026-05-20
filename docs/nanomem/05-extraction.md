@@ -14,6 +14,10 @@ or truth-maintenance system.
 Extraction output must be fine-grained, third-person, timestamped, scoped, and
 grounded in `DialogueRef`s.
 
+Accepted `MemoryUnit.text` should be objective memory prose, not a raw message
+quote. For example, `I prefer concise Chinese answers.` becomes
+`The user said they prefer concise Chinese answers.`
+
 ## 2. Inputs And Outputs
 
 ```python
@@ -42,6 +46,7 @@ DialogueRecord
   -> annotate role and speaker_id
   -> extract candidate personal facts
   -> convert to third-person MemoryUnit text
+  -> normalize evidence phrasing
   -> assign owner and namespace
   -> assign timestamp and DialogueRef
   -> classify memory_type
@@ -55,8 +60,10 @@ extractor configuration or implementation policy; it must not appear in
 the tokenizer and windowing strategy, but should record enough stats to compare
 quality and cost.
 
-Chunking is internal to extraction. It does not create session, turn, or
-conversation objects in the data model.
+Chunking is internal to extraction. LLM-backed extraction should build chunks
+from visible extractable messages, preserve original message indexes, split at
+hidden/tool gaps, and prefer role-aware dialogue exchange boundaries. It does
+not create session, turn, or conversation objects in the data model.
 
 ## 4. What To Extract
 
@@ -138,7 +145,26 @@ A candidate becomes a MemoryUnit only if it satisfies all gates:
 
 Quality gates should return explicit skip reasons for inspection and tuning.
 
-## 9. Deduplication
+## 9. LLM Extractor Contract
+
+Model-backed extraction is allowed, but the storage contract stays local and
+deterministic:
+
+- send only extractable visible messages to the model;
+- keep original dialogue message indexes in the prompt payload;
+- call the model per internal extraction chunk;
+- require every accepted unit to return a valid `message_range`;
+- reject ranges that cross hidden, tool, empty, or otherwise skipped messages;
+- reject ranges outside the current chunk;
+- classify `memory_type` using the first-version allowed set;
+- treat low confidence as a skip when `confidence_threshold` is configured;
+- use fallback extraction when provider calls or strict schema validation fail.
+
+Capture revalidates extractor output before storage. This keeps custom
+extractors from writing units with the wrong scope, invalid confidence, missing
+timestamps, or unsafe dialogue references.
+
+## 10. Deduplication
 
 First-version capture does not provide request idempotency. Extraction may
 suppress exact duplicates from the same dialogue, but it should not perform
@@ -153,3 +179,18 @@ The user later said this project should use uv.
 
 Both can be useful evidence. Read and render should preserve time and context so
 the downstream agent can reason.
+
+## 11. Evaluation Harness
+
+Extraction quality should be regression-tested before wiring real model
+providers into capture. The eval harness compares an extractor against
+deterministic cases:
+
+- input `ExtractionRequest` dialogue;
+- expected unit type, evidence range, text fragments, and minimum confidence;
+- expected skip reason and optional message range;
+- per-case pass/fail details and aggregate pass count.
+
+Eval fixtures should avoid network calls. Fake LLM clients can test prompt
+parsing and schema behavior, while the same cases can later run against a real
+provider in offline quality checks.

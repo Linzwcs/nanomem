@@ -109,13 +109,24 @@ def extractor_from_config(config: NanoMemConfig) -> MemoryUnitExtractor:
         if not extraction.model:
             raise ValueError("llm extraction requires model")
         fallback = None
-        if extraction.fallback_backend == "heuristic":
+        if extraction.fallback_backend is None:
+            fallback = None
+        elif extraction.fallback_backend == "heuristic":
             fallback = HeuristicMemoryUnitExtractor()
+        else:
+            raise ValueError(
+                "Unsupported extraction fallback backend: "
+                f"{extraction.fallback_backend}"
+            )
         return LLMMemoryUnitExtractor(
             model=extraction.model,
             api_key=extraction.api_key,
             api_key_env=extraction.api_key_env,
             base_url=extraction.base_url,
             fallback=fallback,
+            confidence_threshold=extraction.confidence_threshold,
+            strict_schema=extraction.strict_schema,
+            max_messages_per_chunk=extraction.max_messages_per_chunk,
+            max_chars_per_chunk=extraction.max_chars_per_chunk,
         )
     raise ValueError(f"Unsupported extraction backend: {extraction.backend}")

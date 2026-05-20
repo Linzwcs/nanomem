@@ -12,6 +12,11 @@ Operations manage stored personal data. They are separate from agent-facing
 Agent-facing tools should not expose backup, export, retention, delete,
 redaction, reindex, integrity checks, or raw DialogueRecord inspection.
 
+The web management console described in `15-web-management-console.md` is a
+control-plane surface for these operations. It should use stronger
+authorization than agent-facing capture/read tools and must not be exposed
+through MCP as ordinary agent capabilities.
+
 ## 2. Control-Plane Operations
 
 Recommended operations:

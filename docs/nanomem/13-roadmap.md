@@ -1,108 +1,222 @@
 # Roadmap
 
-Status: draft
+Status: active draft
 
-This document defines the staged implementation plan for the clean NanoMem
-design.
+This roadmap starts from the current verified implementation rather than the
+original design-only plan. NanoMem already has an end-to-end local MVP:
 
-## Phase 0: Design Freeze
+```text
+agent/dialogue -> capture -> DialogueRecord -> extraction -> MemoryUnit
+  -> SQLite store -> dense index -> read -> rank -> render -> agent context
+```
 
-Goals:
+## Verified Baseline
 
-- freeze product boundary and MemoryUnit style;
-- freeze core contracts and service interfaces;
-- keep session, project, agent, and host ids out of core scope;
-- align README and modular docs.
+Validation date: 2026-05-20.
 
-Exit criteria:
+Commands run:
 
-- `00` through `13` specs are internally consistent;
-- examples use required timestamps;
-- no separate external-resource reference model remains in the first-version
-  design.
+```bash
+PYTHONPATH=src python -m pytest
+PYTHONPATH=src python -m compileall -q src/nanomem scripts/build_complete_test_db.py
+node --check src/nanomem/manager/assets/app.js
+PYTHONPATH=src python scripts/build_complete_test_db.py --force
+```
 
-## Phase 1: Core Contract Migration
+Observed results:
 
-Goals:
+```text
+53 passed, 1 skipped
+unit_count=8
+dialogue_count=7
+missing_dialogue_refs=0
+```
 
-- update `contracts.py` to match `MemoryScope`, `CaptureDialogue`,
-  `DialogueRecord`, `DialogueRef`, `MemoryUnit`, `CaptureRequest`, and
+HTTP and manager smoke checks also passed:
+
+- `/v1/health` returns `200`.
+- `/manager` and packaged assets return `200`.
+- `/admin/api/stats` reports 8 units and 7 dialogue records.
+- all memory detail source chunks resolve with status `ok`;
+- each source chunk includes exact extracted `messages` and full
+  multi-turn `dialogue_messages`;
+- `/admin/api/reindex` indexes 8 units;
+- retrieval preview for `concise Chinese answers` returns 3 ranked units and
+  renders 3 context units.
+
+Agent adapter E2E also passed:
+
+- `after_turn` writes dialogue and memory units;
+- `read` retrieves relevant memory;
+- renderer returns timestamped context under budget.
+
+## Current Capability
+
+Implemented:
+
+- core contracts for `MemoryScope`, `CaptureDialogue`, `DialogueRecord`,
+  `DialogueRef`, `MemoryUnit`, `CaptureRequest`, and `ReadRequest`;
+- SQLite authoritative store for units, dialogues, operation logs, schema
+  state, backup/export, and retention primitives;
+- capture pipeline with dialogue archival before extraction;
+- heuristic extractor with skip reasons for non-memory content;
+- dense in-memory vector index with hashing embeddings;
+- lexical fallback when the active index returns no hits;
+- ranker and timestamped context renderer with post-render token budget;
+- HTTP server, SDK client, MCP server, CLI, and local `AgentMemoryAdapter`;
+- `nanomem.manager` local management UI with dashboard, memory list/detail,
+  multi-turn evidence log, operation logs, retrieval lab, and system health.
+
+Known limits:
+
+- extraction quality is MVP-level unless an LLM extractor is configured;
+- dense index is in-memory and must be rebuilt after restart;
+- no persistent ANN backend is implemented yet;
+- render format is simple and not yet optimized for maximum facts per budget;
+- admin maintenance workflows are partly CLI/service-level and not fully exposed
+  in Manager;
+- operation log payloads still need stricter minimization before sensitive use.
+
+## Milestone 1: Contract Freeze
+
+Goal: make the current MVP contracts stable enough for adapter and backend work.
+
+Work:
+
+- review every public dataclass field and serialization helper;
+- freeze `MemoryUnit`, `DialogueRecord`, `DialogueRef`, `CaptureRequest`, and
   `ReadRequest`;
-- make time required in contracts;
-- keep metadata as custom JSON only;
-- preserve old code paths only behind explicit compatibility shims if needed.
+- document compatibility rules for `owner_id`, namespace lists, timestamps, and
+  metadata;
+- add regression tests for malformed payloads and backward-compatible aliases.
 
 Exit criteria:
 
-- import/compile checks pass;
-- focused unit tests cover contract serialization and validation;
-- README examples match accepted request shapes.
+- contract docs match code exactly;
+- HTTP, SDK, MCP, CLI, and manager tests all pass;
+- examples in README and `docs/reports/request-response-examples.md` use the
+  frozen shapes.
 
-## Phase 2: SQLite Store Stabilization
+## Milestone 2: LLM Extraction
 
-Goals:
+Goal: replace heuristic-only capture with production-quality fact extraction.
 
-- persist MemoryUnits, DialogueRecords, operation logs, and schema migrations;
-- keep DialogueRecords out of normal read;
-- implement retention/redaction state required by the store contract.
+Current baseline:
 
-Exit criteria:
+- OpenAI-compatible LLM extractor supports injectable completion clients for
+  deterministic tests;
+- extraction filters hidden/tool/non-visible messages before model calls;
+- role-aware internal chunks preserve original message indexes and split across
+  non-extractable gaps;
+- accepted MemoryUnit text is normalized into third-person evidence phrasing;
+- strict payload validation covers `message_range`, `memory_type`, confidence,
+  non-extractable evidence ranges, and out-of-chunk ranges;
+- deterministic fake-LLM fixtures cover preference, correction, user event,
+  agent interaction, workspace skip, tool-log skip, and multi-turn attribution;
+- extractor-agnostic eval harness reports expected unit/skip matches before
+  real provider quality runs;
+- provider errors, missing API keys, and invalid strict payloads can fall back
+  to the heuristic extractor.
 
-- store tests cover append, query, dialogue archive, operation logs, and redaction;
-- index rebuild works from stored MemoryUnits.
+Work:
 
-## Phase 3: Capture And Extraction
-
-Goals:
-
-- enforce bounded `CaptureDialogue`;
-- archive DialogueRecord before extraction;
-- extract third-person, evidence-grounded MemoryUnits;
-- return explicit skip reasons.
-
-Exit criteria:
-
-- tests cover user preference, correction, workspace-local skip, tool-output
-  skip, multi-speaker attribution, replay behavior, and conflicting facts.
-
-## Phase 4: Read, Ranking, And Render
-
-Goals:
-
-- require `query_time`;
-- retrieve through index and load authoritative units from store;
-- rank evidence by relevance, recency, namespace, type, and confidence;
-- render under post-render token budget with mandatory timestamps.
+- improve prompt fixtures against real model responses;
+- add offline eval data for extraction precision and recall;
+- tune chunk sizing defaults after measuring latency and quality.
 
 Exit criteria:
 
-- tests cover namespace defaults, time ranges, conflicts, budget packing, and
-  structured `ranked_units`.
+- tests cover preference, correction, user event, agent behavior, workspace
+  skip, tool-log skip, and multi-turn attribution;
+- extraction fixtures are deterministic in test mode;
+- Manager evidence clearly shows the source range inside the original dialogue.
 
-## Phase 5: Adapter Hardening
+## Milestone 3: Persistent Vector Index
 
-Goals:
+Goal: keep SQLite as authoritative store while making retrieval practical for
+larger local stores.
 
-- map HTTP, MCP, CLI, and SDK payloads onto the core contracts;
-- keep admin/control-plane operations out of agent-facing tools;
-- document integration examples for local agent harnesses.
+Work:
 
-Exit criteria:
-
-- smoke tests cover HTTP/MCP capture and read;
-- admin CLI covers backup, export, retention preview/apply, reindex, and
-  integrity check.
-
-## Phase 6: Index Extensions
-
-Goals:
-
-- keep lexical/dense/hybrid as baseline;
-- add LanceDB adapter for local persistent ANN if needed;
-- evaluate Postgres + pgvector only for managed multi-user deployments.
+- add a persistent local index backend behind `MemoryUnitIndex`;
+- prioritize LanceDB for local ANN;
+- keep dense in-memory and lexical indexes as test/dev baselines;
+- add index metadata, freshness checks, and safe rebuild behavior;
+- ensure redacted units are excluded from index rebuilds.
 
 Exit criteria:
 
-- LanceDB/pgvector adapters remain behind `MemoryUnitIndex`;
 - service code has no backend-specific imports;
-- indexes remain rebuildable from the authoritative store.
+- reindex can rebuild the selected backend from SQLite;
+- retrieval latency is bounded without full in-memory similarity scans;
+- tests cover restart persistence and index lag reporting.
+
+## Milestone 4: Render Algorithm
+
+Goal: maximize useful facts under the same post-render token budget.
+
+Work:
+
+- separate candidate retrieval, ranking, packing, and text formatting;
+- make render policy deterministic and inspectable;
+- prefer high-value short facts when budget is tight;
+- surface diagnostics when ranked hits exist but no unit fits the budget;
+- keep timestamps mandatory in rendered output.
+
+Exit criteria:
+
+- tests cover small, medium, and large budgets;
+- returned context includes the maximum feasible number of useful units for a
+  fixed ranked set;
+- Retrieval Lab shows ranked count, rendered count, token count, and skipped
+  due-to-budget count.
+
+## Milestone 5: Agent Integration
+
+Goal: make NanoMem easy to attach to local agent harnesses without becoming a
+general workspace-memory system.
+
+Work:
+
+- define the sidecar pattern: `before_turn -> read`, `after_turn -> capture`;
+- document Codex, Claude Code, OpenClaw, and generic local-agent usage;
+- keep Manager/admin endpoints out of agent-facing tools;
+- add request/response examples for HTTP and MCP;
+- add smoke tests for remote HTTP-backed `AgentMemoryAdapter`.
+
+Exit criteria:
+
+- a local agent can read memories before a turn and capture visible dialogue
+  after a turn;
+- examples do not store raw files, tool logs, or multimodal assets;
+- namespace behavior is clear: default read searches all namespaces unless
+  restricted by host policy.
+
+## Milestone 6: Manager Operations
+
+Goal: make the local management UI a reliable operator surface.
+
+Work:
+
+- add pagination and URL-persistent filters;
+- move evidence resolution out of `server/admin.py` into an admin service module;
+- expose backup, export, integrity check, retention preview, and reindex history;
+- add redaction preview and source dialogue reveal audit;
+- improve operation log minimization.
+
+Exit criteria:
+
+- Manager handles larger stores without loading every record;
+- destructive actions use preview/apply flows;
+- no login/auth work is required for this local-first milestone;
+- raw dialogue remains audit-only and is not indexed.
+
+## Deferred
+
+These are intentionally out of the near-term roadmap:
+
+- login/authentication and hosted multi-user role systems;
+- all-in-one document, code, media, and memory storage;
+- direct indexing of raw dialogue or multimodal resources;
+- Postgres/pgvector until managed multi-user deployment is needed;
+- automatic memory editing without explicit evidence and audit trail.

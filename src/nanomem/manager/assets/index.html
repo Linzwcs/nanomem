@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NanoMem Manager</title>
+  <link rel="stylesheet" href="/manager/assets/styles.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar" aria-label="Manager navigation">
+      <div class="brand">
+        <div class="brand-mark">NM</div>
+        <div>
+          <h1>NanoMem</h1>
+          <p>Manager</p>
+        </div>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-title">Observe</div>
+        <a href="#/dashboard" data-route="dashboard">Dashboard</a>
+        <a href="#/memory-units" data-route="memory-units">Memory Units</a>
+        <a href="#/operation-logs" data-route="operation-logs">Operation Logs</a>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-title">Operate</div>
+        <a href="#/retrieval-lab" data-route="retrieval-lab">Retrieval Lab</a>
+        <a href="#/system" data-route="system">System Health</a>
+      </div>
+
+      <div class="side-note">
+        <span>Local control plane</span>
+        <strong id="sideStatus">loading</strong>
+      </div>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <div>
+          <div class="breadcrumb" id="breadcrumb">Dashboard</div>
+          <div class="top-title" id="pageTitle">NanoMem Manager</div>
+        </div>
+        <div class="top-actions">
+          <div class="status-pill" id="status">loading</div>
+          <button class="button secondary" type="button" id="refresh">Refresh</button>
+        </div>
+      </header>
+
+      <main id="app" class="content" tabindex="-1"></main>
+    </div>
+  </div>
+
+  <script type="module" src="/manager/assets/app.js"></script>
+</body>
+</html>

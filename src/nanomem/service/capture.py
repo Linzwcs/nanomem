@@ -8,10 +8,12 @@ from nanomem.contracts import (
     CaptureSkip,
     DialogueRecord,
     ExtractionRequest,
+    MemoryUnit,
     MemoryScope,
     OperationLogEntry,
 )
 from nanomem.extraction.base import MemoryUnitExtractor
+from nanomem.extraction.events import is_extractable_message
 from nanomem.ids import new_id, stable_id
 from nanomem.index.base import MemoryUnitIndex
 from nanomem.store.base import MemoryStore
@@ -44,6 +46,11 @@ class CapturePipeline:
                 scope=scope,
                 dialogue=dialogue,
             )
+        )
+        _validate_extraction_units(
+            extraction.units,
+            scope=scope,
+            dialogue=dialogue,
         )
         self.store.append_units(extraction.units)
         self.index.upsert(extraction.units)
@@ -131,6 +138,46 @@ def _dialogue_record(
         checksum=checksum,
         metadata=dict(request.dialogue.metadata),
     )
+
+
+def _validate_extraction_units(
+    units: tuple[MemoryUnit, ...],
+    *,
+    scope: MemoryScope,
+    dialogue: DialogueRecord,
+) -> None:
+    for unit in units:
+        if unit.scope != scope:
+            raise ValueError(f"MemoryUnit {unit.unit_id} has unexpected scope")
+        if not unit.text.strip():
+            raise ValueError(f"MemoryUnit {unit.unit_id} text is required")
+        if not unit.memory_type:
+            raise ValueError(f"MemoryUnit {unit.unit_id} memory_type is required")
+        if not unit.timestamp:
+            raise ValueError(f"MemoryUnit {unit.unit_id} timestamp is required")
+        if not unit.available_at:
+            raise ValueError(f"MemoryUnit {unit.unit_id} available_at is required")
+        if unit.confidence is not None and not (0.0 <= unit.confidence <= 1.0):
+            raise ValueError(f"MemoryUnit {unit.unit_id} confidence is out of range")
+        for ref in unit.dialogue_refs:
+            if ref.dialogue_id != dialogue.dialogue_id:
+                raise ValueError(
+                    f"MemoryUnit {unit.unit_id} references a different dialogue"
+                )
+            if ref.message_range is None:
+                continue
+            start, end = ref.message_range
+            if start < 0 or end <= start or end > len(dialogue.messages):
+                raise ValueError(
+                    f"MemoryUnit {unit.unit_id} has invalid dialogue ref range"
+                )
+            if not all(
+                is_extractable_message(message)
+                for message in dialogue.messages[start:end]
+            ):
+                raise ValueError(
+                    f"MemoryUnit {unit.unit_id} references non-extractable evidence"
+                )
 
 
 def _skip_payload(skip: CaptureSkip) -> dict[str, object]:

@@ -1,9 +1,8 @@
 # Capture API
 
-Status: draft
+Status: v1 freeze candidate
 
-This document defines the intended capture API. It is a design target and may
-be ahead of the current implementation.
+This document defines the current capture API contract.
 
 ## 1. Purpose
 
@@ -39,8 +38,9 @@ CaptureDialogue:
 DialogueMessage:
   role: str
   content: str
-  speaker_id: str | None
   timestamp: str
+  speaker_id: str | None
+  metadata: dict
 ```
 
 ## 3. Core Invariants
@@ -54,8 +54,9 @@ Capture has these first-version invariants:
 - Capture inputs describe what happened, not how extraction should chunk or
   process the dialogue. Algorithm parameters belong to extractor configuration,
   not `CaptureDialogue` or `CaptureRequest`.
-- message `role` must describe a visible dialogue function; hidden system,
-  developer, tool, and raw result messages are rejected before extraction.
+- message `role` should describe a visible dialogue function. Hidden messages,
+  tool calls, tool results, and raw outputs are skipped by extraction and should
+  not be sent as ordinary capture evidence.
 - Capture archives a `DialogueRecord` before extraction.
 - Every accepted MemoryUnit has `scope`, `text`, `memory_type`, `timestamp`,
   `available_at`, lifecycle fields, and at least one `DialogueRef`.
@@ -65,7 +66,7 @@ Capture has these first-version invariants:
 - Capture is append-only. It does not replace old facts, resolve conflicts, or
   synthesize a canonical profile.
 - Hidden reasoning, tool calls, tool results, raw files, and raw multimodal
-  assets are rejected before extraction.
+  assets must not become MemoryUnits.
 
 ## 4. Namespace Semantics
 
@@ -120,6 +121,10 @@ Disallowed capture material:
 - current task progress;
 - raw files or raw multimodal assets;
 - complete chat archives.
+
+Current extractor behavior treats roles outside `user`, `assistant`,
+`system_visible`, and `other` as non-extractable and returns skip reasons rather
+than storing memory units.
 
 External resources are consumed by the agent or tools before capture. If their
 content matters, it should appear in user-visible dialogue, such as a user

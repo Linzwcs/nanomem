@@ -1,9 +1,8 @@
 # Read API
 
-Status: draft
+Status: v1 freeze candidate
 
-This document defines the intended read API. It is a design target and may be
-ahead of the current implementation.
+This document defines the current read API contract.
 
 ## 1. Purpose
 
@@ -22,7 +21,7 @@ ReadRequest:
   query: str | dict
   query_time: str
   time_range: TimeRange | None
-  recency_policy: "recent" | "balanced" | "historical"
+  recency_policy: "recent" | "balanced" | "historical" | None
   max_units: int | None
   context_budget_tokens: int | None
   metadata: dict
@@ -57,13 +56,13 @@ Read has these first-version invariants:
 
 ## 4. Namespace Semantics
 
-Read defaults to all allowed namespaces for the owner.
+Read defaults to all namespaces for the owner.
 
 Rules:
 
-- `namespaces=None`: search all configured `allowed_namespaces`;
+- `namespaces=None`: search all namespaces for the owner;
 - `namespaces=("work", "research")`: search exactly those namespaces;
-- every requested namespace must be in `allowed_namespaces`;
+- hosts may enforce their own allowed namespace policy before calling NanoMem;
 - wildcard namespace strings are not part of the first design;
 - extractors do not decide read namespaces.
 
