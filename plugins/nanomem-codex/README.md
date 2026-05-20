@@ -24,6 +24,12 @@ codex plugin marketplace add /path/to/nanomem
 Enable `plugin_hooks` and trust the NanoMem hooks in `/hooks` before expecting
 automatic read/capture to run.
 
+After install/trust, run the repo smoke test:
+
+```bash
+bash scripts/smoke_codex_plugin.sh
+```
+
 Set environment variables in the Codex session or shell:
 
 ```bash

@@ -183,6 +183,11 @@ Codex 自动读写 NanoMem 时，才在 Codex `/plugins` 中安装 `nanomem-code
 开启 `plugin_hooks`，并在 `/hooks` 中信任 NanoMem hooks。
 详细安装、验证和原理说明见
 [docs/plugins/codex-installation.md](docs/plugins/codex-installation.md)。
+完成 opt-in 安装后，可以运行：
+
+```bash
+bash scripts/smoke_codex_plugin.sh
+```
 
 两者共用 hook runner：
 

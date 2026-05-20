@@ -158,7 +158,20 @@ hashing embedding.
 
 ## Smoke Test
 
-Temporarily enable raw hook payload capture:
+Use the repo smoke script when the plugin is already installed and trusted in
+Codex:
+
+```bash
+bash scripts/smoke_codex_plugin.sh
+```
+
+The script starts a temporary NanoMem server, creates a temporary
+`nanomem-agent-hook` shim for the Codex child process, runs `codex exec
+--enable plugin_hooks`, and checks hook debug payloads plus SQLite state. It
+does not register a marketplace, install a plugin, enable plugin hooks
+persistently, or write hook trust state.
+
+Manual validation is equivalent. Temporarily enable raw hook payload capture:
 
 ```bash
 export NANOMEM_HOOK_DEBUG_DIR=.nanomem/hook-debug
