@@ -1,7 +1,7 @@
 # Claude Code Adapter Plan
 
 Status: draft
-Last checked: 2026-05-19
+Last checked: 2026-05-20
 
 ## Platform Facts
 
@@ -45,8 +45,9 @@ Recommended package shape:
 ```text
 nanomem-claude-code/
   .claude-plugin/plugin.json
-  hooks/hooks.json
+  hooks.json
   .mcp.json
+  skills/nanomem-memory/SKILL.md
   bin/nanomem-claude-read
   bin/nanomem-claude-capture
   README.md
@@ -110,6 +111,24 @@ store.
 The command hooks should read JSON from stdin. Read hooks may emit context for
 Claude. Capture hooks should be quiet on success and write diagnostics to
 stderr or NanoMem operation logs.
+
+The repo-local skeleton uses the shared command:
+
+```text
+nanomem-agent-hook read --host claude-code
+nanomem-agent-hook capture --host claude-code
+```
+
+The command talks to a running NanoMem server over HTTP. Configure it with:
+
+```bash
+export NANOMEM_BASE_URL=http://127.0.0.1:8765
+export NANOMEM_OWNER_ID="$USER"
+export NANOMEM_NAMESPACE=personal
+```
+
+If `NANOMEM_NAMESPACE` is unset or empty, the hook captures without a namespace
+and reads all namespaces.
 
 ## MCP Role
 

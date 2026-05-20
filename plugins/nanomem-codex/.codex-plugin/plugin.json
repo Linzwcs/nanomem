@@ -1,0 +1,39 @@
+{
+  "name": "nanomem-codex",
+  "version": "0.1.0",
+  "description": "Connect Codex to NanoMem long-term personal memory through hooks and optional MCP tools.",
+  "author": {
+    "name": "NanoMem contributors",
+    "url": "https://github.com/Linzwcs/nanomem"
+  },
+  "homepage": "https://github.com/Linzwcs/nanomem",
+  "repository": "https://github.com/Linzwcs/nanomem",
+  "license": "MIT",
+  "keywords": [
+    "memory",
+    "agents",
+    "codex",
+    "mcp"
+  ],
+  "skills": "./skills/",
+  "hooks": "./hooks.json",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "NanoMem",
+    "shortDescription": "Read and capture long-term personal memory.",
+    "longDescription": "Adds NanoMem as a sidecar memory layer for Codex. Hooks inject relevant personal memory before a turn and capture user-visible dialogue after a turn. MCP tools are available for explicit lookup or remember-this requests.",
+    "developerName": "NanoMem contributors",
+    "category": "Coding",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/Linzwcs/nanomem",
+    "privacyPolicyURL": "https://github.com/Linzwcs/nanomem",
+    "termsOfServiceURL": "https://github.com/Linzwcs/nanomem",
+    "defaultPrompt": [
+      "Recall my relevant personal preferences with NanoMem"
+    ],
+    "brandColor": "#2563EB"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "nanomem": {
+      "command": "nanomem-mcp",
+      "args": [
+        "--config",
+        ".nanomem/config.json"
+      ]
+    }
+  }
+}

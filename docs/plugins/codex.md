@@ -1,7 +1,7 @@
 # Codex Adapter Plan
 
 Status: draft
-Last checked: 2026-05-19
+Last checked: 2026-05-20
 
 ## Platform Facts
 
@@ -120,10 +120,11 @@ NanoMem operation logs.
 A Codex plugin can package the MCP server and helper scripts:
 
 ```text
-nanomem-codex-plugin/
+plugins/nanomem-codex/
   .codex-plugin/plugin.json
   .mcp.json
-  hooks/hooks.json
+  hooks.json
+  skills/nanomem-memory/SKILL.md
   bin/nanomem-codex-read
   bin/nanomem-codex-capture
 ```
@@ -131,6 +132,24 @@ nanomem-codex-plugin/
 This is useful for distribution, but it should be documented as an opt-in path
 because plugin hooks require `plugin_hooks = true`. The stable first path should
 remain user or project hooks plus direct SDK/HTTP capture.
+
+The repo-local skeleton uses the shared command:
+
+```text
+nanomem-agent-hook read --host codex
+nanomem-agent-hook capture --host codex
+```
+
+The command talks to a running NanoMem server over HTTP. Configure it with:
+
+```bash
+export NANOMEM_BASE_URL=http://127.0.0.1:8765
+export NANOMEM_OWNER_ID="$USER"
+export NANOMEM_NAMESPACE=personal
+```
+
+If `NANOMEM_NAMESPACE` is unset or empty, the hook captures without a namespace
+and reads all namespaces.
 
 ## What Codex Should Read And Capture
 

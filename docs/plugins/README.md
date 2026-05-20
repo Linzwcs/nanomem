@@ -47,6 +47,39 @@ personal fact in visible dialogue; NanoMem then captures from the dialogue.
 - `codex.md`: Codex plugin, hook, and MCP adaptation plan.
 - `claude-code.md`: Claude Code plugin and hook adaptation plan.
 
+## Repo-Local Plugin Skeletons
+
+This repository now includes first-pass plugin packages:
+
+```text
+plugins/nanomem-codex/
+plugins/nanomem-claude-code/
+```
+
+Both packages use the same installed hook runner:
+
+```text
+nanomem-agent-hook read --host <codex|claude-code>
+nanomem-agent-hook capture --host <codex|claude-code>
+```
+
+Required runtime setup:
+
+```bash
+python -m pip install -e .
+nanomem-server --config .nanomem/config.json
+export NANOMEM_BASE_URL=http://127.0.0.1:8765
+export NANOMEM_OWNER_ID="$USER"
+export NANOMEM_NAMESPACE=personal
+```
+
+If `NANOMEM_NAMESPACE` is unset or empty, the hook captures without a namespace
+and reads across all namespaces.
+
+The plugin skeletons expose `/v1/read` and `/v1/capture` only. They do not
+expose manager/control endpoints, raw DialogueRecord browsing, backup, export,
+retention, or reindex operations.
+
 ## Design Rule
 
 Use the strongest lifecycle primitive the harness provides:
