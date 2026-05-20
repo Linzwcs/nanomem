@@ -19,13 +19,18 @@ from nanomem.maintenance.service import NanoMemMaintenanceService
 
 
 def service_from_config(config: NanoMemConfig) -> NanoMemService:
-    return NanoMemService(
-        store=store_from_config(config),
-        index=index_from_config(config),
+    store = store_from_config(config)
+    index = index_from_config(config)
+    service = NanoMemService(
+        store=store,
+        index=index,
         extractor=extractor_from_config(config),
         default_recency_policy=config.read.default_recency_policy,
         default_max_units=config.read.default_max_units,
     )
+    if config.index.rebuild_on_startup:
+        service.reindex()
+    return service
 
 
 def service_from_config_file(path: str) -> NanoMemService:

@@ -80,6 +80,7 @@ files.
 ```yaml
 index:
   backend: dense
+  rebuild_on_startup: true
   dense_scan_limit: 2000
   metadata_filter_keys: []
   embedding:
@@ -98,6 +99,12 @@ Backend choices:
 LanceDB should default to `${data_dir}/lancedb` when no explicit path is set.
 `metadata_filter_keys` defaults to empty. Add keys only when the host wants
 those metadata fields copied into the index for filtering.
+
+`rebuild_on_startup` defaults to `true`. With the current in-memory index
+backends, NanoMem treats SQLite as the authoritative fact store and rebuilds the
+active index from stored `MemoryUnit` records whenever a configured service
+starts. Set it to `false` only for specialized tests or hosts that rebuild the
+index explicitly.
 
 ## 6. Extraction Config
 

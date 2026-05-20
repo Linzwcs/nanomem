@@ -279,6 +279,8 @@ to CLI or another control-plane surface.
 
 SQLite 是当前默认和已实现的事实存储，默认路径是 `.nanomem/nanomem.db`，适合本地、单用户和 agent sidecar 场景。
 默认检索后端是 `dense`，默认 embedding 是本地 deterministic hashing，因此可以离线启动。
+配置化启动时默认 `index.rebuild_on_startup = true`，服务会从 SQLite 中已存的
+MemoryUnit 重建当前内存索引，保证重启后仍能读取已有记忆。
 当前 `dense` 是轻量本地索引：先按 owner/namespace scope 缩小候选，再按最近时间
 顺序做有上限的 similarity scan，默认 `index.dense_scan_limit = 2000`。如果
 以后需要低延迟 ANN 语义检索，不在 NanoMem 内部实现 ANN；应通过新的

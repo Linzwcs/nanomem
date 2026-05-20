@@ -33,6 +33,7 @@ class IndexConfig:
     lexical_weight: float = 0.5
     dense_weight: float = 0.5
     dense_scan_limit: int = 2_000
+    rebuild_on_startup: bool = True
 
 
 @dataclass(frozen=True)
@@ -141,6 +142,10 @@ def config_from_mapping(payload: dict[str, Any]) -> NanoMemConfig:
             lexical_weight=float(index_payload.get("lexical_weight", 0.5)),
             dense_weight=float(index_payload.get("dense_weight", 0.5)),
             dense_scan_limit=int(index_payload.get("dense_scan_limit", 2_000)),
+            rebuild_on_startup=_optional_bool(
+                index_payload.get("rebuild_on_startup"),
+                default=True,
+            ),
         ),
         extraction=ExtractionConfig(
             backend=str(extraction_payload.get("backend", "heuristic")),
