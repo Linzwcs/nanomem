@@ -3,11 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
-from nanomem.admin.service import (
+from nanomem.control.service import (
     BackupResult,
     ExportResult,
     IntegrityCheckResult,
-    NanoMemAdminService,
+    NanoMemControlService,
     OperationLogRetentionApplyResult,
     OperationLogRetentionPolicy,
     OperationLogRetentionPreview,
@@ -46,28 +46,28 @@ class NanoMemMaintenanceService:
     def __init__(
         self,
         *,
-        admin: NanoMemAdminService,
+        control: NanoMemControlService,
         config: MaintenanceConfig,
     ) -> None:
-        self.admin = admin
+        self.control = control
         self.config = config
 
     def plan(self) -> MaintenancePlan:
-        schema_status = self.admin.schema_status()
+        schema_status = self.control.schema_status()
         integrity = (
-            self.admin.integrity_check()
+            self.control.integrity_check()
             if self.config.integrity_check
             else None
         )
         retention_policy = _retention_policy(self.config.retention)
         log_policy = _log_retention_policy(self.config.operation_log_retention)
         retention_preview = (
-            self.admin.retention_preview(retention_policy)
+            self.control.retention_preview(retention_policy)
             if retention_policy is not None
             else None
         )
         log_preview = (
-            self.admin.operation_log_retention_preview(log_policy)
+            self.control.operation_log_retention_preview(log_policy)
             if log_policy is not None
             else None
         )
@@ -99,7 +99,7 @@ class NanoMemMaintenanceService:
         if self.config.backup.enabled:
             if not self.config.backup.path:
                 raise ValueError("maintenance.backup.path is required")
-            backup = self.admin.backup(
+            backup = self.control.backup(
                 self.config.backup.path,
                 overwrite=self.config.backup.overwrite,
             )
@@ -107,7 +107,7 @@ class NanoMemMaintenanceService:
         if self.config.export.enabled:
             if not self.config.export.path:
                 raise ValueError("maintenance.export.path is required")
-            export = self.admin.export_json(
+            export = self.control.export_json(
                 self.config.export.path,
                 include_operation_logs=(
                     self.config.export.include_operation_logs
@@ -117,17 +117,17 @@ class NanoMemMaintenanceService:
 
         retention_policy = _retention_policy(self.config.retention)
         if retention_policy is not None:
-            retention = self.admin.retention_apply(retention_policy)
+            retention = self.control.retention_apply(retention_policy)
 
         log_policy = _log_retention_policy(self.config.operation_log_retention)
         if log_policy is not None:
-            log_retention = self.admin.operation_log_retention_apply(log_policy)
+            log_retention = self.control.operation_log_retention_apply(log_policy)
 
         if retention is None and "reindex" in plan.planned_actions:
-            reindex = self.admin.reindex()
+            reindex = self.control.reindex()
 
         integrity_after = (
-            self.admin.integrity_check()
+            self.control.integrity_check()
             if self.config.integrity_check
             else None
         )

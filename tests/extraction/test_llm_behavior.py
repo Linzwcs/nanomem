@@ -34,7 +34,7 @@ def test_llm_behavior_fixtures_cover_core_user_memory_types() -> None:
             {
                 "units": [
                     {
-                        "text": "I prefer concise Chinese answers.",
+                        "text": "The user said they prefer concise Chinese answers.",
                         "message_range": [0, 1],
                         "memory_type": "preference",
                         "confidence": 0.91,
@@ -51,7 +51,7 @@ def test_llm_behavior_fixtures_cover_core_user_memory_types() -> None:
             {
                 "units": [
                     {
-                        "text": "I joined the NanoMem design review on May 6, 2026.",
+                        "text": "The user said they joined the NanoMem design review on May 6, 2026.",
                         "message_range": [2, 3],
                         "memory_type": "user_event",
                         "confidence": 0.83,
@@ -95,7 +95,7 @@ def test_llm_behavior_fixture_captures_agent_interaction_event() -> None:
             {
                 "units": [
                     {
-                        "text": "I will remember that you prefer concise Chinese answers in future sessions.",
+                        "text": "The agent said it will remember that the user prefers concise Chinese answers in future sessions.",
                         "message_range": [0, 1],
                         "memory_type": "agent_interaction_event",
                         "confidence": 0.78,

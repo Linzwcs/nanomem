@@ -5,7 +5,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from typing import Any
 
-from nanomem.server.admin import handle_admin_get, handle_admin_post
+from nanomem.server.manager import handle_manager_get, handle_manager_post
 from nanomem.service.core import NanoMemService
 from nanomem.server.schemas import (
     capture_request_from_json,
@@ -38,9 +38,9 @@ def make_handler(
 
         def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API
             try:
-                admin_response = handle_admin_get(service, self.path)
-                if admin_response is not None:
-                    _write_response(self, admin_response)
+                manager_response = handle_manager_get(service, self.path)
+                if manager_response is not None:
+                    _write_response(self, manager_response)
                     return
             except KeyError as exc:
                 _write_json(
@@ -76,9 +76,9 @@ def make_handler(
         def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API
             try:
                 payload = _read_json_body(self, max_body_bytes=max_body_bytes)
-                admin_response = handle_admin_post(service, self.path, payload)
-                if admin_response is not None:
-                    _write_response(self, admin_response)
+                manager_response = handle_manager_post(service, self.path, payload)
+                if manager_response is not None:
+                    _write_response(self, manager_response)
                     return
                 if self.path == "/v1/capture":
                     result = service.capture(capture_request_from_json(payload))

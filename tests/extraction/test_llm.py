@@ -66,7 +66,7 @@ def test_llm_extractor_parses_units_with_dialogue_ref_and_metadata() -> None:
         {
             "units": [
                 {
-                    "text": "The user prefers concise Chinese answers.",
+                    "text": "The user said they prefer concise Chinese answers.",
                     "message_range": [1, 2],
                     "memory_type": "preference",
                     "confidence": "0.86",

@@ -19,7 +19,6 @@ from nanomem.extraction.events import (
     is_extractable_message,
     non_extractable_message_skip,
 )
-from nanomem.extraction.normalize import normalize_memory_text
 from nanomem.ids import scope_payload, stable_id
 
 
@@ -328,19 +327,6 @@ class LLMMemoryUnitExtractor:
                     message_range=message_range,
                     reason="out_of_chunk_message_range",
                     detail="message_range must stay inside the current chunk",
-                    strict=self.strict_schema,
-                )
-                continue
-            text = normalize_memory_text(
-                text,
-                request.dialogue.messages[message_range[0]],
-            )
-            if not text:
-                _handle_invalid(
-                    skipped,
-                    message_range=message_range,
-                    reason="empty_unit_text",
-                    detail="normalized unit text is empty",
                     strict=self.strict_schema,
                 )
                 continue

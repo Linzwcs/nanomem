@@ -28,13 +28,13 @@ server-side page routing is not required.
 ## Current Endpoints
 
 ```text
-GET  /admin/api/stats
-GET  /admin/api/memory-units
-GET  /admin/api/memory-units/{unit_id}
-GET  /admin/api/dialogues/{dialogue_id}
-GET  /admin/api/operation-logs
-POST /admin/api/reindex
-POST /admin/api/retrieval-preview
+GET  /manager/api/stats
+GET  /manager/api/memory-units
+GET  /manager/api/memory-units/{unit_id}
+GET  /manager/api/dialogues/{dialogue_id}
+GET  /manager/api/operation-logs
+POST /manager/api/reindex
+POST /manager/api/retrieval-preview
 ```
 
 ## Current Data Path
@@ -42,8 +42,8 @@ POST /admin/api/retrieval-preview
 ```text
 Browser UI
   -> Manager HTTP asset mount
-  -> Admin HTTP API handlers
-  -> NanoMemAdminService / NanoMemService
+  -> control-plane HTTP API handlers
+  -> NanoMemControlService / NanoMemService
   -> SQLite authoritative store
   -> active MemoryUnitIndex
 ```
@@ -61,10 +61,10 @@ stored memory units.
 - Retention preview/apply endpoints.
 - Delete/redact workflows.
 - Authentication and role checks.
-- Distinguishing admin preview read logs from runtime read logs.
+- Distinguishing manager preview read logs from runtime read logs.
 
 ## Development Constraint
 
 Keep the MVP build-free until a frontend framework becomes necessary. If a
 framework is introduced later, compiled assets should still be served under the
-same `/admin/assets/*` path.
+same `/manager/assets/*` path.

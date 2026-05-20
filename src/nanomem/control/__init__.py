@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from nanomem.admin.service import (
+from nanomem.control.service import (
     BackupResult,
     DatabaseStats,
     ExportResult,
     IntegrityCheckResult,
     NanoMemAdminService,
+    NanoMemControlService,
     OperationLogEntry,
     OperationLogRetentionApplyResult,
     OperationLogRetentionPolicy,
@@ -25,6 +26,7 @@ __all__ = [
     "ExportResult",
     "IntegrityCheckResult",
     "NanoMemAdminService",
+    "NanoMemControlService",
     "OperationLogEntry",
     "OperationLogRetentionApplyResult",
     "OperationLogRetentionPolicy",

@@ -33,7 +33,7 @@ The first storage slice should persist:
 
 - `MemoryUnit`: durable personal fact;
 - `DialogueRecord`: control-plane dialogue evidence;
-- operation log: capture/read/admin traces;
+- operation log: capture/read/control-plane traces;
 - schema migration state.
 
 `DialogueRecord` and operation logs must not be exposed through normal

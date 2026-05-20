@@ -2,7 +2,7 @@
 
 Status: draft
 
-The admin console should stay simple while making room for larger memory stores
+The manager should stay simple while making room for larger memory stores
 and stricter privacy workflows.
 
 ## Performance Optimizations
@@ -37,14 +37,15 @@ until the object model and workflows are proven.
 
 ## Service Refactor Path
 
-As admin grows, move logic out of `server/admin.py`:
+As manager workflows grow, keep routing in `server/manager.py` and move larger
+control workflows into focused modules:
 
 ```text
-server/admin.py       -> routing and serialization
-admin/service.py      -> stats, integrity, maintenance use cases
-admin/evidence.py     -> DialogueRef -> source chunk resolution
-admin/operations.py   -> preview/apply workflows
-admin/schemas.py      -> stable response dataclasses
+server/manager.py     -> routing and serialization
+control/service.py    -> stats, integrity, maintenance use cases
+control/evidence.py   -> DialogueRef -> source chunk resolution
+control/operations.py -> preview/apply workflows
+control/schemas.py    -> stable response dataclasses
 ```
 
 Keep store interfaces focused on persistence primitives. Keep index interfaces

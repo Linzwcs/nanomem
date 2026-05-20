@@ -2,7 +2,7 @@
 
 Status: draft
 
-The admin console should be organized around stable NanoMem objects and the
+The manager should be organized around stable NanoMem objects and the
 links between them.
 
 ```text

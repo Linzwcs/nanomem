@@ -26,7 +26,7 @@ PYTHONPATH=src python scripts/build_complete_test_db.py --force
 Observed results:
 
 ```text
-53 passed, 1 skipped
+49 passed, 1 skipped
 unit_count=8
 dialogue_count=7
 missing_dialogue_refs=0
@@ -36,11 +36,11 @@ HTTP and manager smoke checks also passed:
 
 - `/v1/health` returns `200`.
 - `/manager` and packaged assets return `200`.
-- `/admin/api/stats` reports 8 units and 7 dialogue records.
+- `/manager/api/stats` reports 8 units and 7 dialogue records.
 - all memory detail source chunks resolve with status `ok`;
 - each source chunk includes exact extracted `messages` and full
   multi-turn `dialogue_messages`;
-- `/admin/api/reindex` indexes 8 units;
+- `/manager/api/reindex` indexes 8 units;
 - retrieval preview for `concise Chinese answers` returns 3 ranked units and
   renders 3 context units.
 
@@ -73,7 +73,7 @@ Known limits:
 - dense index is in-memory and must be rebuilt after restart;
 - no persistent ANN backend is implemented yet;
 - render format is simple and not yet optimized for maximum facts per budget;
-- admin maintenance workflows are partly CLI/service-level and not fully exposed
+- control-plane maintenance workflows are partly CLI/service-level and not fully exposed
   in Manager;
 - operation log payloads still need stricter minimization before sensitive use.
 
@@ -108,7 +108,8 @@ Current baseline:
 - extraction filters hidden/tool/non-visible messages before model calls;
 - role-aware internal chunks preserve original message indexes and split across
   non-extractable gaps;
-- accepted MemoryUnit text is normalized into third-person evidence phrasing;
+- LLM prompt/schema requires third-person evidence phrasing; heuristic remains
+  a simple smoke-test extractor;
 - strict payload validation covers `message_range`, `memory_type`, confidence,
   non-extractable evidence ranges, and out-of-chunk ranges;
 - deterministic fake-LLM fixtures cover preference, correction, user event,
@@ -180,7 +181,7 @@ Work:
 
 - define the sidecar pattern: `before_turn -> read`, `after_turn -> capture`;
 - document Codex, Claude Code, OpenClaw, and generic local-agent usage;
-- keep Manager/admin endpoints out of agent-facing tools;
+- keep manager/control-plane endpoints out of agent-facing tools;
 - add request/response examples for HTTP and MCP;
 - add smoke tests for remote HTTP-backed `AgentMemoryAdapter`.
 
@@ -199,7 +200,7 @@ Goal: make the local management UI a reliable operator surface.
 Work:
 
 - add pagination and URL-persistent filters;
-- move evidence resolution out of `server/admin.py` into an admin service module;
+- move evidence resolution out of `server/manager.py` into a control service module;
 - expose backup, export, integrity check, retention preview, and reindex history;
 - add redaction preview and source dialogue reveal audit;
 - improve operation log minimization.

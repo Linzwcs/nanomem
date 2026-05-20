@@ -26,7 +26,7 @@ inspection. Keep the modes separate:
 - MemoryUnit + OperationLog export.
 - Raw DialogueRecord export.
 
-Raw dialogue export should be disabled by default and require admin permission.
+Raw dialogue export should be disabled by default and require operator permission.
 Every export should include a manifest with schema version, counts, timestamp,
 redaction policy, and checksum.
 
@@ -58,7 +58,7 @@ Normal MemoryUnit detail can show source status and metadata. Raw dialogue
 content should eventually move behind a reveal endpoint:
 
 ```text
-POST /admin/api/dialogues/{dialogue_id}/reveal
+POST /manager/api/dialogues/{dialogue_id}/reveal
 ```
 
 Reveal should require permission, reason, and audit logging. Browser logs must
@@ -66,8 +66,8 @@ not include raw dialogue content.
 
 ## Hosted Safety Defaults
 
-- Bind admin to localhost by default.
+- Bind manager/control endpoints to localhost by default.
 - Require auth before network exposure.
 - Use CSRF protection for state-changing operations.
-- Do not expose admin endpoints through MCP or agent adapters.
+- Do not expose manager/control endpoints through MCP or agent adapters.
 - Never store provider secrets in browser-readable payloads.

@@ -15,7 +15,6 @@ from nanomem.extraction.events import (
     is_extractable_message,
     non_extractable_message_skip,
 )
-from nanomem.extraction.normalize import normalize_memory_text
 from nanomem.ids import scope_payload, stable_id
 
 
@@ -104,9 +103,6 @@ class HeuristicMemoryUnitExtractor:
         for sentence_index, sentence in enumerate(_sentences(content)):
             if not sentence or not _is_personal_sentence(sentence, message):
                 continue
-            memory_text = normalize_memory_text(sentence, message)
-            if not memory_text:
-                continue
             dialogue_ref = DialogueRef(
                 dialogue_id=request.dialogue.dialogue_id,
                 message_range=(index, index + 1),
@@ -120,7 +116,7 @@ class HeuristicMemoryUnitExtractor:
                         "message_range": dialogue_ref.message_range,
                     },
                     "sentence_index": sentence_index,
-                    "text": memory_text,
+                    "text": sentence,
                     "timestamp": message.timestamp,
                 },
             )
@@ -128,7 +124,7 @@ class HeuristicMemoryUnitExtractor:
                 MemoryUnit(
                     unit_id=unit_id,
                     scope=request.scope,
-                    text=memory_text,
+                    text=sentence,
                     memory_type=_memory_type(sentence, message),
                     timestamp=message.timestamp,
                     available_at=request.dialogue.captured_at,

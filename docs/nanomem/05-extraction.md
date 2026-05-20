@@ -11,12 +11,10 @@ Extraction is responsible for finding long-term personal facts in a
 `CaptureDialogue`. It is not a summarizer, document ingester, profile writer,
 or truth-maintenance system.
 
-Extraction output must be fine-grained, third-person, timestamped, scoped, and
-grounded in `DialogueRef`s.
-
-Accepted `MemoryUnit.text` should be objective memory prose, not a raw message
-quote. For example, `I prefer concise Chinese answers.` becomes
-`The user said they prefer concise Chinese answers.`
+Production extraction output should be fine-grained, third-person, timestamped,
+scoped, and grounded in `DialogueRef`s. The LLM prompt/schema is responsible for
+that wording. The heuristic extractor is a deterministic smoke-test baseline and
+should stay simple rather than performing complex text rewriting.
 
 ## 2. Inputs And Outputs
 
@@ -41,12 +39,11 @@ The record represents one capture payload, not a whole host session.
 
 ```text
 DialogueRecord
-  -> normalize visible messages
-  -> chunk = n over normalized dialogue text
+  -> prepare visible messages
+  -> chunk = n over visible dialogue text
   -> annotate role and speaker_id
   -> extract candidate personal facts
   -> convert to third-person MemoryUnit text
-  -> normalize evidence phrasing
   -> assign owner and namespace
   -> assign timestamp and DialogueRef
   -> classify memory_type

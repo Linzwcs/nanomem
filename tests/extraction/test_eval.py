@@ -31,7 +31,7 @@ def test_extraction_eval_report_matches_expected_units_and_skips() -> None:
                     ExpectedMemoryUnit(
                         memory_type="preference",
                         message_range=(0, 1),
-                        text_contains=("they prefer concise chinese answers",),
+                        text_contains=("i prefer concise chinese answers",),
                         min_confidence=0.7,
                     ),
                 ),

@@ -25,8 +25,8 @@ implementation.
 - `14-contract-freeze-review.md`: field-by-field review before v1 contract freeze.
 - `15-web-management-console.md`: high-level control-plane web console boundary.
 
-## Related Admin Specs
+## Related Manager Specs
 
-Detailed admin-console design, API planning, UI workflows, operations, privacy,
-and rollout notes live in `../admin/`. Keep durable memory contracts in this
-directory, and put human-facing management-platform details in `docs/admin/`.
+Detailed manager design, API planning, UI workflows, operations, privacy, and
+rollout notes live in `../manager/`. Keep durable memory contracts in this
+directory, and put human-facing management-platform details in `docs/manager/`.

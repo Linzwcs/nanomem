@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from nanomem.admin.service import (
+from nanomem.control.service import (
     BackupResult,
     DatabaseStats,
     ExportResult,
     IntegrityCheckResult,
     NanoMemAdminService,
+    NanoMemControlService,
     OperationLogRetentionApplyResult,
     OperationLogRetentionPolicy,
     OperationLogRetentionPreview,
@@ -54,6 +55,8 @@ from nanomem.extraction.llm import LLMMemoryUnitExtractor
 from nanomem.factory import (
     admin_from_config,
     admin_from_config_file,
+    control_from_config,
+    control_from_config_file,
     maintenance_from_config,
     maintenance_from_config_file,
     service_from_config,
@@ -112,6 +115,7 @@ __all__ = [
     "NanoMemConfig",
     "NanoMemService",
     "NanoMemAdminService",
+    "NanoMemControlService",
     "OpenClawMemoryAdapter",
     "PackedContext",
     "MemoryUnit",
@@ -129,6 +133,8 @@ __all__ = [
     "TimeRange",
     "admin_from_config",
     "admin_from_config_file",
+    "control_from_config",
+    "control_from_config_file",
     "load_config",
     "maintenance_from_config",
     "maintenance_from_config_file",

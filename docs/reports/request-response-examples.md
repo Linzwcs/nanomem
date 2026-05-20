@@ -80,9 +80,9 @@ Response:
         "namespace": "personal",
         "owner_id": "user-demo"
       },
-      "text": "The user said they prefer concise Chinese answers.",
+      "text": "I prefer concise Chinese answers.",
       "timestamp": "2026-05-19T10:00:00+08:00",
-      "unit_id": "unit_2b91a8966b037f482f41b8d5"
+      "unit_id": "unit_73f8c65770c17f9253ecf842"
     },
     {
       "available_at": "2026-05-19T10:00:05+08:00",
@@ -108,9 +108,9 @@ Response:
         "namespace": "personal",
         "owner_id": "user-demo"
       },
-      "text": "The user asked the agent to remember that they usually want architecture first, then code.",
+      "text": "Please remember that I usually want architecture first, then code.",
       "timestamp": "2026-05-19T10:00:00+08:00",
-      "unit_id": "unit_7f2e53eff02bbe4b688967c0"
+      "unit_id": "unit_bdb41289ee2ad308eecd9a0f"
     }
   ]
 }
@@ -217,9 +217,9 @@ Response:
         "namespace": "personal",
         "owner_id": "user-demo"
       },
-      "text": "The user asked the agent to remember that they do not want raw tool logs stored as long-term personal memory.",
+      "text": "Please remember that I do not want raw tool logs stored as long-term personal memory.",
       "timestamp": "2026-05-19T10:05:02+08:00",
-      "unit_id": "unit_3b94af447252127868a066bb"
+      "unit_id": "unit_a0ed51ee38ab7722c066a45d"
     }
   ]
 }
@@ -248,23 +248,23 @@ Response:
 ```json
 {
   "context": {
-    "text": "Relevant memory units:\n- [2026-05-19T10:00:00+08:00, namespace=personal, confidence=0.80] The user asked the agent to remember that they usually want architecture first, then code.",
-    "token_count": 47,
+    "text": "Relevant memory units:\n- [2026-05-19T10:00:00+08:00, namespace=personal, confidence=0.80] Please remember that I usually want architecture first, then code.",
+    "token_count": 42,
     "unit_count": 1
   },
   "ranked_units": [
     {
       "rank": 1,
-      "retrieval_text": "The user asked the agent to remember that they usually want architecture first, then code.",
-      "score": 0.35016510873960766,
+      "retrieval_text": "Please remember that I usually want architecture first, then code.",
+      "score": 0.38252466449492617,
       "score_breakdown": {
-        "dense": 0.1336306209562122,
+        "dense": 0.17677669529663687,
         "embedding_model": "hashing_embedding_128",
         "recency": 0.9997685720897941,
         "recency_policy": "balanced",
-        "relevance": 0.1336306209562122,
+        "relevance": 0.17677669529663687,
         "scan_limit": 2000,
-        "scanned_count": 1
+        "scanned_count": 2
       },
       "unit": {
         "available_at": "2026-05-19T10:00:05+08:00",
@@ -290,9 +290,9 @@ Response:
           "namespace": "personal",
           "owner_id": "user-demo"
         },
-        "text": "The user asked the agent to remember that they usually want architecture first, then code.",
+        "text": "Please remember that I usually want architecture first, then code.",
         "timestamp": "2026-05-19T10:00:00+08:00",
-        "unit_id": "unit_7f2e53eff02bbe4b688967c0"
+        "unit_id": "unit_bdb41289ee2ad308eecd9a0f"
       }
     }
   ],
@@ -309,7 +309,7 @@ Response:
   },
   "stats": {
     "candidate_count": 1,
-    "context_tokens": 47,
+    "context_tokens": 42,
     "index_backend": "dense_cosine_v1",
     "query": "answer style architecture first",
     "ranked_count": 1,

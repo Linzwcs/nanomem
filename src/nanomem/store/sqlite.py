@@ -212,7 +212,7 @@ class SQLiteMemoryUnitStore:
             rows = self._connection.execute(query, tuple(params)).fetchall()
         return tuple(_row_to_operation_log(row) for row in rows)
 
-    # Control-plane helpers used by CLI/admin. They are intentionally outside
+    # Control-plane helpers used by CLI and manager. They are intentionally outside
     # the MemoryStore protocol.
     def list_units(
         self,

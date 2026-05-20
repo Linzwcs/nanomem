@@ -7,7 +7,7 @@ NanoMem memory stores. The console is a control-plane product surface. It is
 not an agent-facing memory interface and must not change the small
 `capture`/`read` API boundary.
 
-Detailed admin-console design now lives in `../admin/`. This document remains
+Detailed manager design now lives in `../manager/`. This document remains
 the high-level product boundary inside the core NanoMem specs.
 
 ## 1. Purpose
@@ -82,7 +82,7 @@ Shows operational health:
 - oldest/newest MemoryUnit timestamps;
 - top owner/namespace pairs.
 
-This page maps directly to `NanoMemAdminService.stats()`.
+This page maps directly to `NanoMemControlService.stats()`.
 
 ### Memory Units
 
@@ -118,7 +118,7 @@ Actions:
 - run retrieval test using the unit text.
 
 Editing MemoryUnit text should not be part of v1. If correction is needed, add
-new evidence through capture or use explicit admin redaction/delete.
+new evidence through capture or use explicit control-plane redaction/delete.
 
 ### Dialogue Evidence
 
@@ -166,7 +166,7 @@ Inputs:
 - owner id;
 - namespace list;
 - query;
-- query_time, defaulting to current UTC time when omitted in the admin preview;
+- query_time, defaulting to current UTC time when omitted in the manager preview;
 - time_range;
 - recency_policy;
 - max_units;
@@ -257,18 +257,18 @@ The browser app uses hash routes, so no additional server-side page routes are
 required.
 
 `/admin` remains a compatibility alias. JSON control-plane endpoints continue
-to live under `/admin/api/*`.
+to live under `/manager/api/*`.
 
 Implemented JSON endpoints:
 
 ```text
-GET  /admin/api/stats
-GET  /admin/api/memory-units
-GET  /admin/api/memory-units/{unit_id}
-GET  /admin/api/dialogues/{dialogue_id}
-GET  /admin/api/operation-logs
-POST /admin/api/reindex
-POST /admin/api/retrieval-preview
+GET  /manager/api/stats
+GET  /manager/api/memory-units
+GET  /manager/api/memory-units/{unit_id}
+GET  /manager/api/dialogues/{dialogue_id}
+GET  /manager/api/operation-logs
+POST /manager/api/reindex
+POST /manager/api/retrieval-preview
 ```
 
 Implemented pages:
@@ -300,24 +300,24 @@ The web console should use a control-plane API separate from `/v1/capture` and
 Suggested endpoints:
 
 ```text
-GET  /admin/api/stats
-GET  /admin/api/memory-units
-GET  /admin/api/memory-units/{unit_id}
-GET  /admin/api/dialogues/{dialogue_id}
-GET  /admin/api/operation-logs
-POST /admin/api/reindex
-POST /admin/api/retention/preview
-POST /admin/api/retention/apply
-POST /admin/api/backup
-POST /admin/api/export
-POST /admin/api/retrieval-preview
+GET  /manager/api/stats
+GET  /manager/api/memory-units
+GET  /manager/api/memory-units/{unit_id}
+GET  /manager/api/dialogues/{dialogue_id}
+GET  /manager/api/operation-logs
+POST /manager/api/reindex
+POST /manager/api/retention/preview
+POST /manager/api/retention/apply
+POST /manager/api/backup
+POST /manager/api/export
+POST /manager/api/retrieval-preview
 ```
 
-The API should be implemented on top of `NanoMemAdminService`,
+The API should be implemented on top of `NanoMemControlService`,
 `NanoMemService.reindex`, and existing store selectors. It should not duplicate
 storage or ranking logic.
 
-`GET /admin/api/memory-units/{unit_id}` may return a derived `source_chunks`
+`GET /manager/api/memory-units/{unit_id}` may return a derived `source_chunks`
 field for the console. Each chunk resolves a `DialogueRef` into the referenced
 dialogue metadata and the exact half-open message range used during extraction.
 This keeps the browser simple while preserving `MemoryUnit` as the canonical
@@ -345,14 +345,14 @@ Recommended first implementation:
 
 ```text
 Packaged browser UI
-  -> Admin HTTP API
-  -> NanoMemAdminService / NanoMemService
+  -> control-plane HTTP API
+  -> NanoMemControlService / NanoMemService
   -> SQLite fact store
   -> active MemoryUnitIndex
 ```
 
 For local development, the console can be served by the same process as the
-admin API. For hosted deployments, serve it behind normal authentication and do
+control-plane API. For hosted deployments, serve it behind normal authentication and do
 not expose raw dialogue endpoints publicly.
 
 The UI must treat the index as cache-like derived state. It can display index
@@ -361,7 +361,7 @@ health, but all authoritative data should come from the store.
 The local browser UI should stay build-free until there is a strong need for a
 front-end toolchain. Prefer packaged `index.html`, `styles.css`, and browser
 modules over large Python string templates. If React, Svelte, or Vite is added
-later, the built assets should still be served from the same `/admin/assets/*`
+later, the built assets should still be served from the same `/manager/assets/*`
 surface.
 
 ## 8. MVP Scope
@@ -403,11 +403,11 @@ Default behavior:
 - hide raw DialogueRecord content until explicitly opened;
 - do not show secrets from config;
 - do not include raw personal content in browser console logs;
-- do not expose admin endpoints through MCP or agent adapters.
+- do not expose manager/control endpoints through MCP or agent adapters.
 
 ## 11. Open Design Questions
 
-- Should manual MemoryUnit insertion exist as an admin feature, or should all
+- Should manual MemoryUnit insertion exist as a manager feature, or should all
   new memories go through capture evidence?
 - Should the console support approving candidate extractions before storage?
 - Should retention apply delete DialogueRecords independently from MemoryUnits?
@@ -418,7 +418,7 @@ Default behavior:
 
 Phase 1: read-only local console
 
-- admin stats endpoint;
+- control stats endpoint;
 - memory unit list/detail;
 - dialogue evidence lookup;
 - operation log list;

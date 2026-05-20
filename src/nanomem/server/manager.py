@@ -7,7 +7,7 @@ import json
 from typing import Any
 from urllib.parse import parse_qs, unquote, urlparse
 
-from nanomem.admin.service import NanoMemAdminService
+from nanomem.control.service import NanoMemControlService
 from nanomem.contracts import (
     MemoryUnit,
     MemoryUnitSelector,
@@ -22,18 +22,18 @@ _MANAGER_ASSET_PACKAGE = "nanomem.manager.assets"
 
 
 @dataclass(frozen=True)
-class AdminResponse:
+class ManagerResponse:
     status: HTTPStatus
     body: bytes
     content_type: str
 
 
-def handle_admin_get(
+def handle_manager_get(
     service: NanoMemService,
     path: str,
-) -> AdminResponse | None:
+) -> ManagerResponse | None:
     parsed = urlparse(path)
-    normalized_path = _normalized_admin_path(parsed.path)
+    normalized_path = _normalized_control_path(parsed.path)
     if parsed.path in {"/admin", "/admin/", "/manager", "/manager/"}:
         return _asset_response("index.html")
     asset_name = _manager_asset_name(parsed.path)
@@ -42,17 +42,17 @@ def handle_admin_get(
     if normalized_path is None:
         return None
     query = parse_qs(parsed.query, keep_blank_values=False)
-    if normalized_path == "/admin/api/stats":
+    if normalized_path == "/manager/api/stats":
         return _json_response(_stats_payload(service))
-    if normalized_path == "/admin/api/memory-units":
+    if normalized_path == "/manager/api/memory-units":
         return _json_response(_memory_units_payload(service, query))
-    if normalized_path.startswith("/admin/api/memory-units/"):
-        unit_id = unquote(normalized_path.removeprefix("/admin/api/memory-units/"))
+    if normalized_path.startswith("/manager/api/memory-units/"):
+        unit_id = unquote(normalized_path.removeprefix("/manager/api/memory-units/"))
         return _json_response(_memory_unit_payload(service, unit_id))
-    if normalized_path.startswith("/admin/api/dialogues/"):
-        dialogue_id = unquote(normalized_path.removeprefix("/admin/api/dialogues/"))
+    if normalized_path.startswith("/manager/api/dialogues/"):
+        dialogue_id = unquote(normalized_path.removeprefix("/manager/api/dialogues/"))
         return _json_response(_dialogue_payload(service, dialogue_id))
-    if normalized_path == "/admin/api/operation-logs":
+    if normalized_path == "/manager/api/operation-logs":
         return _json_response(_operation_logs_payload(service, query))
     return _json_response(
         {"error": "not_found", "path": normalized_path},
@@ -60,19 +60,19 @@ def handle_admin_get(
     )
 
 
-def handle_admin_post(
+def handle_manager_post(
     service: NanoMemService,
     path: str,
     payload: dict[str, Any],
-) -> AdminResponse | None:
+) -> ManagerResponse | None:
     parsed = urlparse(path)
-    normalized_path = _normalized_admin_path(parsed.path)
+    normalized_path = _normalized_control_path(parsed.path)
     if normalized_path is None:
         return None
-    if normalized_path == "/admin/api/reindex":
+    if normalized_path == "/manager/api/reindex":
         selector = _selector_from_payload(payload)
         return _json_response(asdict(service.reindex(selector)))
-    if normalized_path == "/admin/api/retrieval-preview":
+    if normalized_path == "/manager/api/retrieval-preview":
         request = read_request_from_json(_read_preview_payload(payload))
         result = service.read(request)
         return _json_response(read_result_to_json(result))
@@ -83,11 +83,11 @@ def handle_admin_post(
 
 
 def _stats_payload(service: NanoMemService) -> dict[str, Any]:
-    admin = NanoMemAdminService(
+    control = NanoMemControlService(
         store=service.store,  # type: ignore[arg-type]
         index=service.index,
     )
-    return asdict(admin.stats())
+    return asdict(control.stats())
 
 
 def _memory_units_payload(
@@ -396,15 +396,15 @@ def _json_response(
     payload: dict[str, Any],
     *,
     status: HTTPStatus = HTTPStatus.OK,
-) -> AdminResponse:
-    return AdminResponse(
+) -> ManagerResponse:
+    return ManagerResponse(
         status=status,
         body=json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8"),
         content_type="application/json; charset=utf-8",
     )
 
 
-def _asset_response(name: str) -> AdminResponse:
+def _asset_response(name: str) -> ManagerResponse:
     if not name or "/" in name or "\\" in name or name.startswith("."):
         return _json_response(
             {"error": "not_found", "path": name},
@@ -421,7 +421,7 @@ def _asset_response(name: str) -> AdminResponse:
             {"error": "not_found", "path": name},
             status=HTTPStatus.NOT_FOUND,
         )
-    return AdminResponse(
+    return ManagerResponse(
         status=HTTPStatus.OK,
         body=body,
         content_type=_asset_content_type(name),
@@ -438,11 +438,11 @@ def _asset_content_type(name: str) -> str:
     return "application/octet-stream"
 
 
-def _normalized_admin_path(path: str) -> str | None:
-    if path.startswith("/admin/"):
-        return path
+def _normalized_control_path(path: str) -> str | None:
     if path.startswith("/manager/api/"):
-        return "/admin/api/" + path.removeprefix("/manager/api/")
+        return path
+    if path.startswith("/admin/api/"):
+        return "/manager/api/" + path.removeprefix("/admin/api/")
     return None
 
 

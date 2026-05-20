@@ -4,9 +4,9 @@ from dataclasses import dataclass
 import time
 from typing import Callable, TextIO
 
-from nanomem.admin import (
+from nanomem.control import (
     DatabaseStats,
-    NanoMemAdminService,
+    NanoMemControlService,
     RetentionPolicy,
     RetentionPreview,
 )
@@ -32,24 +32,24 @@ class DashboardSnapshot:
 
 
 def build_dashboard(
-    admin: NanoMemAdminService,
+    control: NanoMemControlService,
     *,
     limit: int = 10,
     retention_before: str | None = None,
 ) -> DashboardSnapshot:
     retention = None
     if retention_before:
-        retention = admin.retention_preview(
+        retention = control.retention_preview(
             RetentionPolicy(before=retention_before),
             sample_limit=min(limit, 10),
         )
-    stats = admin.stats()
+    stats = control.stats()
     return DashboardSnapshot(
         generated_at=now_utc_iso(),
         stats=stats,
         health=_health_from_stats(stats),
-        recent_units=admin.list_units(limit=limit),
-        recent_logs=admin.list_operation_logs(limit=limit),
+        recent_units=control.list_units(limit=limit),
+        recent_logs=control.list_operation_logs(limit=limit),
         retention_preview=retention,
     )
 
@@ -134,7 +134,7 @@ def render_dashboard(snapshot: DashboardSnapshot) -> str:
 
 
 def run_dashboard_watch(
-    admin: NanoMemAdminService,
+    control: NanoMemControlService,
     *,
     stdout: TextIO,
     limit: int = 10,
@@ -147,7 +147,7 @@ def run_dashboard_watch(
     count = 0
     while iterations is None or count < iterations:
         snapshot = build_dashboard(
-            admin,
+            control,
             limit=limit,
             retention_before=retention_before,
         )

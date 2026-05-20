@@ -14,7 +14,7 @@ from nanomem.index.lexical import LexicalMemoryUnitIndex
 from nanomem.service.core import NanoMemService
 from nanomem.store.base import MemoryStore
 from nanomem.store.sqlite import SQLiteMemoryUnitStore
-from nanomem.admin.service import NanoMemAdminService
+from nanomem.control.service import NanoMemControlService
 from nanomem.maintenance.service import NanoMemMaintenanceService
 
 
@@ -32,20 +32,28 @@ def service_from_config_file(path: str) -> NanoMemService:
     return service_from_config(load_config(path))
 
 
-def admin_from_config(config: NanoMemConfig) -> NanoMemAdminService:
-    return NanoMemAdminService(
+def control_from_config(config: NanoMemConfig) -> NanoMemControlService:
+    return NanoMemControlService(
         store=store_from_config(config),  # type: ignore[arg-type]
         index=index_from_config(config),
     )
 
 
-def admin_from_config_file(path: str) -> NanoMemAdminService:
-    return admin_from_config(load_config(path))
+def control_from_config_file(path: str) -> NanoMemControlService:
+    return control_from_config(load_config(path))
+
+
+def admin_from_config(config: NanoMemConfig) -> NanoMemControlService:
+    return control_from_config(config)
+
+
+def admin_from_config_file(path: str) -> NanoMemControlService:
+    return control_from_config_file(path)
 
 
 def maintenance_from_config(config: NanoMemConfig) -> NanoMemMaintenanceService:
     return NanoMemMaintenanceService(
-        admin=admin_from_config(config),
+        control=control_from_config(config),
         config=config.maintenance,
     )
 

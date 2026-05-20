@@ -38,14 +38,14 @@ Seven `CaptureRequest` inputs were executed for owner `user-sim`.
 
 Observed generated units:
 
-- `The user said they prefer concise Chinese answers.`
-- `The user asked the agent to remember that they usually want architecture first, then code.`
-- `The user said they prefer fact-level memory units when discussing NanoMem design.`
-- `The user asked the agent to remember that they do not want raw tool logs stored as long-term personal memory.`
-- `The user said they now prefer concise plans unless they explicitly ask for detail.`
-- `The user asked the agent to remember that manually curated NanoMem memories must remain retrievable after index rebuild.`
-- `The user asked the agent to remember that they joined the NanoMem design review on May 6, 2026.`
-- `The agent said it will remember that the user prefers concise Chinese answers in future sessions.`
+- `I prefer concise Chinese answers.`
+- `Please remember that I usually want architecture first, then code.`
+- `I prefer fact-level memory units when discussing NanoMem design.`
+- `Please remember that I do not want raw tool logs stored as long-term personal memory.`
+- `Correction: I now prefer concise plans unless I explicitly ask for detail.`
+- `Please remember that manually curated NanoMem memories must remain retrievable after index rebuild.`
+- `Please remember that I joined the NanoMem design review on May 6, 2026.`
+- `I will remember that you prefer concise Chinese answers in future sessions.`
 
 The workspace/tool-log case behaved as intended:
 
@@ -56,7 +56,7 @@ The workspace/tool-log case behaved as intended:
 ## 3. Complete Evidence Fixture
 
 Earlier simulations inserted one manual `MemoryUnit` directly into SQLite. That
-was useful for testing reindex behavior, but it produced a poor admin-console
+was useful for testing reindex behavior, but it produced a poor manager
 fixture because the manual unit referenced a dialogue id that did not exist in
 the DialogueRecord archive.
 
@@ -76,7 +76,7 @@ The script verifies this invariant before exiting:
 
 ```text
 missing_dialogue_refs=0
-ready_for_admin=true
+ready_for_manager=true
 ```
 
 ## 4. Read Simulation

@@ -5,7 +5,7 @@ const breadcrumbEl = document.getElementById("breadcrumb");
 const pageTitleEl = document.getElementById("pageTitle");
 const refreshButton = document.getElementById("refresh");
 
-const API_BASE = "/admin/api";
+const API_BASE = "/manager/api";
 
 let statsCache = null;
 let unitFilters = {
@@ -791,10 +791,10 @@ async function renderSystem() {
     </section>
 
     <section class="section">
-      <div><h3>Configuration Summary</h3><p class="section-subtitle">Manager uses the existing server process and admin API.</p></div>
+      <div><h3>Configuration Summary</h3><p class="section-subtitle">Manager uses the existing server process and control API.</p></div>
       <dl class="fact-grid">
         ${fact("Manager route", "/manager")}
-        ${fact("API route", "/admin/api")}
+        ${fact("API route", "/manager/api")}
         ${fact("Authentication", "not enabled for local manager")}
         ${fact("Raw dialogue", "audit surface only")}
       </dl>

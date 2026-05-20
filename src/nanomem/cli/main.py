@@ -6,8 +6,8 @@ import json
 import sys
 from typing import TextIO
 
-from nanomem.admin import (
-    NanoMemAdminService,
+from nanomem.control import (
+    NanoMemControlService,
     OperationLogRetentionPolicy,
     RetentionPolicy,
 )
@@ -30,48 +30,48 @@ def main(argv: list[str] | None = None, *, stdout: TextIO | None = None) -> int:
     config = load_config(args.config) if getattr(args, "config", None) else None
     store = _store_from_args(args, config)
     try:
-        admin = NanoMemAdminService(
+        control = NanoMemControlService(
             store=store,
             index=index_from_config(config) if config is not None else None,
         )
         if args.command == "stats":
-            return _stats(admin, json_output=args.json, stdout=output)
+            return _stats(control, json_output=args.json, stdout=output)
         if args.command == "list":
-            return _list(admin, args=args, stdout=output)
+            return _list(control, args=args, stdout=output)
         if args.command == "logs":
-            return _logs(admin, args=args, stdout=output)
+            return _logs(control, args=args, stdout=output)
         if args.command == "migrations":
-            return _migrations(admin, json_output=args.json, stdout=output)
+            return _migrations(control, json_output=args.json, stdout=output)
         if args.command == "integrity-check":
-            return _integrity_check(admin, json_output=args.json, stdout=output)
+            return _integrity_check(control, json_output=args.json, stdout=output)
         if args.command == "backup":
-            return _backup(admin, args=args, stdout=output)
+            return _backup(control, args=args, stdout=output)
         if args.command == "export":
-            return _export(admin, args=args, stdout=output)
+            return _export(control, args=args, stdout=output)
         if args.command == "maintenance-plan":
             return _maintenance_plan(
-                _maintenance_service(admin, config),
+                _maintenance_service(control, config),
                 json_output=args.json,
                 stdout=output,
             )
         if args.command == "maintenance-run":
             return _maintenance_run(
-                _maintenance_service(admin, config),
+                _maintenance_service(control, config),
                 args=args,
                 stdout=output,
             )
         if args.command == "reindex":
-            return _reindex(admin, json_output=args.json, stdout=output)
+            return _reindex(control, json_output=args.json, stdout=output)
         if args.command == "retention-preview":
-            return _retention_preview(admin, args=args, stdout=output)
+            return _retention_preview(control, args=args, stdout=output)
         if args.command == "retention-apply":
-            return _retention_apply(admin, args=args, stdout=output)
+            return _retention_apply(control, args=args, stdout=output)
         if args.command == "log-retention-preview":
-            return _log_retention_preview(admin, args=args, stdout=output)
+            return _log_retention_preview(control, args=args, stdout=output)
         if args.command == "log-retention-apply":
-            return _log_retention_apply(admin, args=args, stdout=output)
+            return _log_retention_apply(control, args=args, stdout=output)
         if args.command == "dashboard":
-            return _dashboard(admin, args=args, stdout=output)
+            return _dashboard(control, args=args, stdout=output)
     finally:
         store.close()
     parser.error(f"unknown command: {args.command}")
@@ -242,12 +242,12 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def _stats(
-    admin: NanoMemAdminService,
+    control: NanoMemControlService,
     *,
     json_output: bool,
     stdout: TextIO,
 ) -> int:
-    stats = admin.stats()
+    stats = control.stats()
     payload = asdict(stats)
     if json_output:
         _write_json(payload, stdout)
@@ -280,12 +280,12 @@ def _stats(
 
 
 def _migrations(
-    admin: NanoMemAdminService,
+    control: NanoMemControlService,
     *,
     json_output: bool,
     stdout: TextIO,
 ) -> int:
-    status = admin.schema_status()
+    status = control.schema_status()
     payload = asdict(status)
     if json_output:
         _write_json(payload, stdout)
@@ -313,12 +313,12 @@ def _migrations(
 
 
 def _integrity_check(
-    admin: NanoMemAdminService,
+    control: NanoMemControlService,
     *,
     json_output: bool,
     stdout: TextIO,
 ) -> int:
-    result = admin.integrity_check()
+    result = control.integrity_check()
     payload = asdict(result)
     if json_output:
         _write_json(payload, stdout)
@@ -331,13 +331,13 @@ def _integrity_check(
 
 
 def _backup(
-    admin: NanoMemAdminService,
+    control: NanoMemControlService,
     *,
     args: argparse.Namespace,
     stdout: TextIO,
 ) -> int:
     try:
-        result = admin.backup(args.output, overwrite=args.overwrite)
+        result = control.backup(args.output, overwrite=args.overwrite)
     except FileExistsError as exc:
         stdout.write(f"{exc}\n")
         return 2
@@ -353,13 +353,13 @@ def _backup(
 
 
 def _export(
-    admin: NanoMemAdminService,
+    control: NanoMemControlService,
     *,
     args: argparse.Namespace,
     stdout: TextIO,
 ) -> int:
     try:
-        result = admin.export_json(
+        result = control.export_json(
             args.output,
             include_operation_logs=not args.no_logs,
             overwrite=args.overwrite,
@@ -453,13 +453,13 @@ def _maintenance_run(
 
 
 def _list(
-    admin: NanoMemAdminService,
+    control: NanoMemControlService,
     *,
     args: argparse.Namespace,
     stdout: TextIO,
 ) -> int:
     scope = _scope_from_args(args)
-    units = admin.list_units(
+    units = control.list_units(
         scope=scope,
         time_range=TimeRange(start=args.start, end=args.end),
         limit=args.limit,
@@ -478,12 +478,12 @@ def _list(
 
 
 def _logs(
-    admin: NanoMemAdminService,
+    control: NanoMemControlService,
     *,
     args: argparse.Namespace,
     stdout: TextIO,
 ) -> int:
-    logs = admin.list_operation_logs(
+    logs = control.list_operation_logs(
         scope=_scope_from_args(args),
         operation_type=args.operation_type,
         limit=args.limit,
@@ -512,12 +512,12 @@ def _logs(
 
 
 def _reindex(
-    admin: NanoMemAdminService,
+    control: NanoMemControlService,
     *,
     json_output: bool,
     stdout: TextIO,
 ) -> int:
-    result = admin.reindex()
+    result = control.reindex()
     payload = asdict(result)
     if json_output:
         _write_json(payload, stdout)
@@ -530,13 +530,13 @@ def _reindex(
 
 
 def _retention_preview(
-    admin: NanoMemAdminService,
+    control: NanoMemControlService,
     *,
     args: argparse.Namespace,
     stdout: TextIO,
 ) -> int:
     policy = _retention_policy_from_args(args)
-    preview = admin.retention_preview(policy)
+    preview = control.retention_preview(policy)
     payload = asdict(preview)
     if args.json:
         _write_json(payload, stdout)
@@ -556,7 +556,7 @@ def _retention_preview(
 
 
 def _retention_apply(
-    admin: NanoMemAdminService,
+    control: NanoMemControlService,
     *,
     args: argparse.Namespace,
     stdout: TextIO,
@@ -565,7 +565,7 @@ def _retention_apply(
         stdout.write("Refusing to apply retention without --yes.\n")
         return 2
     policy = _retention_policy_from_args(args)
-    result = admin.retention_apply(policy)
+    result = control.retention_apply(policy)
     payload = asdict(result)
     if args.json:
         _write_json(payload, stdout)
@@ -579,13 +579,13 @@ def _retention_apply(
 
 
 def _log_retention_preview(
-    admin: NanoMemAdminService,
+    control: NanoMemControlService,
     *,
     args: argparse.Namespace,
     stdout: TextIO,
 ) -> int:
     policy = _log_retention_policy_from_args(args)
-    preview = admin.operation_log_retention_preview(policy)
+    preview = control.operation_log_retention_preview(policy)
     payload = asdict(preview)
     if args.json:
         _write_json(payload, stdout)
@@ -606,7 +606,7 @@ def _log_retention_preview(
 
 
 def _log_retention_apply(
-    admin: NanoMemAdminService,
+    control: NanoMemControlService,
     *,
     args: argparse.Namespace,
     stdout: TextIO,
@@ -615,7 +615,7 @@ def _log_retention_apply(
         stdout.write("Refusing to apply operation log retention without --yes.\n")
         return 2
     policy = _log_retention_policy_from_args(args)
-    result = admin.operation_log_retention_apply(policy)
+    result = control.operation_log_retention_apply(policy)
     payload = asdict(result)
     if args.json:
         _write_json(payload, stdout)
@@ -628,14 +628,14 @@ def _log_retention_apply(
 
 
 def _dashboard(
-    admin: NanoMemAdminService,
+    control: NanoMemControlService,
     *,
     args: argparse.Namespace,
     stdout: TextIO,
 ) -> int:
     if args.watch:
         run_dashboard_watch(
-            admin,
+            control,
             stdout=stdout,
             limit=args.limit,
             retention_before=args.retention_before,
@@ -645,7 +645,7 @@ def _dashboard(
         )
         return 0
     snapshot = build_dashboard(
-        admin,
+        control,
         limit=args.limit,
         retention_before=args.retention_before,
     )
@@ -720,13 +720,13 @@ def _store_from_args(
 
 
 def _maintenance_service(
-    admin: NanoMemAdminService,
+    control: NanoMemControlService,
     config: NanoMemConfig | None,
 ) -> NanoMemMaintenanceService:
     if config is None:
         raise SystemExit("--config is required")
     return NanoMemMaintenanceService(
-        admin=admin,
+        control=control,
         config=config.maintenance,
     )
 

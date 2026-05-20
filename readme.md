@@ -89,7 +89,9 @@ src/nanomem/
   server/             # HTTP API
   mcp/                # MCP stdio 服务
   cli/                # 管理命令
-  admin/maintenance/  # 统计、迁移、备份、导出、保留策略
+  control/            # 统计、迁移、备份、导出、保留策略
+  maintenance/        # 维护计划和自动化执行
+  manager/            # 本地网页管理台静态资源
 docs/                 # 产品与架构文档
 tests/                # pytest 回归测试
 .github/workflows/    # CI
@@ -156,9 +158,9 @@ http://127.0.0.1:8765/manager
 ```
 
 该页面是 control-plane，用于观察 MemoryUnit、DialogueRecord、operation logs、
-retrieval preview 和 index health；不要把这些 admin endpoints 暴露成 MCP 或
-agent-facing tools。`/admin` 仍保留为兼容别名，JSON control-plane API 位于
-`/admin/api/*`。
+retrieval preview 和 index health；不要把这些 manager/control endpoints 暴露成 MCP
+或 agent-facing tools。`/admin` 仍保留为兼容别名，JSON control-plane API 位于
+`/manager/api/*`。
 
 ## HTTP API 示例
 

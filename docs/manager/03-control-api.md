@@ -1,16 +1,16 @@
-# Admin API
+# Control API
 
 Status: draft
 
-`/admin/api/*` is a control-plane API. It should observe, diagnose, and maintain
+`/manager/api/*` is a control-plane API. It should observe, diagnose, and maintain
 the memory store without redefining capture/read behavior.
 
 ## Architecture
 
 ```text
-/admin/api/*
+/manager/api/*
   -> thin HTTP routing and serialization
-  -> NanoMemAdminService for admin use cases
+  -> NanoMemControlService for control-plane use cases
   -> Store / Index / NanoMemService.read()
 ```
 
@@ -20,11 +20,11 @@ They should not duplicate store, ranking, rendering, or redaction logic.
 ## Observation Endpoints
 
 ```text
-GET /admin/api/stats
-GET /admin/api/schema
-GET /admin/api/integrity
-GET /admin/api/index-health
-GET /admin/api/operation-logs
+GET /manager/api/stats
+GET /manager/api/schema
+GET /manager/api/integrity
+GET /manager/api/index-health
+GET /manager/api/operation-logs
 ```
 
 Observation endpoints are read-only. They should support selectors and
@@ -33,11 +33,11 @@ pagination for large stores.
 ## Memory And Evidence Endpoints
 
 ```text
-GET /admin/api/memory-units
-GET /admin/api/memory-units/{unit_id}
-GET /admin/api/memory-units/{unit_id}/source
-GET /admin/api/dialogues/{dialogue_id}
-GET /admin/api/dialogues/{dialogue_id}/produced-units
+GET /manager/api/memory-units
+GET /manager/api/memory-units/{unit_id}
+GET /manager/api/memory-units/{unit_id}/source
+GET /manager/api/dialogues/{dialogue_id}
+GET /manager/api/dialogues/{dialogue_id}/produced-units
 ```
 
 Memory list endpoints return canonical `MemoryUnit` fields. Detail endpoints may
@@ -56,12 +56,12 @@ Each source chunk should include:
 ## Diagnosis Endpoints
 
 ```text
-POST /admin/api/retrieval-preview
-POST /admin/api/reindex
+POST /manager/api/retrieval-preview
+POST /manager/api/reindex
 ```
 
 `retrieval-preview` must call `NanoMemService.read()` so the result matches
-agent runtime behavior. It should mark logs as admin previews or allow preview
+agent runtime behavior. It should mark logs as manager previews or allow preview
 logging to be disabled.
 
 `reindex` rebuilds derived index state from the authoritative store. If partial
@@ -71,12 +71,12 @@ was fully rebuilt or incrementally updated.
 ## Maintenance Endpoints
 
 ```text
-POST /admin/api/backup
-POST /admin/api/export
-POST /admin/api/retention/preview
-POST /admin/api/retention/apply
-POST /admin/api/redactions/preview
-POST /admin/api/redactions/apply
+POST /manager/api/backup
+POST /manager/api/export
+POST /manager/api/retention/preview
+POST /manager/api/retention/apply
+POST /manager/api/redactions/preview
+POST /manager/api/redactions/apply
 ```
 
 Every destructive or privacy-sensitive operation needs:

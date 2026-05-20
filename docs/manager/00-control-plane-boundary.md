@@ -4,7 +4,7 @@ Status: draft
 
 ## Purpose
 
-The admin console is a control plane for NanoMem memory stores. It helps a
+NanoMem Manager is a control plane for NanoMem memory stores. It helps a
 human answer:
 
 - What durable memories exist for an owner and namespace?
@@ -18,7 +18,7 @@ client or a general document browser.
 
 ## Non-Goals
 
-The admin console must not become:
+The manager must not become:
 
 - an agent runtime interface;
 - a replacement for `/v1/capture` or `/v1/read`;
@@ -49,14 +49,14 @@ agent -> /v1/capture -> store + index
 agent -> /v1/read    -> read pipeline -> rendered memory context
 ```
 
-The admin path is:
+The manager path is:
 
 ```text
-human -> /admin -> /admin/api/* -> AdminService / Store / Index / ReadPipeline
+human -> /manager -> /manager/api/* -> NanoMemControlService / Store / Index / ReadPipeline
 ```
 
-`retrieval-preview` is the only admin feature that should call the live
-`ReadPipeline`, because its job is to simulate runtime recall. Other admin
+`retrieval-preview` is the only manager feature that should call the live
+`ReadPipeline`, because its job is to simulate runtime recall. Other manager
 queries should read authoritative records from the store and format audit
 payloads without changing runtime semantics.
 

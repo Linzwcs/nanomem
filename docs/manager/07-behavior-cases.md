@@ -2,7 +2,7 @@
 
 Status: draft
 
-These cases define expected admin-console behavior. Core memory behavior remains
+These cases define expected manager behavior. Core memory behavior remains
 covered by `docs/nanomem/11-behavior-cases.md`.
 
 ## Memory List
@@ -55,7 +55,7 @@ operation requires permission and reason, then writes an audit log.
 ## Export
 
 Given an export request, MemoryUnit-only export excludes raw dialogue. Raw
-DialogueRecord export requires explicit admin mode and writes a manifest with
+DialogueRecord export requires explicit operator mode and writes a manifest with
 schema version, counts, checksum, and timestamp.
 
 ## Permission Failure

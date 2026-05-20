@@ -54,7 +54,7 @@ def main() -> None:
     print(f"unit_count={len(units)}")
     print(f"dialogue_count={len({ref.dialogue_id for unit in units for ref in unit.dialogue_refs})}")
     print("missing_dialogue_refs=0")
-    print("ready_for_admin=true")
+    print("ready_for_manager=true")
 
 
 def capture_requests() -> tuple[CaptureRequest, ...]:

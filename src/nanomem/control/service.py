@@ -130,7 +130,7 @@ class IntegrityCheckResult:
     messages: tuple[str, ...]
 
 
-class NanoMemAdminService:
+class NanoMemControlService:
     """Control-plane operations for operators, CLI, and future TUI."""
 
     def __init__(
@@ -412,3 +412,7 @@ def _index_metadata(index: MemoryUnitIndex) -> dict[str, Any]:
     if lexical is not None:
         payload["lexical"] = _index_metadata(lexical)
     return payload
+
+
+# Backward-compatible public name. New code should use NanoMemControlService.
+NanoMemAdminService = NanoMemControlService

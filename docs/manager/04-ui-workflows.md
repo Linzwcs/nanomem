@@ -2,7 +2,7 @@
 
 Status: draft
 
-The admin UI should make memory state explainable without turning dialogue into
+The manager UI should make memory state explainable without turning dialogue into
 the main product surface.
 
 ## Memory Review
@@ -70,7 +70,7 @@ Every page should have explicit states for:
 - redacted dialogue;
 - stale or empty index;
 - permission denied;
-- failed admin operation.
+- failed control operation.
 
 These states are part of the product because operators need to distinguish
 normal absence from data integrity problems.

@@ -598,15 +598,15 @@ Jobs:
 Maintenance must not silently merge units or synthesize canonical user
 profiles.
 
-## 14. Admin And CLI Layer
+## 14. Control And CLI Layer
 
-Admin operations are control-plane operations for operators and future TUI
+Control operations are operator-facing operations for CLI, manager, and future TUI
 views. They are not part of the agent-facing memory API.
 
-Initial admin service:
+Initial control service:
 
 ```python
-class NanoMemAdminService:
+class NanoMemControlService:
     def stats(self) -> DatabaseStats:
         ...
 
@@ -648,7 +648,7 @@ class NanoMemAdminService:
         ...
 ```
 
-The CLI and future TUI should call `NanoMemAdminService`. They should not issue
+The CLI and future TUI should call `NanoMemControlService`. They should not issue
 ad hoc SQL queries or mutate store/index internals directly.
 
 Initial CLI commands:
@@ -672,9 +672,9 @@ python -m nanomem.cli dashboard --db path/to/nanomem.sqlite3
 python -m nanomem.cli dashboard --db path/to/nanomem.sqlite3 --watch --interval 2
 ```
 
-TUI starts as a dependency-free read-only terminal dashboard over the same admin
+TUI starts as a dependency-free read-only terminal dashboard over the same control
 service. It can later grow into an interactive curses/textual interface without
-changing the admin service contract.
+changing the control service contract.
 
 - overview stats;
 - user/tenant counts;
@@ -1007,7 +1007,7 @@ src/nanomem/index/base.py
 src/nanomem/index/lexical.py
 src/nanomem/ranking/ranker.py
 src/nanomem/render/context.py
-src/nanomem/admin/service.py
+src/nanomem/control/service.py
 src/nanomem/cli/main.py
 src/nanomem/tui/dashboard.py
 src/nanomem/server/app.py

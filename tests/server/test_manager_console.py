@@ -8,12 +8,12 @@ from nanomem.contracts import (
     DialogueMessage,
     MemoryScope,
 )
-from nanomem.server.admin import handle_admin_get, handle_admin_post
+from nanomem.server.manager import handle_manager_get, handle_manager_post
 from nanomem.service.core import NanoMemService
 
 
-def test_admin_console_serves_html() -> None:
-    response = handle_admin_get(NanoMemService(), "/admin")
+def test_manager_console_serves_html() -> None:
+    response = handle_manager_get(NanoMemService(), "/admin")
 
     assert response is not None
     assert response.status.value == 200
@@ -22,33 +22,33 @@ def test_admin_console_serves_html() -> None:
     assert b'/manager/assets/styles.css' in response.body
     assert b'/manager/assets/app.js' in response.body
 
-    manager = handle_admin_get(NanoMemService(), "/manager")
+    manager = handle_manager_get(NanoMemService(), "/manager")
     assert manager is not None
     assert manager.status.value == 200
     assert b"NanoMem Manager" in manager.body
 
 
-def test_admin_console_serves_packaged_assets() -> None:
+def test_manager_console_serves_packaged_assets() -> None:
     service = NanoMemService()
 
-    css = handle_admin_get(service, "/manager/assets/styles.css")
+    css = handle_manager_get(service, "/manager/assets/styles.css")
     assert css is not None
     assert css.status.value == 200
     assert css.content_type == "text/css; charset=utf-8"
     assert b".detail-page" in css.body
 
-    js = handle_admin_get(service, "/manager/assets/app.js")
+    js = handle_manager_get(service, "/manager/assets/app.js")
     assert js is not None
     assert js.status.value == 200
     assert js.content_type == "text/javascript; charset=utf-8"
     assert b"renderMemoryUnitDetail" in js.body
 
-    missing = handle_admin_get(service, "/manager/assets/missing.js")
+    missing = handle_manager_get(service, "/manager/assets/missing.js")
     assert missing is not None
     assert missing.status.value == 404
 
 
-def test_admin_api_lists_stats_units_dialogue_and_logs() -> None:
+def test_manager_api_lists_stats_units_dialogue_and_logs() -> None:
     service = NanoMemService()
     capture = service.capture(
         CaptureRequest(
@@ -72,22 +72,25 @@ def test_admin_api_lists_stats_units_dialogue_and_logs() -> None:
         )
     )
 
-    stats = _json(handle_admin_get(service, "/admin/api/stats"))
+    stats = _json(handle_manager_get(service, "/manager/api/stats"))
     assert stats["unit_count"] == 1
     assert stats["index_backend"] == "dense_cosine_v1"
 
+    legacy_stats = _json(handle_manager_get(service, "/admin/api/stats"))
+    assert legacy_stats["unit_count"] == 1
+
     units = _json(
-        handle_admin_get(
+        handle_manager_get(
             service,
-            "/admin/api/memory-units?owner_id=user-1&namespace=personal",
+            "/manager/api/memory-units?owner_id=user-1&namespace=personal",
         )
     )
     assert units["count"] == 1
     unit_id = units["units"][0]["unit_id"]
     dialogue_id = capture.dialogue_id
 
-    unit = _json(handle_admin_get(service, f"/admin/api/memory-units/{unit_id}"))
-    assert unit["unit"]["text"] == "The user said they prefer concise Chinese answers."
+    unit = _json(handle_manager_get(service, f"/manager/api/memory-units/{unit_id}"))
+    assert unit["unit"]["text"] == "I prefer concise Chinese answers."
     assert unit["source_chunks"][0]["ref"]["message_range"] == [1, 2]
     assert unit["source_chunks"][0]["status"] == "ok"
     assert unit["source_chunks"][0]["range_label"] == "messages [1, 2)"
@@ -99,16 +102,16 @@ def test_admin_api_lists_stats_units_dialogue_and_logs() -> None:
     assert unit["source_chunks"][0]["dialogue_messages"][0]["in_ref_range"] is False
     assert unit["source_chunks"][0]["dialogue_messages"][1]["in_ref_range"] is True
 
-    dialogue = _json(handle_admin_get(service, f"/admin/api/dialogues/{dialogue_id}"))
+    dialogue = _json(handle_manager_get(service, f"/manager/api/dialogues/{dialogue_id}"))
     assert dialogue["dialogue"]["dialogue_id"] == dialogue_id
     assert len(dialogue["produced_units"]) == 1
 
-    logs = _json(handle_admin_get(service, "/admin/api/operation-logs?limit=10"))
+    logs = _json(handle_manager_get(service, "/manager/api/operation-logs?limit=10"))
     assert logs["count"] == 1
     assert logs["logs"][0]["operation_type"] == "capture"
 
 
-def test_admin_api_filters_memory_units_by_date_and_order() -> None:
+def test_manager_api_filters_memory_units_by_date_and_order() -> None:
     service = NanoMemService()
     for day, text in (
         ("2026-01-01", "I prefer concise Chinese answers."),
@@ -132,9 +135,9 @@ def test_admin_api_filters_memory_units_by_date_and_order() -> None:
         )
 
     filtered = _json(
-        handle_admin_get(
+        handle_manager_get(
             service,
-            "/admin/api/memory-units"
+            "/manager/api/memory-units"
             "?owner_id=user-1"
             "&start=2026-01-02T00:00:00%2B00:00"
             "&order=oldest_first",
@@ -144,12 +147,10 @@ def test_admin_api_filters_memory_units_by_date_and_order() -> None:
     assert filtered["selector"]["order"] == "oldest_first"
     assert filtered["selector"]["time_range"]["start"] == "2026-01-02T00:00:00+00:00"
     assert filtered["count"] == 1
-    assert filtered["units"][0]["text"] == (
-        "The user said they prefer fact-level memory units."
-    )
+    assert filtered["units"][0]["text"] == "I prefer fact-level memory units."
 
 
-def test_admin_api_retrieval_preview_and_reindex() -> None:
+def test_manager_api_retrieval_preview_and_reindex() -> None:
     service = NanoMemService()
     service.capture(
         CaptureRequest(
@@ -169,9 +170,9 @@ def test_admin_api_retrieval_preview_and_reindex() -> None:
     )
 
     preview = _json(
-        handle_admin_post(
+        handle_manager_post(
             service,
-            "/admin/api/retrieval-preview",
+            "/manager/api/retrieval-preview",
             {
                 "owner_id": "user-1",
                 "namespaces": None,
@@ -182,7 +183,7 @@ def test_admin_api_retrieval_preview_and_reindex() -> None:
     assert preview["context"]["unit_count"] == 1
     assert preview["stats"]["index_backend"] == "dense_cosine_v1"
 
-    reindex = _json(handle_admin_post(service, "/admin/api/reindex", {}))
+    reindex = _json(handle_manager_post(service, "/manager/api/reindex", {}))
     assert reindex["indexed_unit_count"] == 1
     assert reindex["index_backend"] == "dense_cosine_v1"
 
