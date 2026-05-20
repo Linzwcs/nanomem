@@ -12,6 +12,7 @@ from nanomem.contracts import (
     DialogueMessage,
     MemoryScope,
     MemoryUnitSelector,
+    OperationLogSelector,
 )
 from nanomem.integrations.hooks import HookConfig, run_capture, run_read
 from nanomem.server.app import NanoMemHTTPServer
@@ -51,7 +52,7 @@ def test_hook_read_injects_memory_context(tmp_path) -> None:
                     {
                         "session_id": "session-1",
                         "turn_id": "turn-1",
-                        "prompt": "Please answer in my preferred style.",
+                        "prompt": "Please follow my concise Chinese answer preference.",
                     }
                 )
             ),
@@ -103,6 +104,57 @@ def test_hook_capture_uses_spooled_prompt(tmp_path) -> None:
     assert code == 0
     assert json.loads(stdout.getvalue())["suppressOutput"] is True
     assert [unit.text for unit in units] == ["I prefer fact-level memory units."]
+
+
+def test_hook_capture_records_assistant_reply_when_available(tmp_path) -> None:
+    service = NanoMemService()
+    with _server(service) as base_url:
+        config = HookConfig(
+            host="codex",
+            base_url=base_url,
+            owner_id="user-1",
+            namespace="personal",
+            turn_dir=tmp_path,
+        )
+        run_read(
+            config,
+            stdin=StringIO(
+                json.dumps(
+                    {
+                        "session_id": "session-1",
+                        "turn_id": "turn-1",
+                        "prompt": "I prefer concise Chinese answers.",
+                    }
+                )
+            ),
+            stdout=StringIO(),
+            stderr=StringIO(),
+        )
+        code = run_capture(
+            config,
+            stdin=StringIO(
+                json.dumps(
+                    {
+                        "session_id": "session-1",
+                        "turn_id": "turn-1",
+                        "last_assistant_message": "OK",
+                    }
+                )
+            ),
+            stdout=StringIO(),
+            stderr=StringIO(),
+        )
+
+    logs = service.store.list_operation_logs(
+        OperationLogSelector(owner_id="user-1", operation_type="capture")
+    )
+    dialogue_id = logs[0].summary["dialogue_id"]
+    dialogue = service.store.get_dialogue(dialogue_id)
+    assert code == 0
+    assert dialogue is not None
+    assert [message.role for message in dialogue.messages] == ["user", "assistant"]
+    assert dialogue.messages[1].content == "OK"
+    assert dialogue.messages[1].speaker_id == "agent"
 
 
 def test_hook_debug_dir_records_raw_hook_payload(tmp_path) -> None:

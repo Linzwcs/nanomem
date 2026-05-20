@@ -33,7 +33,7 @@ class HookConfig:
     turn_dir: Path = Path(".nanomem/agent-turns")
     debug_dir: Path | None = None
     timeout: float = 5.0
-    capture_assistant: bool = False
+    capture_assistant: bool = True
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -67,7 +67,11 @@ def config_from_env(host: str, env: dict[str, str] | None = None) -> HookConfig:
         turn_dir=Path(values.get("NANOMEM_TURN_DIR", ".nanomem/agent-turns")),
         debug_dir=_optional_path(values.get("NANOMEM_HOOK_DEBUG_DIR")),
         timeout=float(values.get("NANOMEM_TIMEOUT", "5")),
-        capture_assistant=_bool_env(values, "NANOMEM_CAPTURE_ASSISTANT"),
+        capture_assistant=_bool_env(
+            values,
+            "NANOMEM_CAPTURE_ASSISTANT",
+            default=True,
+        ),
     )
 
 
@@ -349,8 +353,11 @@ def _int_env(values: dict[str, str], key: str, default: int) -> int:
     return int(value)
 
 
-def _bool_env(values: dict[str, str], key: str) -> bool:
-    return values.get(key, "").lower() in {"1", "true", "yes", "on"}
+def _bool_env(values: dict[str, str], key: str, *, default: bool = False) -> bool:
+    value = values.get(key)
+    if value is None or value == "":
+        return default
+    return value.lower() in {"1", "true", "yes", "on"}
 
 
 def _optional_path(value: str | None) -> Path | None:

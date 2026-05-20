@@ -3,6 +3,10 @@
 Status: draft
 Last checked: 2026-05-20
 
+For the concrete installation runbook, validation steps, and rationale for the
+current hook behavior, see
+[`codex-installation.md`](codex-installation.md).
+
 ## Platform Facts
 
 Codex supports MCP servers, hooks, and plugins. On the current local CLI,
@@ -120,6 +124,7 @@ NanoMem operation logs.
 A Codex plugin can package the MCP server and helper scripts:
 
 ```text
+.agents/plugins/marketplace.json
 plugins/nanomem-codex/
   .codex-plugin/plugin.json
   .mcp.json
@@ -150,6 +155,26 @@ export NANOMEM_NAMESPACE=personal
 
 If `NANOMEM_NAMESPACE` is unset or empty, the hook captures without a namespace
 and reads all namespaces.
+
+Local installation flow:
+
+```bash
+codex plugin marketplace add /path/to/nanomem
+```
+
+Then install `nanomem-codex` from the Codex `/plugins` UI, enable
+`plugin_hooks`, and trust the two NanoMem hooks in `/hooks`. Plugin install
+copies the plugin into Codex's plugin cache and writes:
+
+```toml
+[plugins."nanomem-codex@nanomem-local"]
+enabled = true
+```
+
+For `codex exec` smoke tests, ensure `nanomem-agent-hook` is on `PATH` and pass
+the same `NANOMEM_*` environment variables. By default the capture hook stores
+the final assistant reply when Codex provides it; set
+`NANOMEM_CAPTURE_ASSISTANT=0` to store only the user message.
 
 ## What Codex Should Read And Capture
 

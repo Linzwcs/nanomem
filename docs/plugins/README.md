@@ -22,6 +22,11 @@ admin path    -> CLI / control plane only
 This keeps storage reliable, avoids model-decided writes, and prevents
 maintenance operations from becoming ordinary agent tools.
 
+Plugin installation should be explicit and host-local. NanoMem should not
+silently install Codex or Claude Code adapters into a user's system-level agent
+environment; adapters become active only after the user registers, installs,
+enables, and trusts them for that host.
+
 ## Shared Adapter Contract
 
 Every plugin adapter should map host lifecycle events onto the same NanoMem
@@ -45,6 +50,8 @@ personal fact in visible dialogue; NanoMem then captures from the dialogue.
 ## Documents
 
 - `codex.md`: Codex plugin, hook, and MCP adaptation plan.
+- `codex-installation.md`: Codex plugin installation, runtime flow, validation,
+  and troubleshooting.
 - `claude-code.md`: Claude Code plugin and hook adaptation plan.
 
 ## Repo-Local Plugin Skeletons
