@@ -105,6 +105,39 @@ def test_hook_capture_uses_spooled_prompt(tmp_path) -> None:
     assert [unit.text for unit in units] == ["I prefer fact-level memory units."]
 
 
+def test_hook_debug_dir_records_raw_hook_payload(tmp_path) -> None:
+    stdout = StringIO()
+    code = run_read(
+        HookConfig(
+            host="codex",
+            base_url="http://127.0.0.1:1",
+            owner_id="user-1",
+            namespace="personal",
+            turn_dir=tmp_path / "turns",
+            debug_dir=tmp_path / "debug",
+        ),
+        stdin=StringIO(
+            json.dumps(
+                {
+                    "session_id": "session-1",
+                    "turn_id": "turn-1",
+                    "prompt": "Remember this debug shape.",
+                }
+            )
+        ),
+        stdout=stdout,
+        stderr=StringIO(),
+    )
+
+    debug_files = tuple((tmp_path / "debug").glob("*.json"))
+    debug_payload = json.loads(debug_files[0].read_text(encoding="utf-8"))
+    assert code == 0
+    assert len(debug_files) == 1
+    assert debug_payload["host"] == "codex"
+    assert debug_payload["action"] == "read"
+    assert debug_payload["payload"]["prompt"] == "Remember this debug shape."
+
+
 class _server:
     def __init__(self, service: NanoMemService) -> None:
         self.service = service

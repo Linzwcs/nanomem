@@ -759,3 +759,7 @@ def _csv(items: tuple[str, ...]) -> str:
     if not items:
         return "none"
     return ", ".join(items)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -192,6 +192,14 @@ export NANOMEM_NAMESPACE=personal
 如果不设置 `NANOMEM_NAMESPACE`，hook 会按默认策略读取所有 namespace，并以
 无 namespace 的 scope 写入。
 
+真实宿主联调时可以临时开启 hook payload 调试：
+
+```bash
+export NANOMEM_HOOK_DEBUG_DIR=.nanomem/hook-debug
+```
+
+该目录会保存 hook stdin JSON，便于确认 Codex / Claude Code 实际字段。正常使用时不要开启，避免长期保存用户 prompt 或 transcript metadata。
+
 自动 capture 由 hook 直接调用 `/v1/capture`，不要走 MCP；MCP 只保留
 `nanomem_read` 和显式的 `nanomem_capture`。
 

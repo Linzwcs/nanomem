@@ -21,3 +21,7 @@ def main(argv: list[str] | None = None) -> int:
     server = NanoMemMCPServer(service)
     run_stdio(server, input_stream=sys.stdin, output_stream=sys.stdout)
     return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

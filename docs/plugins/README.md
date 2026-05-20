@@ -76,6 +76,16 @@ export NANOMEM_NAMESPACE=personal
 If `NANOMEM_NAMESPACE` is unset or empty, the hook captures without a namespace
 and reads across all namespaces.
 
+For real host validation, set `NANOMEM_HOOK_DEBUG_DIR` temporarily:
+
+```bash
+export NANOMEM_HOOK_DEBUG_DIR=.nanomem/hook-debug
+```
+
+The hook will write raw stdin payloads there so the adapter can be adjusted to
+the host's actual event JSON. Keep this off during normal use because payloads
+may contain user prompts or transcript metadata.
+
 The plugin skeletons expose `/v1/read` and `/v1/capture` only. They do not
 expose manager/control endpoints, raw DialogueRecord browsing, backup, export,
 retention, or reindex operations.

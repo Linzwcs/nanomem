@@ -31,6 +31,7 @@ class HookConfig:
     context_budget_tokens: int = DEFAULT_CONTEXT_BUDGET_TOKENS
     recency_policy: str = "balanced"
     turn_dir: Path = Path(".nanomem/agent-turns")
+    debug_dir: Path | None = None
     timeout: float = 5.0
     capture_assistant: bool = False
 
@@ -64,6 +65,7 @@ def config_from_env(host: str, env: dict[str, str] | None = None) -> HookConfig:
         ),
         recency_policy=values.get("NANOMEM_RECENCY_POLICY", "balanced"),
         turn_dir=Path(values.get("NANOMEM_TURN_DIR", ".nanomem/agent-turns")),
+        debug_dir=_optional_path(values.get("NANOMEM_HOOK_DEBUG_DIR")),
         timeout=float(values.get("NANOMEM_TIMEOUT", "5")),
         capture_assistant=_bool_env(values, "NANOMEM_CAPTURE_ASSISTANT"),
     )
@@ -77,6 +79,7 @@ def run_read(
     stderr: TextIO = sys.stderr,
 ) -> int:
     payload = _read_payload(stdin, stderr)
+    _write_debug_payload(config, payload, action="read", stderr=stderr)
     prompt = _extract_user_prompt(payload)
     if not prompt:
         _write_json(stdout, _success_response())
@@ -113,6 +116,7 @@ def run_capture(
     stderr: TextIO = sys.stderr,
 ) -> int:
     payload = _read_payload(stdin, stderr)
+    _write_debug_payload(config, payload, action="capture", stderr=stderr)
     turn = _read_turn(config, payload)
     prompt = _extract_user_prompt(payload) or turn.get("prompt")
     if not prompt:
@@ -235,6 +239,39 @@ def _read_turn(config: HookConfig, payload: dict[str, Any]) -> dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
+def _write_debug_payload(
+    config: HookConfig,
+    payload: dict[str, Any],
+    *,
+    action: str,
+    stderr: TextIO,
+) -> None:
+    if config.debug_dir is None:
+        return
+    try:
+        config.debug_dir.mkdir(parents=True, exist_ok=True)
+        path = config.debug_dir / (
+            f"{now_utc_iso().replace(':', '').replace('+', 'Z')}-"
+            f"{config.host}-{action}-{_turn_key(payload)}.json"
+        )
+        path.write_text(
+            json.dumps(
+                {
+                    "host": config.host,
+                    "action": action,
+                    "captured_at": now_utc_iso(),
+                    "payload": payload,
+                },
+                ensure_ascii=False,
+                sort_keys=True,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+    except OSError as exc:
+        _log(stderr, f"failed to write hook debug payload: {exc}")
+
+
 def _turn_path(config: HookConfig, payload: dict[str, Any]) -> Path:
     return config.turn_dir / f"{config.host}-{_turn_key(payload)}.json"
 
@@ -314,6 +351,12 @@ def _int_env(values: dict[str, str], key: str, default: int) -> int:
 
 def _bool_env(values: dict[str, str], key: str) -> bool:
     return values.get(key, "").lower() in {"1", "true", "yes", "on"}
+
+
+def _optional_path(value: str | None) -> Path | None:
+    if value is None or value == "":
+        return None
+    return Path(value)
 
 
 if __name__ == "__main__":
