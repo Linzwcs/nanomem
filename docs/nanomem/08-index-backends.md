@@ -1,6 +1,6 @@
 # Index Backends
 
-Status: draft
+Status: active draft
 
 This document defines NanoMem's retrieval backend strategy.
 
@@ -33,6 +33,7 @@ Current local backends:
 - `dense`: default bounded embedding retrieval after owner/namespace filtering;
 - `lexical`: deterministic token fallback over MemoryUnit text;
 - `hybrid`: merge of lexical and dense scores.
+- `lancedb`: optional persistent local vector index backed by LanceDB.
 
 `dense` must use `index.dense_scan_limit` or equivalent to cap per-query
 similarity work. It is a baseline, not an ANN system.
@@ -47,6 +48,29 @@ Recommended layout:
 ```text
 SQLiteMemoryUnitStore = .nanomem/nanomem.db
 LanceDBMemoryUnitIndex = .nanomem/lancedb
+```
+
+Configuration:
+
+```yaml
+store:
+  backend: sqlite
+  path: .nanomem/nanomem.db
+
+index:
+  backend: lancedb
+  path: .nanomem/lancedb
+  table: memory_units
+  distance_type: cosine
+  embedding:
+    backend: hashing
+    dimensions: 128
+```
+
+Install with the optional dependency:
+
+```bash
+python -m pip install -e '.[lancedb]'
 ```
 
 The LanceDB table may duplicate only search-time fields:
@@ -68,6 +92,12 @@ The authoritative MemoryUnit remains in SQLite. LanceDB must be rebuildable from
 the fact store. Arbitrary `metadata` must not be indexed by default; only
 configured filter keys may be duplicated into backend-specific columns.
 
+The implemented adapter stores `unit_id`, scope fields, timestamps,
+`memory_type`, `retrieval_text`, `embedding_model`, `metadata_json`, and
+`vector`. It filters by owner, namespace, redaction state, and time range before
+returning candidate ids. The read pipeline still fetches canonical units from
+the store before ranking and rendering.
+
 ## 5. Postgres + pgvector
 
 Use Postgres + pgvector only when deployment requirements justify a managed
@@ -79,7 +109,7 @@ database:
 - audit controls;
 - metadata filtering in one operational database.
 
-Recommended split:
+Recommended future split:
 
 ```text
 PostgresMemoryStore = facts, dialogue records, logs

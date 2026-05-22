@@ -71,7 +71,8 @@ Known limits:
 
 - extraction quality is MVP-level unless an LLM extractor is configured;
 - dense index is in-memory and must be rebuilt after restart;
-- no persistent ANN backend is implemented yet;
+- LanceDB is available as an optional persistent local vector index, but still
+  needs broader runtime smoke coverage with real embedding providers;
 - render format is simple and not yet optimized for maximum facts per budget;
 - control-plane maintenance workflows are partly CLI/service-level and not fully exposed
   in Manager;
@@ -137,10 +138,16 @@ Exit criteria:
 Goal: keep SQLite as authoritative store while making retrieval practical for
 larger local stores.
 
+Current baseline:
+
+- `lancedb` backend is available behind `MemoryUnitIndex`;
+- the adapter duplicates only search-time fields and remains rebuildable from
+  SQLite;
+- default installs stay lightweight because LanceDB is optional.
+
 Work:
 
-- add a persistent local index backend behind `MemoryUnitIndex`;
-- prioritize LanceDB for local ANN;
+- add runtime smoke tests for LanceDB persistence and restart behavior;
 - keep dense in-memory and lexical indexes as test/dev baselines;
 - add index metadata, freshness checks, and safe rebuild behavior;
 - ensure redacted units are excluded from index rebuilds.
@@ -199,6 +206,8 @@ Goal: make the local management UI a reliable operator surface.
 
 Work:
 
+- introduce a React/Vite source tree while keeping `/manager` served by the
+  existing Python server;
 - add pagination and URL-persistent filters;
 - move evidence resolution out of `server/manager.py` into a control service module;
 - expose backup, export, integrity check, retention preview, and reindex history;

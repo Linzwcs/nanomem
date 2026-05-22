@@ -72,7 +72,7 @@ user-visible dialogue
 
 ## 当前状态
 
-本仓库处于早期实现阶段，当前包含 Python 源码、HTTP 服务、MCP 服务、CLI 管理命令、SQLite 存储、词法/向量/混合索引、启发式与 LLM 记忆提取器。项目已提供 `pyproject.toml`、pytest 回归测试和 GitHub Actions CI；依赖锁文件仍未引入。
+本仓库处于早期实现阶段，当前包含 Python 源码、HTTP 服务、MCP 服务、CLI 管理命令、SQLite 存储、词法/向量/混合索引、可选 LanceDB 向量索引、启发式与 LLM 记忆提取器。项目已提供 `pyproject.toml`、pytest 回归测试和 GitHub Actions CI；依赖锁文件仍未引入。
 
 ## 目录结构
 
@@ -83,7 +83,7 @@ src/nanomem/
   factory.py          # 根据配置组装 store、index、extractor、service
   service/            # capture/read 编排逻辑
   store/              # SQLite 持久化
-  index/              # lexical、dense、hybrid 索引；向量库 adapter 可后续扩展
+  index/              # lexical、dense、hybrid、lancedb 索引 adapter
   embeddings/         # hashing 与 OpenAI-compatible embedding
   extraction/         # heuristic 与 LLM 提取器
   server/             # HTTP API
@@ -92,6 +92,7 @@ src/nanomem/
   control/            # 统计、迁移、备份、导出、保留策略
   maintenance/        # 维护计划和自动化执行
   manager/            # 本地网页管理台静态资源
+manager-ui/           # React/Vite 管理台源码草案
 docs/                 # 产品与架构文档
 tests/                # pytest 回归测试
 .github/workflows/    # CI
@@ -134,7 +135,7 @@ nanomem-mcp --help
 ```text
 .nanomem/
   nanomem.db      # SQLite fact store
-  lancedb/        # future local ANN index
+  lancedb/        # optional local LanceDB vector index
   backups/        # optional backups
   exports/        # optional exports
 ```
@@ -297,7 +298,7 @@ to CLI or another control-plane surface.
 当前工厂支持以下配置值：
 
 - `store.backend`: `sqlite`
-- `index.backend`: `lexical`、`dense`、`hybrid`
+- `index.backend`: `lexical`、`dense`、`hybrid`、`lancedb`
 - `index.embedding.backend`: `hashing`、`openai_compatible`
 - `extraction.backend`: `heuristic`、`llm`
 
@@ -309,10 +310,28 @@ SQLite 是当前默认和已实现的事实存储，默认路径是 `.nanomem/na
 MemoryUnit 重建当前内存索引，保证重启后仍能读取已有记忆。
 当前 `dense` 是轻量本地索引：先按 owner/namespace scope 缩小候选，再按最近时间
 顺序做有上限的 similarity scan，默认 `index.dense_scan_limit = 2000`。如果
-以后需要低延迟 ANN 语义检索，不在 NanoMem 内部实现 ANN；应通过新的
-`MemoryUnitIndex` adapter 接入数据库。优先考虑两条路线：LanceDB 作为本地
-embedded vector index，或 Postgres + pgvector 作为事实存储和向量索引合一的
-托管后端。不要把 SQLite 扩展成 JSON vector 扫描引擎。
+需要持久化本地向量索引时，可以安装 LanceDB extra：
+
+```bash
+python -m pip install -e ".[lancedb]"
+```
+
+并配置：
+
+```json
+{
+  "index": {
+    "backend": "lancedb",
+    "path": ".nanomem/lancedb",
+    "table": "memory_units",
+    "distance_type": "cosine"
+  }
+}
+```
+
+LanceDB 只保存检索字段和 embedding，SQLite 仍然是 MemoryUnit 与 DialogueRecord
+的 source of truth。更重的 Postgres + pgvector 适合之后的托管/多用户部署，
+不要把 SQLite 扩展成 JSON vector 扫描引擎。
 
 ## 开发说明
 

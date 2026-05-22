@@ -2,14 +2,14 @@
 
 Status: draft
 
-The current local manager is a build-free browser app packaged inside
-`nanomem.manager`. The existing NanoMem HTTP server mounts it without adding a
-login layer.
+The current local manager is a React/Vite browser app compiled into
+`nanomem.manager.assets`. The existing NanoMem HTTP server mounts those static
+assets without adding a login layer.
 
 ```text
 GET /manager              -> packaged manager index.html
-GET /manager/assets/*.css -> packaged manager stylesheet
-GET /manager/assets/*.js  -> packaged manager browser module
+GET /manager/assets/*.css -> compiled manager stylesheet
+GET /manager/assets/*.js  -> compiled manager browser module
 ```
 
 `/admin` remains a compatibility alias. The browser uses hash routes, so
@@ -65,6 +65,6 @@ stored memory units.
 
 ## Development Constraint
 
-Keep the MVP build-free until a frontend framework becomes necessary. If a
-framework is introduced later, compiled assets should still be served under the
-same `/manager/assets/*` path.
+The React source lives in `manager-ui/`. Compiled assets must still be served
+under the same `/manager/assets/*` path so the Python server and local
+deployment model do not change.

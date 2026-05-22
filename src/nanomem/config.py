@@ -29,6 +29,9 @@ class EmbeddingConfig:
 @dataclass(frozen=True)
 class IndexConfig:
     backend: str = "dense"
+    path: str = f"{DEFAULT_DATA_DIR}/lancedb"
+    table: str = "memory_units"
+    distance_type: str = "cosine"
     embedding: EmbeddingConfig = field(default_factory=EmbeddingConfig)
     lexical_weight: float = 0.5
     dense_weight: float = 0.5
@@ -131,6 +134,9 @@ def config_from_mapping(payload: dict[str, Any]) -> NanoMemConfig:
         ),
         index=IndexConfig(
             backend=str(index_payload.get("backend", "dense")),
+            path=str(index_payload.get("path", _default_index_path(data_dir))),
+            table=str(index_payload.get("table", "memory_units")),
+            distance_type=str(index_payload.get("distance_type", "cosine")),
             embedding=EmbeddingConfig(
                 backend=str(embedding_payload.get("backend", "hashing")),
                 model=_optional_str(embedding_payload.get("model")),
@@ -312,6 +318,10 @@ def _mapping(value: Any) -> dict[str, Any]:
 
 def _default_sqlite_path(data_dir: str) -> str:
     return str(Path(data_dir) / DEFAULT_SQLITE_FILENAME)
+
+
+def _default_index_path(data_dir: str) -> str:
+    return str(Path(data_dir) / "lancedb")
 
 
 def _optional_str(value: Any) -> str | None:

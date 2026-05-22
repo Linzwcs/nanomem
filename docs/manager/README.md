@@ -20,6 +20,7 @@ stored, whether retrieval works, and which maintenance operations are needed.
 - `05-operations-and-privacy.md`: reindex, export, retention, redaction, and raw dialogue safety.
 - `06-optimization-roadmap.md`: scaling, UX, and phased implementation.
 - `07-behavior-cases.md`: concrete manager acceptance cases.
+- `08-react-frontend-architecture.md`: proposed React/Vite frontend boundary.
 
 ## Relationship To Core Specs
 

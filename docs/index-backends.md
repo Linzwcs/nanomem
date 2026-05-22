@@ -1,6 +1,6 @@
 # Index Backends
 
-Status: draft
+Status: active draft
 
 NanoMem keeps retrieval simple in the core package. It does not implement ANN
 algorithms internally. ANN-capable retrieval should be delegated to database
@@ -36,7 +36,8 @@ Current backends:
 
 - `dense`: default bounded embedding retrieval after owner/namespace filtering;
 - `lexical`: deterministic token-overlap fallback and debugging baseline;
-- `hybrid`: merge of lexical and dense scores.
+- `hybrid`: merge of lexical and dense scores;
+- `lancedb`: optional persistent local vector index.
 
 The local dense index uses `index.dense_scan_limit` to cap per-query similarity
 work. It is useful for smoke runs, tests, and small local memories. It is not an
@@ -52,6 +53,22 @@ Recommended split:
 ```text
 SQLiteMemoryUnitStore = .nanomem/nanomem.db
 LanceDBMemoryUnitIndex = .nanomem/lancedb
+```
+
+Configuration:
+
+```yaml
+index:
+  backend: lancedb
+  path: .nanomem/lancedb
+  table: memory_units
+  distance_type: cosine
+```
+
+Install with:
+
+```bash
+python -m pip install -e '.[lancedb]'
 ```
 
 Use a single NanoMem data directory so local state can be backed up, moved, or

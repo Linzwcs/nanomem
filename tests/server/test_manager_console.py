@@ -35,13 +35,15 @@ def test_manager_console_serves_packaged_assets() -> None:
     assert css is not None
     assert css.status.value == 200
     assert css.content_type == "text/css; charset=utf-8"
-    assert b".detail-page" in css.body
+    assert b".app-shell" in css.body
+    assert b".data-table" in css.body
 
     js = handle_manager_get(service, "/manager/assets/app.js")
     assert js is not None
     assert js.status.value == 200
     assert js.content_type == "text/javascript; charset=utf-8"
-    assert b"renderMemoryUnitDetail" in js.body
+    assert b"Memory Units" in js.body
+    assert b"Retrieval Preview" in js.body
 
     missing = handle_manager_get(service, "/manager/assets/missing.js")
     assert missing is not None

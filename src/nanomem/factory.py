@@ -10,6 +10,7 @@ from nanomem.extraction.llm import LLMMemoryUnitExtractor
 from nanomem.index.base import MemoryUnitIndex
 from nanomem.index.dense import DenseMemoryUnitIndex
 from nanomem.index.hybrid import HybridMemoryUnitIndex
+from nanomem.index.lancedb import LanceDBMemoryUnitIndex
 from nanomem.index.lexical import LexicalMemoryUnitIndex
 from nanomem.service.core import NanoMemService
 from nanomem.store.base import MemoryStore
@@ -81,6 +82,14 @@ def index_from_config(config: NanoMemConfig) -> MemoryUnitIndex:
         return DenseMemoryUnitIndex(
             embedding_model=embedding_from_config(config),
             scan_limit=config.index.dense_scan_limit,
+        )
+    if backend == "lancedb":
+        return LanceDBMemoryUnitIndex(
+            config.index.path,
+            table_name=config.index.table,
+            embedding_model=embedding_from_config(config),
+            dimensions=config.index.embedding.dimensions,
+            distance_type=config.index.distance_type,
         )
     if backend == "hybrid":
         return HybridMemoryUnitIndex(

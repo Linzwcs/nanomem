@@ -26,6 +26,7 @@ dependencies = []
 
 [project.optional-dependencies]
 openai = ["openai>=1.0"]
+lancedb = ["lancedb"]
 dev = ["pytest>=8.0"]
 
 [project.urls]
