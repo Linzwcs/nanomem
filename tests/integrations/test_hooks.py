@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from io import StringIO
 import json
+from pathlib import Path
 import threading
 
 import pytest
 
+from nanomem.config import config_from_mapping
 from nanomem.contracts import (
     CaptureDialogue,
     CaptureRequest,
@@ -13,10 +15,16 @@ from nanomem.contracts import (
     MemoryScope,
     MemoryUnitSelector,
     OperationLogSelector,
+    ReadRequest,
 )
+from nanomem.factory import service_from_config
 from nanomem.integrations.hooks import HookConfig, run_capture, run_read
+from nanomem.sdk import NanoMemClient
 from nanomem.server.app import NanoMemHTTPServer
 from nanomem.service.core import NanoMemService
+
+
+FIXTURE_DIR = Path(__file__).resolve().parents[1] / "fixtures" / "codex_hooks"
 
 
 def test_hook_read_injects_memory_context(tmp_path) -> None:
@@ -190,6 +198,128 @@ def test_hook_debug_dir_records_raw_hook_payload(tmp_path) -> None:
     assert debug_payload["payload"]["prompt"] == "Remember this debug shape."
 
 
+def test_codex_sidecar_hook_flow_persists_across_restart(tmp_path) -> None:
+    owner_id = "codex-user"
+    namespace = "personal"
+    config = config_from_mapping(
+        {
+            "store": {
+                "backend": "sqlite",
+                "path": str(tmp_path / "nanomem.db"),
+            },
+            "index": {
+                "backend": "dense",
+            },
+            "extraction": {
+                "backend": "heuristic",
+            },
+        }
+    )
+    read_payload = _fixture("user_prompt_submit.json")
+    stop_payload = _fixture("stop.json")
+
+    service = service_from_config(config)
+    try:
+        with _server(service) as base_url:
+            client = NanoMemClient(base_url)
+            client.capture(
+                CaptureRequest(
+                    scope=MemoryScope(owner_id=owner_id, namespace=namespace),
+                    dialogue=CaptureDialogue(
+                        occurred_at="2026-05-24T09:00:00+08:00",
+                        messages=(
+                            DialogueMessage(
+                                role="user",
+                                speaker_id=owner_id,
+                                content=(
+                                    "I prefer concise Chinese answers for coding "
+                                    "discussions."
+                                ),
+                                timestamp="2026-05-24T09:00:00+08:00",
+                            ),
+                        ),
+                        metadata={"host": "seed"},
+                    ),
+                    capture_time="2026-05-24T09:00:01+08:00",
+                )
+            )
+
+            hook_config = HookConfig(
+                host="codex",
+                base_url=base_url,
+                owner_id=owner_id,
+                namespace=namespace,
+                turn_dir=tmp_path / "turns",
+                debug_dir=tmp_path / "debug",
+            )
+            read_stdout = StringIO()
+            read_code = run_read(
+                hook_config,
+                stdin=_stdin(read_payload),
+                stdout=read_stdout,
+                stderr=StringIO(),
+            )
+            read_output = json.loads(read_stdout.getvalue())
+
+            capture_stdout = StringIO()
+            capture_code = run_capture(
+                hook_config,
+                stdin=_stdin(stop_payload),
+                stdout=capture_stdout,
+                stderr=StringIO(),
+            )
+
+        logs = service.store.list_operation_logs(
+            OperationLogSelector(
+                owner_id=owner_id,
+                namespaces=(namespace,),
+                operation_type="capture",
+            )
+        )
+        captured_dialogue = service.store.get_dialogue(logs[0].summary["dialogue_id"])
+    finally:
+        service.store.close()  # type: ignore[attr-defined]
+
+    assert read_code == 0
+    assert capture_code == 0
+    assert "hookSpecificOutput" in read_output
+    assert "concise Chinese answers" in read_output["hookSpecificOutput"][
+        "additionalContext"
+    ]
+    assert json.loads(capture_stdout.getvalue())["continue"] is True
+    assert captured_dialogue is not None
+    assert [message.role for message in captured_dialogue.messages] == [
+        "user",
+        "assistant",
+    ]
+    assert captured_dialogue.messages[0].content == read_payload["prompt"]
+    assert captured_dialogue.messages[1].content == stop_payload[
+        "last_assistant_message"
+    ]
+    assert len(tuple((tmp_path / "debug").glob("*-codex-read-*.json"))) == 1
+    assert len(tuple((tmp_path / "debug").glob("*-codex-capture-*.json"))) == 1
+
+    restarted = service_from_config(config)
+    try:
+        with _server(restarted) as base_url:
+            read = NanoMemClient(base_url).read(
+                ReadRequest(
+                    owner_id=owner_id,
+                    namespaces=(namespace,),
+                    query="sidecar flow concise Chinese answer preference",
+                    query_time="2026-05-24T09:05:00+08:00",
+                    max_units=5,
+                )
+            )
+    finally:
+        restarted.store.close()  # type: ignore[attr-defined]
+
+    texts = [ranked.unit.text for ranked in read.ranked_units]
+    assert read.context.unit_count >= 1
+    assert any("sidecar flow" in text for text in texts)
+    assert any("concise Chinese answers" in text for text in texts)
+
+
 class _server:
     def __init__(self, service: NanoMemService) -> None:
         self.service = service
@@ -212,3 +342,11 @@ class _server:
         self.server.server_close()
         if self.thread is not None:
             self.thread.join(timeout=2)
+
+
+def _fixture(name: str) -> dict:
+    return json.loads((FIXTURE_DIR / name).read_text(encoding="utf-8"))
+
+
+def _stdin(payload: dict) -> StringIO:
+    return StringIO(json.dumps(payload))

@@ -1,0 +1,7 @@
+{
+  "hook_event_name": "UserPromptSubmit",
+  "session_id": "codex-session-1",
+  "turn_id": "codex-turn-1",
+  "cwd": "/tmp/nanomem-codex-demo",
+  "prompt": "Please use my concise Chinese answer preference and explain the sidecar flow."
+}

@@ -156,7 +156,22 @@ The read-hook test query was made explicit because that test should verify hook
 transport and context injection, not broad semantic generalization from a local
 hashing embedding.
 
-## Smoke Test
+## Sidecar Smoke Test
+
+Use the sidecar smoke test before installing the Codex plugin. It simulates the
+Codex hook JSON contract, calls the same hook runner, writes through the local
+HTTP sidecar, restarts the sidecar, and verifies that SQLite-persisted memory is
+still searchable.
+
+```bash
+bash scripts/smoke_codex_sidecar.sh
+```
+
+This script does not require the Codex CLI. It validates NanoMem's side of the
+integration: `UserPromptSubmit -> read`, `Stop -> capture`, SQLite persistence,
+startup reindex, and rendered read context.
+
+## Codex Plugin Smoke Test
 
 Use the repo smoke script when the plugin is already installed and trusted in
 Codex:

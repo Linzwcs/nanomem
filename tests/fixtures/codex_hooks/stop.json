@@ -1,0 +1,7 @@
+{
+  "hook_event_name": "Stop",
+  "session_id": "codex-session-1",
+  "turn_id": "codex-turn-1",
+  "cwd": "/tmp/nanomem-codex-demo",
+  "last_assistant_message": "OK. I will explain the sidecar flow first and keep the answer concise."
+}
