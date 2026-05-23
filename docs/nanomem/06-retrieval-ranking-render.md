@@ -66,7 +66,6 @@ Recommended ranking signals:
 - namespace match;
 - time-range match;
 - memory type;
-- confidence;
 - metadata hints supplied by the host;
 - conflict usefulness when older and newer facts are both relevant.
 
@@ -99,10 +98,10 @@ Host-configured labels:
 ```text
 Relevant personal memory:
 - [2026-01-05, namespace=work] The user prefers design discussion before implementation.
-- [2026-05-19, confidence=0.82] The user decided NanoMem should not store raw workspace documents.
+- [2026-05-19, namespace=personal] The user decided NanoMem should not store raw workspace documents.
 ```
 
-The renderer may include dialogue refs, namespace, confidence, tags, project
+The renderer may include dialogue refs, namespace, tags, project
 hints, or memory type, but time is the only mandatory bracket field.
 
 ## 7. Render Rules

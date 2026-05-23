@@ -61,10 +61,6 @@ export function MemoryUnitsPage() {
         cell: ({ row }) => <Badge tone="muted">{row.original.scope.namespace}</Badge>,
       },
       {
-        header: "Confidence",
-        cell: ({ row }) => row.original.confidence?.toFixed(2) ?? "none",
-      },
-      {
         header: "Time",
         cell: ({ row }) => formatTime(row.original.timestamp),
       },

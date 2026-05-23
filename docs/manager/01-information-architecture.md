@@ -39,12 +39,11 @@ Filters:
 - namespace list;
 - memory type;
 - timestamp range;
-- confidence bucket;
 - redaction state;
 - evidence status.
 
-Rows should show timestamp, scope, type, confidence, redaction state, short
-memory text, and dialogue ref count.
+Rows should show timestamp, scope, type, redaction state, short memory text, and
+dialogue ref count.
 
 ## Dialogue Evidence
 

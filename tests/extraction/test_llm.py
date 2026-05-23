@@ -69,7 +69,6 @@ def test_llm_extractor_parses_units_with_dialogue_ref_and_metadata() -> None:
                     "text": "The user said they prefer concise Chinese answers.",
                     "message_range": [1, 2],
                     "memory_type": "preference",
-                    "confidence": "0.86",
                     "evidence_role": "user",
                     "source_speaker_id": "user-1",
                 }
@@ -80,7 +79,6 @@ def test_llm_extractor_parses_units_with_dialogue_ref_and_metadata() -> None:
     extractor = LLMMemoryUnitExtractor(
         model="test-model",
         completion_client=client,
-        confidence_threshold=0.5,
     )
 
     result = extractor.extract(_request())
@@ -93,7 +91,6 @@ def test_llm_extractor_parses_units_with_dialogue_ref_and_metadata() -> None:
     assert unit.available_at == "2026-01-01T00:00:30+00:00"
     assert unit.dialogue_refs[0].dialogue_id == "dlg-1"
     assert unit.dialogue_refs[0].message_range == (1, 2)
-    assert unit.confidence == 0.86
     assert unit.metadata["extractor"] == "llm_v1"
     assert unit.metadata["model"] == "test-model"
     assert unit.metadata["evidence_role"] == "user"
@@ -124,32 +121,6 @@ def test_llm_extractor_sends_only_extractable_visible_messages() -> None:
     ]
 
 
-def test_llm_extractor_low_confidence_becomes_skip() -> None:
-    extractor = LLMMemoryUnitExtractor(
-        model="test-model",
-        completion_client=FakeCompletionClient(
-            {
-                "units": [
-                    {
-                        "text": "The user likes detailed plans.",
-                        "message_range": [1, 2],
-                        "memory_type": "preference",
-                        "confidence": 0.3,
-                    }
-                ],
-                "skipped": [],
-            }
-        ),
-        confidence_threshold=0.5,
-    )
-
-    result = extractor.extract(_request())
-
-    assert result.units == ()
-    assert result.skipped[0].reason == "low_confidence"
-    assert result.skipped[0].message_range == (1, 2)
-
-
 def test_llm_extractor_invalid_payload_uses_fallback() -> None:
     extractor = LLMMemoryUnitExtractor(
         model="test-model",
@@ -160,7 +131,6 @@ def test_llm_extractor_invalid_payload_uses_fallback() -> None:
                         "text": "The user prefers concise answers.",
                         "message_range": [99, 100],
                         "memory_type": "preference",
-                        "confidence": 0.9,
                     }
                 ],
                 "skipped": [],
@@ -186,7 +156,6 @@ def test_llm_extractor_rejects_ranges_that_cross_hidden_messages() -> None:
                         "text": "The user prefers concise answers.",
                         "message_range": [0, 3],
                         "memory_type": "preference",
-                        "confidence": 0.9,
                     }
                 ],
                 "skipped": [],
@@ -242,7 +211,6 @@ def test_llm_extractor_chunks_role_aware_exchanges() -> None:
                         "text": "The user prefers concise answers.",
                         "message_range": [0, 1],
                         "memory_type": "preference",
-                        "confidence": 0.9,
                     }
                 ],
                 "skipped": [],
@@ -253,7 +221,6 @@ def test_llm_extractor_chunks_role_aware_exchanges() -> None:
                         "text": "The user wants source citations.",
                         "message_range": [2, 3],
                         "memory_type": "preference",
-                        "confidence": 0.8,
                     }
                 ],
                 "skipped": [],
@@ -339,7 +306,6 @@ def test_llm_extractor_rejects_ranges_outside_current_chunk() -> None:
                             "text": "The user wants source citations.",
                             "message_range": [2, 3],
                             "memory_type": "preference",
-                            "confidence": 0.9,
                         }
                     ],
                     "skipped": [],

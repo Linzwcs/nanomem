@@ -129,7 +129,6 @@ class HeuristicMemoryUnitExtractor:
                     timestamp=message.timestamp,
                     available_at=request.dialogue.captured_at,
                     dialogue_refs=(dialogue_ref,),
-                    confidence=_confidence(sentence, message),
                     metadata={
                         "extractor": self.name,
                         "source_role": message.role,
@@ -177,17 +176,3 @@ def _memory_type(sentence: str, message: DialogueMessage) -> str:
     if "prefer" in text or "喜欢" in sentence or "偏好" in sentence:
         return "preference"
     return "background"
-
-
-def _confidence(sentence: str, message: DialogueMessage) -> float:
-    if message.metadata.get("memory_type") in {"correction", "preference"}:
-        return 0.9
-    if is_assistant_reply(message):
-        return 0.75
-    if re.search(
-        r"\b(i prefer|i like|i usually|remember|please)\b",
-        sentence,
-        flags=re.IGNORECASE,
-    ):
-        return 0.8
-    return 0.65

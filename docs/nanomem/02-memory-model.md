@@ -266,7 +266,6 @@ MemoryUnit:
   timestamp: str
   available_at: str
   dialogue_refs: tuple[DialogueRef, ...]
-  confidence: float | None
   retention_until: str | None
   redacted_at: str | None
   metadata: dict
@@ -322,7 +321,7 @@ First-version `memory_type` values:
 | `relationship` | Relationship with person, tool, organization, or agent |
 | `user_event` | Important event or decision involving the user |
 | `agent_interaction_event` | User-visible agent action that affects future collaboration |
-| `uncertain` | Potentially useful but low-confidence fact |
+| `uncertain` | Potentially useful fact whose type is not yet specific |
 
 These labels are retrieval and policy aids. They should not become separate
 storage systems. Custom memory types are out of scope for the first version;
@@ -382,7 +381,7 @@ PackedContext:
 Rendering should maximize useful fact coverage under the post-render token
 budget while preserving time evidence. Rendered text must include the
 MemoryUnit timestamp for every item. Other display labels, such as dialogue
-refs, namespace, confidence, tags, and project hints, are renderer-configurable
+refs, namespace, memory type, tags, and project hints, are renderer-configurable
 metadata.
 
 ## 14. Operation Logs

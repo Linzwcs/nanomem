@@ -18,7 +18,6 @@ class ExpectedMemoryUnit:
     message_range: tuple[int, int] | None = None
     text: str | None = None
     text_contains: tuple[str, ...] = ()
-    min_confidence: float | None = None
 
 
 @dataclass(frozen=True)
@@ -161,11 +160,6 @@ def _unit_matches(expected: ExpectedMemoryUnit, unit: MemoryUnit) -> bool:
     lowered = unit.text.lower()
     if any(fragment.lower() not in lowered for fragment in expected.text_contains):
         return False
-    if (
-        expected.min_confidence is not None
-        and (unit.confidence is None or unit.confidence < expected.min_confidence)
-    ):
-        return False
     return True
 
 
@@ -240,7 +234,6 @@ def _expected_unit_payload(expected: ExpectedMemoryUnit) -> dict[str, Any]:
         "message_range": expected.message_range,
         "text": expected.text,
         "text_contains": expected.text_contains,
-        "min_confidence": expected.min_confidence,
     }
 
 
@@ -263,7 +256,6 @@ def _unit_payload(unit: MemoryUnit) -> dict[str, Any]:
             }
             for ref in unit.dialogue_refs
         ],
-        "confidence": unit.confidence,
     }
 
 

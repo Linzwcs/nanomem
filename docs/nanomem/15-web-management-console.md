@@ -94,7 +94,6 @@ Filters:
 - namespace list;
 - memory type;
 - time range;
-- confidence range;
 - redaction state;
 - free-text search preview.
 
@@ -104,7 +103,6 @@ Columns:
 - owner;
 - namespace;
 - memory type;
-- confidence;
 - short text;
 - dialogue ref count;
 - retention/redaction state.
@@ -389,7 +387,7 @@ Explicitly defer:
 - Show dense tables, not marketing cards.
 - Keep timestamps visible on every memory row.
 - Make owner and namespace filters persistent.
-- Use badges for memory type, confidence, redaction, and retention status.
+- Use badges for memory type, namespace, redaction, and retention status.
 - Require explicit user action before showing raw DialogueRecord content.
 - Highlight skipped capture reasons.
 - Show when rendered context differs from ranked hits due to token budget.
@@ -412,7 +410,6 @@ Default behavior:
 - Should the console support approving candidate extractions before storage?
 - Should retention apply delete DialogueRecords independently from MemoryUnits?
 - Should Retrieval Lab support side-by-side backend comparison?
-- Should low-confidence MemoryUnits enter a review queue?
 
 ## 12. Implementation Plan
 

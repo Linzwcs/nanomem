@@ -111,7 +111,6 @@ index explicitly.
 ```yaml
 extraction:
   backend: heuristic
-  confidence_threshold: 0.5
 ```
 
 LLM extraction should keep provider secrets out of config:
@@ -122,7 +121,6 @@ extraction:
   model: gpt-example
   api_key_env: NANOMEM_LLM_API_KEY
   fallback_backend: heuristic
-  confidence_threshold: 0.5
   strict_schema: true
   max_messages_per_chunk: 24
   max_chars_per_chunk: 12000
@@ -133,8 +131,7 @@ not part of `CaptureDialogue` or the public capture request.
 
 `fallback_backend` may be `heuristic` or `null`. `strict_schema: true` means an
 invalid LLM payload fails the whole model result and falls back; `false` skips
-invalid units individually. `confidence_threshold` filters uncertain candidate
-facts before storage.
+invalid units individually.
 
 `max_messages_per_chunk` and `max_chars_per_chunk` are extractor-internal
 windowing limits. They are deliberately not part of capture requests.
@@ -149,7 +146,6 @@ read:
   renderer:
     show_namespace: false
     show_dialogue_ref: false
-    show_confidence: false
     show_memory_type: false
 ```
 

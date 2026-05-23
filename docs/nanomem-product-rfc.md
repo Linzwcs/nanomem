@@ -291,7 +291,6 @@ The returned context should preserve enough evidence for the agent to reason:
 - unit text;
 - event timestamp and availability time;
 - dialogue reference;
-- extraction confidence where available;
 - scope metadata when relevant.
 
 ## 5. Data Model
@@ -307,7 +306,6 @@ MemoryUnit:
   timestamp: str
   available_at: str
   dialogue_refs: tuple[DialogueRef, ...]
-  confidence: float | None
   retention_until: str | None
   redacted_at: str | None
   metadata: dict
@@ -360,7 +358,7 @@ Read then retrieves fact units rather than raw chunks. The final renderer is an
 explicit optimization stage: under the same post-render token budget, it should
 include as many high-value facts as possible while preserving the timestamp for
 each rendered fact. Other displayed labels, such as dialogue refs, namespace,
-confidence, tags, and project hints, are renderer-configurable metadata. This
+memory type, tags, and project hints, are renderer-configurable metadata. This
 means render quality is measured not only by readability, but also by fact
 density after formatting overhead.
 
@@ -371,7 +369,6 @@ Recommended ranking signals:
 - scope match;
 - evidence quality;
 - unit type;
-- extraction confidence;
 - historical-intent detection.
 
 Rendering must preserve timeline cues. For example:

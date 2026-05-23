@@ -111,7 +111,7 @@ Current baseline:
   non-extractable gaps;
 - LLM prompt/schema requires third-person evidence phrasing; heuristic remains
   a simple smoke-test extractor;
-- strict payload validation covers `message_range`, `memory_type`, confidence,
+- strict payload validation covers `message_range`, `memory_type`,
   non-extractable evidence ranges, and out-of-chunk ranges;
 - deterministic fake-LLM fixtures cover preference, correction, user event,
   agent interaction, workspace skip, tool-log skip, and multi-turn attribution;

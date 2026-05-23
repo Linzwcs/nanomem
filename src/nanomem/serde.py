@@ -157,7 +157,6 @@ def capture_skip_from_json(value: Any) -> CaptureSkip:
 
 def memory_unit_from_json(value: Any) -> MemoryUnit:
     payload = _mapping(value)
-    confidence = payload.get("confidence", payload.get("extraction_confidence"))
     return MemoryUnit(
         unit_id=str(payload.get("unit_id", "")),
         scope=memory_scope_from_json(payload.get("scope")),
@@ -169,7 +168,6 @@ def memory_unit_from_json(value: Any) -> MemoryUnit:
             dialogue_ref_from_json(item)
             for item in _list(payload.get("dialogue_refs"))
         ),
-        confidence=_optional_float(confidence),
         retention_until=_optional_str(payload.get("retention_until")),
         redacted_at=_optional_str(payload.get("redacted_at")),
         metadata=_mapping(payload.get("metadata")),
@@ -271,9 +269,3 @@ def _optional_recency_policy(value: Any) -> str | None:
     if text not in {"recent", "balanced", "historical"}:
         raise ValueError(f"Unsupported recency_policy: {text}")
     return text
-
-
-def _optional_float(value: Any) -> float | None:
-    if value is None:
-        return None
-    return float(value)

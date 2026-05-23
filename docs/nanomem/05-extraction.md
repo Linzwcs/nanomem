@@ -137,8 +137,7 @@ A candidate becomes a MemoryUnit only if it satisfies all gates:
 - `memory_type` is in the first-version allowed set;
 - timestamp assigned;
 - at least one `DialogueRef`;
-- no redacted dialogue evidence is referenced;
-- confidence above configured threshold, if a threshold is enabled.
+- no redacted dialogue evidence is referenced.
 
 Quality gates should return explicit skip reasons for inspection and tuning.
 
@@ -154,12 +153,11 @@ deterministic:
 - reject ranges that cross hidden, tool, empty, or otherwise skipped messages;
 - reject ranges outside the current chunk;
 - classify `memory_type` using the first-version allowed set;
-- treat low confidence as a skip when `confidence_threshold` is configured;
 - use fallback extraction when provider calls or strict schema validation fail.
 
 Capture revalidates extractor output before storage. This keeps custom
-extractors from writing units with the wrong scope, invalid confidence, missing
-timestamps, or unsafe dialogue references.
+extractors from writing units with the wrong scope, missing timestamps, or
+unsafe dialogue references.
 
 ## 10. Deduplication
 
@@ -184,7 +182,7 @@ providers into capture. The eval harness compares an extractor against
 deterministic cases:
 
 - input `ExtractionRequest` dialogue;
-- expected unit type, evidence range, text fragments, and minimum confidence;
+- expected unit type, evidence range, and text fragments;
 - expected skip reason and optional message range;
 - per-case pass/fail details and aggregate pass count.
 

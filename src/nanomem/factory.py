@@ -146,7 +146,6 @@ def extractor_from_config(config: NanoMemConfig) -> MemoryUnitExtractor:
             api_key_env=extraction.api_key_env,
             base_url=extraction.base_url,
             fallback=fallback,
-            confidence_threshold=extraction.confidence_threshold,
             strict_schema=extraction.strict_schema,
             max_messages_per_chunk=extraction.max_messages_per_chunk,
             max_chars_per_chunk=extraction.max_chars_per_chunk,

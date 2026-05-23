@@ -40,7 +40,6 @@ def test_sqlite_store_round_trips_dialogue_units_and_logs(tmp_path) -> None:
             timestamp="2026-01-05T00:00:00+00:00",
             available_at="2026-01-05T00:00:01+00:00",
             dialogue_refs=(DialogueRef(dialogue_id="dlg-1", message_range=(0, 1)),),
-            confidence=0.9,
         )
         store.append_units((unit,))
 

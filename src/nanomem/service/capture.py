@@ -157,8 +157,6 @@ def _validate_extraction_units(
             raise ValueError(f"MemoryUnit {unit.unit_id} timestamp is required")
         if not unit.available_at:
             raise ValueError(f"MemoryUnit {unit.unit_id} available_at is required")
-        if unit.confidence is not None and not (0.0 <= unit.confidence <= 1.0):
-            raise ValueError(f"MemoryUnit {unit.unit_id} confidence is out of range")
         for ref in unit.dialogue_refs:
             if ref.dialogue_id != dialogue.dialogue_id:
                 raise ValueError(

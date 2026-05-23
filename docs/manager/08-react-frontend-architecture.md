@@ -65,8 +65,8 @@ Manager is a control plane, not a landing page. Favor dense, quiet layouts:
 - full-width app shell with left navigation and top filter bar;
 - table-first MemoryUnit review with stable row heights;
 - detail pages that show fact, metadata, and source dialogue as log entries;
-- badges for namespace, memory type, confidence, evidence, and lifecycle state;
-- URL-backed date range, namespace, type, owner, confidence, and text filters;
+- badges for namespace, memory type, evidence, and lifecycle state;
+- URL-backed date range, namespace, type, owner, and text filters;
 - paginated lists that preserve filter state when navigating to detail pages;
 - no decorative hero sections, nested cards, or dashboard-heavy graphics.
 

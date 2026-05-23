@@ -136,7 +136,7 @@ Rendering should:
 
 - preserve third-person MemoryUnit text;
 - include the MemoryUnit timestamp for every rendered item;
-- allow all non-time labels, such as dialogue ref, namespace, confidence, tags,
+- allow all non-time labels, such as dialogue ref, namespace, memory type, tags,
   or project hints, to be configured by the host renderer;
 - avoid turning memories into direct instructions;
 - keep conflicting facts visible when relevant;

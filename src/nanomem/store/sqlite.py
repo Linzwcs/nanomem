@@ -48,9 +48,9 @@ class SQLiteMemoryUnitStore:
                     """
                     INSERT OR IGNORE INTO memory_units (
                       unit_id, owner_id, namespace, text, memory_type,
-                      timestamp, available_at, dialogue_refs_json, confidence,
+                      timestamp, available_at, dialogue_refs_json,
                       retention_until, redacted_at, metadata_json
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     tuple(_unit_row(unit) for unit in units),
                 )
@@ -436,7 +436,6 @@ def _apply_schema(connection: sqlite3.Connection) -> None:
           timestamp TEXT NOT NULL,
           available_at TEXT NOT NULL,
           dialogue_refs_json TEXT NOT NULL,
-          confidence REAL,
           retention_until TEXT,
           redacted_at TEXT,
           metadata_json TEXT NOT NULL
@@ -614,7 +613,6 @@ def _unit_row(unit: MemoryUnit) -> tuple[Any, ...]:
         unit.timestamp,
         unit.available_at,
         _json([asdict(ref) for ref in unit.dialogue_refs]),
-        unit.confidence,
         unit.retention_until,
         unit.redacted_at,
         _json(unit.metadata),
@@ -633,7 +631,6 @@ def _row_to_unit(row: sqlite3.Row) -> MemoryUnit:
         timestamp=row["timestamp"],
         available_at=row["available_at"],
         dialogue_refs=_dialogue_refs_from_json(row["dialogue_refs_json"]),
-        confidence=row["confidence"],
         retention_until=row["retention_until"],
         redacted_at=row["redacted_at"],
         metadata=_load_json(row["metadata_json"]),

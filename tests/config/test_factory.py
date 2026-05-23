@@ -26,14 +26,13 @@ def test_llm_extraction_config_requires_model() -> None:
         extractor_from_config(config)
 
 
-def test_llm_extraction_config_builds_extractor_with_threshold() -> None:
+def test_llm_extraction_config_builds_extractor_options() -> None:
     config = config_from_mapping(
         {
             "extraction": {
                 "backend": "llm",
                 "model": "test-model",
                 "fallback_backend": "heuristic",
-                "confidence_threshold": 0.5,
                 "strict_schema": False,
                 "max_messages_per_chunk": 6,
                 "max_chars_per_chunk": 2000,
@@ -44,7 +43,6 @@ def test_llm_extraction_config_builds_extractor_with_threshold() -> None:
     extractor = extractor_from_config(config)
 
     assert isinstance(extractor, LLMMemoryUnitExtractor)
-    assert extractor.confidence_threshold == 0.5
     assert extractor.strict_schema is False
     assert extractor.max_messages_per_chunk == 6
     assert extractor.max_chars_per_chunk == 2000

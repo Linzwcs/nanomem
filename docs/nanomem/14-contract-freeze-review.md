@@ -98,7 +98,6 @@ MemoryUnit(
   timestamp: str,
   available_at: str,
   dialogue_refs: tuple[DialogueRef, ...] = (),
-  confidence: float | None = None,
   retention_until: str | None = None,
   redacted_at: str | None = None,
   metadata: dict = {},
@@ -161,8 +160,7 @@ Current JSON parsing intentionally keeps these compatibility aliases:
 - legacy capture `events` are mapped into `CaptureDialogue.messages`;
 - legacy event `speaker` is mapped into `DialogueMessage.speaker_id`;
 - legacy `event_type` values `preference` and `correction` are copied into
-  message metadata as `memory_type`;
-- `extraction_confidence` is accepted as `MemoryUnit.confidence`.
+  message metadata as `memory_type`.
 
 These aliases are input compatibility only. New examples should use the frozen
 field names.

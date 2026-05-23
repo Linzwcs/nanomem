@@ -37,13 +37,11 @@ def test_llm_behavior_fixtures_cover_core_user_memory_types() -> None:
                         "text": "The user said they prefer concise Chinese answers.",
                         "message_range": [0, 1],
                         "memory_type": "preference",
-                        "confidence": 0.91,
                     },
                     {
                         "text": "The user corrected the agent not to auto-commit code unless asked.",
                         "message_range": [1, 2],
                         "memory_type": "correction",
-                        "confidence": 0.89,
                     }
                 ],
                 "skipped": [],
@@ -54,7 +52,6 @@ def test_llm_behavior_fixtures_cover_core_user_memory_types() -> None:
                         "text": "The user said they joined the NanoMem design review on May 6, 2026.",
                         "message_range": [2, 3],
                         "memory_type": "user_event",
-                        "confidence": 0.83,
                     }
                 ],
                 "skipped": [],
@@ -98,7 +95,6 @@ def test_llm_behavior_fixture_captures_agent_interaction_event() -> None:
                         "text": "The agent said it will remember that the user prefers concise Chinese answers in future sessions.",
                         "message_range": [0, 1],
                         "memory_type": "agent_interaction_event",
-                        "confidence": 0.78,
                     }
                 ],
                 "skipped": [],
@@ -133,7 +129,6 @@ def test_llm_behavior_fixture_preserves_multi_turn_attribution() -> None:
                         "text": "The user corrected the agent not to auto-commit code.",
                         "message_range": [0, 2],
                         "memory_type": "correction",
-                        "confidence": 0.88,
                     }
                 ],
                 "skipped": [],

@@ -207,7 +207,6 @@ MemoryUnit:
   timestamp: str
   available_at: str
   dialogue_refs: tuple[DialogueRef, ...]
-  confidence: float | None
   retention_until: str | None
   redacted_at: str | None
   metadata: dict
@@ -216,8 +215,8 @@ MemoryUnit:
 Responsibility:
 
 - store one durable, third-person personal fact;
-- carry owner, resolved namespace, time, availability, lifecycle state,
-  confidence, and evidence refs;
+- carry owner, resolved namespace, time, availability, lifecycle state, and
+  evidence refs;
 - provide the authoritative content for indexing, ranking, and rendering.
 
 Why it is separate:
@@ -395,7 +394,7 @@ The extractor must not:
   content.
 
 Extractor output should make operator decisions visible: accepted facts,
-message ranges, confidence, and skip reasons are all part of capture quality.
+message ranges, and skip reasons are all part of capture quality.
 
 ## 7. Ranking And Rendering
 
@@ -413,8 +412,8 @@ class ContextRenderer:
 
 Ranker responsibility:
 
-- combine retrieval scores, recency, namespace, time range, memory type,
-  confidence, and host metadata hints;
+- combine retrieval scores, recency, namespace, time range, memory type, and
+  host metadata hints;
 - keep relevant conflicts visible when useful;
 - produce ordered `RankedMemoryUnit` evidence with score traces.
 
@@ -441,7 +440,7 @@ They must not:
 - omit time from any rendered MemoryUnit.
 
 All labels other than time are renderer-configurable, including namespace,
-confidence, memory type, tags, project hints, and dialogue refs.
+memory type, tags, project hints, and dialogue refs.
 
 ## 8. Transport Adapters
 

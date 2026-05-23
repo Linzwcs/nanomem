@@ -68,7 +68,7 @@ user-visible dialogue
   -> render facts under a post-render token budget
 ```
 
-`chunk = n` 是抽取阶段的窗口参数，不是存储模型。持久化对象仍然是 `MemoryUnit`。读取阶段检索 fact，而不是检索原始对话块；render 阶段在相同 post-render token budget 下尽量放入更多相关 fact。每条渲染记忆必须保留时间；其他展示字段如 dialogue ref、namespace、confidence、tags 或项目提示由宿主自定义。
+`chunk = n` 是抽取阶段的窗口参数，不是存储模型。持久化对象仍然是 `MemoryUnit`。读取阶段检索 fact，而不是检索原始对话块；render 阶段在相同 post-render token budget 下尽量放入更多相关 fact。每条渲染记忆必须保留时间；其他展示字段如 dialogue ref、namespace、memory type、tags 或项目提示由宿主自定义。
 
 ## 当前状态
 

@@ -58,7 +58,6 @@ Response:
   "units": [
     {
       "available_at": "2026-05-19T10:00:05+08:00",
-      "confidence": 0.8,
       "dialogue_refs": [
         {
           "dialogue_id": "dlg_98ebcec8fbe85900faafcbf4",
@@ -86,7 +85,6 @@ Response:
     },
     {
       "available_at": "2026-05-19T10:00:05+08:00",
-      "confidence": 0.8,
       "dialogue_refs": [
         {
           "dialogue_id": "dlg_98ebcec8fbe85900faafcbf4",
@@ -195,7 +193,6 @@ Response:
   "units": [
     {
       "available_at": "2026-05-19T10:05:05+08:00",
-      "confidence": 0.8,
       "dialogue_refs": [
         {
           "dialogue_id": "dlg_ef68f73b7519337295141013",
@@ -248,7 +245,7 @@ Response:
 ```json
 {
   "context": {
-    "text": "Relevant memory units:\n- [2026-05-19T10:00:00+08:00, namespace=personal, confidence=0.80] Please remember that I usually want architecture first, then code.",
+    "text": "Relevant memory units:\n- [2026-05-19T10:00:00+08:00, namespace=personal] Please remember that I usually want architecture first, then code.",
     "token_count": 42,
     "unit_count": 1
   },
@@ -268,7 +265,6 @@ Response:
       },
       "unit": {
         "available_at": "2026-05-19T10:00:05+08:00",
-        "confidence": 0.8,
         "dialogue_refs": [
           {
             "dialogue_id": "dlg_98ebcec8fbe85900faafcbf4",

@@ -223,6 +223,5 @@ Skip reasons should be explicit enough for operators to distinguish:
 - workspace-local content;
 - duplicate dialogue;
 - hidden/tool event;
-- low confidence;
 - empty extraction;
 - invalid namespace.

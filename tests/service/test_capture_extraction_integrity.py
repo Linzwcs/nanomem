@@ -34,7 +34,6 @@ class BadDialogueRefExtractor:
                             message_range=(4, 5),
                         ),
                     ),
-                    confidence=0.8,
                 ),
             )
         )
@@ -59,7 +58,6 @@ class HiddenDialogueRefExtractor:
                             message_range=(0, 2),
                         ),
                     ),
-                    confidence=0.8,
                 ),
             )
         )

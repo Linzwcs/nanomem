@@ -59,7 +59,6 @@ class MemoryUnit:
     timestamp: str
     available_at: str
     dialogue_refs: tuple[DialogueRef, ...] = ()
-    confidence: float | None = None
     retention_until: str | None = None
     redacted_at: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)

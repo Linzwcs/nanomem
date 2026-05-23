@@ -21,7 +21,6 @@ export type MemoryUnit = {
   timestamp: string;
   available_at: string;
   dialogue_refs: DialogueRef[];
-  confidence: number | null;
   retention_until: string | null;
   redacted_at: string | null;
   metadata: Record<string, unknown>;

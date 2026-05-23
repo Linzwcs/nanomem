@@ -49,8 +49,6 @@ def _render_line(item: RankedMemoryUnit) -> str:
     labels = [timestamp]
     if unit.scope.namespace:
         labels.append(f"namespace={unit.scope.namespace}")
-    if unit.confidence is not None:
-        labels.append(f"confidence={unit.confidence:.2f}")
     return f"- [{', '.join(labels)}] {unit.text}"
 
 

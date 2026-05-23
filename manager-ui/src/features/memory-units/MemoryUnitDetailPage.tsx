@@ -41,8 +41,6 @@ export function MemoryUnitDetailPage({ unitId }: { unitId: string }) {
           <dd>{unit.scope.namespace ?? "none"}</dd>
           <dt>Timestamp</dt>
           <dd>{formatTime(unit.timestamp)}</dd>
-          <dt>Confidence</dt>
-          <dd>{unit.confidence?.toFixed(2) ?? "none"}</dd>
         </dl>
       </section>
 

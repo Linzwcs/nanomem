@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 import json
 import os
-from math import isfinite
 from typing import Any, Protocol
 
 from nanomem.contracts import (
@@ -52,8 +51,7 @@ Return JSON only:
     {
       "text": "...",
       "message_range": [0, 1],
-      "memory_type": "preference|correction|habit|background|relationship|user_event|agent_interaction_event|uncertain",
-      "confidence": 0.0
+      "memory_type": "preference|correction|habit|background|relationship|user_event|agent_interaction_event|uncertain"
     }
   ],
   "skipped": [
@@ -138,7 +136,6 @@ class LLMMemoryUnitExtractor:
         base_url: str | None = None,
         fallback: MemoryUnitExtractor | None = None,
         completion_client: LLMCompletionClient | None = None,
-        confidence_threshold: float | None = None,
         strict_schema: bool = True,
         max_messages_per_chunk: int | None = DEFAULT_MAX_MESSAGES_PER_CHUNK,
         max_chars_per_chunk: int | None = None,
@@ -148,7 +145,6 @@ class LLMMemoryUnitExtractor:
         self.base_url = base_url
         self.fallback = fallback
         self.completion_client = completion_client
-        self.confidence_threshold = confidence_threshold
         self.strict_schema = strict_schema
         self.max_messages_per_chunk = _positive_int_or_none(
             max_messages_per_chunk,
@@ -340,26 +336,6 @@ class LLMMemoryUnitExtractor:
                     strict=self.strict_schema,
                 )
                 continue
-            confidence = _confidence(
-                item.get("confidence"),
-                strict=self.strict_schema,
-            )
-            if (
-                confidence is not None
-                and self.confidence_threshold is not None
-                and confidence < self.confidence_threshold
-            ):
-                skipped.append(
-                    CaptureSkip(
-                        message_range=message_range,
-                        reason="low_confidence",
-                        detail=(
-                            f"confidence {confidence:.3f} below threshold "
-                            f"{self.confidence_threshold:.3f}"
-                        ),
-                    )
-                )
-                continue
             timestamp = _timestamp_for_range(request, message_range)
             dialogue_ref = DialogueRef(
                 dialogue_id=request.dialogue.dialogue_id,
@@ -386,7 +362,6 @@ class LLMMemoryUnitExtractor:
                     timestamp=timestamp,
                     available_at=request.dialogue.captured_at,
                     dialogue_refs=(dialogue_ref,),
-                    confidence=confidence,
                     metadata={
                         "extractor": self.name,
                         "model": self.model,
@@ -652,26 +627,6 @@ def _with_fallback_stats(
             "llm_fallback_reason": reason,
         },
     )
-
-
-def _confidence(
-    value: Any,
-    *,
-    strict: bool,
-) -> float | None:
-    if value is None:
-        return None
-    try:
-        parsed = float(value)
-    except (TypeError, ValueError) as exc:
-        if strict:
-            raise LLMExtractionPayloadError("confidence must be a number") from exc
-        return None
-    if not isfinite(parsed) or parsed < 0.0 or parsed > 1.0:
-        if strict:
-            raise LLMExtractionPayloadError("confidence must be between 0 and 1")
-        return None
-    return parsed
 
 
 def _positive_int_or_none(value: int | None, *, field_name: str) -> int | None:

@@ -78,14 +78,14 @@ ReadRequest
   -> resolve owner, namespaces, and explicit time filter
   -> retrieve candidate MemoryUnits through index
   -> load authoritative units from store
-  -> rank by relevance, recency, namespace, confidence, and policy
+  -> rank by relevance, recency, namespace, and policy
   -> render evidence under post-render token budget
   -> record operation log
 ```
 
 Read returns evidence, not a canonical user profile. Conflicting facts should be
 rendered with timestamps so the downstream agent can reason over time.
-Additional labels such as dialogue refs, namespace, confidence, tags, and
+Additional labels such as dialogue refs, namespace, memory type, tags, and
 project hints are renderer configuration.
 
 ## 5. Storage And Indexing

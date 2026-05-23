@@ -8,8 +8,8 @@ the main product surface.
 ## Memory Review
 
 Default to the `Memory Units` list. Operators should be able to scan recent
-facts, filter by owner, namespace, type, time range, confidence, and redaction,
-then open a full-page detail route.
+facts, filter by owner, namespace, type, time range, and redaction, then open a
+full-page detail route.
 
 The detail page should use this structure:
 
@@ -22,9 +22,8 @@ Raw JSON
 ```
 
 `Fact` is the durable memory. `Evidence` shows source dialogue snippets and
-metadata. `Quality` explains confidence, missing refs, redaction, and review
-reasons. `Lifecycle` shows timestamps, retention, and produced-from dialogue
-times.
+metadata. `Quality` explains missing refs, redaction, and review reasons.
+`Lifecycle` shows timestamps, retention, and produced-from dialogue times.
 
 ## Evidence Display
 

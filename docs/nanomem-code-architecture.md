@@ -247,7 +247,6 @@ MemoryUnit:
   timestamp: str
   available_at: str
   dialogue_refs: tuple[DialogueRef, ...]
-  confidence: float | None
   retention_until: str | None
   redacted_at: str | None
   metadata: dict
@@ -387,7 +386,7 @@ Allowed capture behavior:
 
 - append extracted units;
 - skip workspace-local facts;
-- skip low-confidence or empty units;
+- skip empty or invalid units;
 - record extraction traces.
 
 Disallowed capture behavior in the primary path:
@@ -429,7 +428,7 @@ evidence for the caller's LLM to reason over time and scope.
 The renderer is part of retrieval quality, not just presentation. Under the
 same `context_budget_tokens`, the desired renderer should maximize the number
 of relevant facts that survive after formatting and required timestamps are
-included. Optional labels such as dialogue refs, namespace, confidence, tags,
+included. Optional labels such as dialogue refs, namespace, memory type, tags,
 and project hints are controlled by the host renderer. This favors compact
 fact-level rendering over returning large raw chunks whose useful fact density
 is lower.
@@ -562,7 +561,6 @@ Signals:
 - exact scope match;
 - project-context match when present;
 - event type;
-- extraction confidence;
 - historical read policy.
 
 Rendering creates a compact evidence block:

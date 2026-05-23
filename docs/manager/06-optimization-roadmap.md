@@ -26,8 +26,8 @@ Improve review efficiency before adding complex visuals:
 
 - persistent filters in the URL;
 - keyboard-friendly table navigation;
-- clear review queues: low confidence, missing evidence, redacted, stale index;
-- compact badges for type, confidence, evidence status, and lifecycle state;
+- clear review queues: missing evidence, redacted units, stale index;
+- compact badges for type, namespace, evidence status, and lifecycle state;
 - copy buttons for stable ids;
 - side-by-side view only when comparing retrieval outputs, not for normal unit
   detail.

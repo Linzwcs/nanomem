@@ -47,7 +47,6 @@ class ExtractionConfig:
     api_key: str | None = None
     api_key_env: str | None = None
     fallback_backend: str | None = "heuristic"
-    confidence_threshold: float | None = None
     strict_schema: bool = True
     max_messages_per_chunk: int | None = 24
     max_chars_per_chunk: int | None = None
@@ -161,8 +160,6 @@ def config_from_mapping(payload: dict[str, Any]) -> NanoMemConfig:
             api_key_env=_optional_str(extraction_payload.get("api_key_env")),
             fallback_backend=_optional_str(
                 extraction_payload.get("fallback_backend", "heuristic")),
-            confidence_threshold=_optional_float(
-                extraction_payload.get("confidence_threshold")),
             strict_schema=_optional_bool(
                 extraction_payload.get("strict_schema"),
                 default=True,
@@ -334,12 +331,6 @@ def _optional_int(value: Any) -> int | None:
     if value is None:
         return None
     return int(value)
-
-
-def _optional_float(value: Any) -> float | None:
-    if value is None:
-        return None
-    return float(value)
 
 
 def _optional_bool(value: Any, *, default: bool) -> bool:

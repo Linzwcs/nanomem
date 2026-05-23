@@ -193,7 +193,7 @@ Extractor      -> improve fact extraction quality
 EmbeddingModel -> swap local hashing for hosted or local embedding models
 MemoryUnitStore -> keep SQLite now; add another store only when deployment requires it
 MemoryUnitIndex -> keep in-memory simple; add LanceDB or pgvector adapters when needed
-Ranker         -> combine relevance, recency, scope, and confidence signals
+Ranker         -> combine relevance, recency, scope, and policy signals
 Renderer       -> maximize useful fact coverage under token budget
 Adapters       -> integrate agent harness lifecycle hooks
 ```
