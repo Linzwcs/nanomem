@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { ArrowLeft } from "lucide-react";
 
 import { getMemoryUnit } from "../../api/client";
 import { Badge, ErrorState, LoadingState } from "../../components/Status";
@@ -20,29 +21,59 @@ export function MemoryUnitDetailPage({ unitId }: { unitId: string }) {
 
   return (
     <section className="page-stack">
-      <header className="page-header">
+      <header className="page-header memory-page-header">
         <div>
-          <a className="back-link" href={backHref}>Memory Units</a>
-          <h1>{unit.memory_type}</h1>
+          <a className="back-link" href={backHref}>
+            <ArrowLeft aria-hidden="true" size={15} />
+            Memory Units
+          </a>
+          <h1>Memory Unit</h1>
         </div>
         <Badge tone={unit.redacted_at ? "warn" : "good"}>
           {unit.redacted_at ? "redacted" : "active"}
         </Badge>
       </header>
 
-      <section className="panel">
-        <p className="fact-text">{unit.text}</p>
-        <dl className="definition-grid">
-          <dt>Unit id</dt>
-          <dd>{unit.unit_id}</dd>
-          <dt>Owner</dt>
-          <dd>{unit.scope.owner_id}</dd>
-          <dt>Namespace</dt>
-          <dd>{unit.scope.namespace ?? "none"}</dd>
-          <dt>Timestamp</dt>
-          <dd>{formatTime(unit.timestamp)}</dd>
-        </dl>
-      </section>
+      <div className="results-strip">
+        <div className="filter-chip-list">
+          <span className="filter-chip static-chip">Type: {unit.memory_type}</span>
+          <span className="filter-chip static-chip">Owner: {unit.scope.owner_id}</span>
+          <span className="filter-chip static-chip">
+            Namespace: {unit.scope.namespace ?? "default"}
+          </span>
+        </div>
+        <span className="result-count">{formatTime(unit.timestamp)}</span>
+      </div>
+
+      <div className="detail-grid">
+        <section className="panel fact-panel">
+          <p className="fact-text">{unit.text}</p>
+          <div className="fact-badges">
+            <Badge>{unit.memory_type}</Badge>
+            <Badge tone="muted">{unit.scope.namespace ?? "default"}</Badge>
+          </div>
+        </section>
+
+        <section className="panel table-panel">
+          <table className="data-table record-table">
+            <thead>
+              <tr>
+                <th>Record</th>
+                <th>Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              <RecordRow label="Unit id" value={unit.unit_id} />
+              <RecordRow label="Owner" value={unit.scope.owner_id} />
+              <RecordRow
+                label="Namespace"
+                value={unit.scope.namespace ?? "default"}
+              />
+              <RecordRow label="Timestamp" value={formatTime(unit.timestamp)} />
+            </tbody>
+          </table>
+        </section>
+      </div>
 
       <section className="panel">
         <h2>Source Dialogue</h2>
@@ -59,7 +90,10 @@ export function MemoryUnitDetailPage({ unitId }: { unitId: string }) {
               <ol className="dialogue-log">
                 {(chunk.dialogue_messages ?? chunk.messages).map((message) => (
                   <li
-                    className={message.in_ref_range ? "message-in-range" : ""}
+                    className={[
+                      message.in_ref_range ? "message-in-range" : "",
+                      `message-role-${message.role}`,
+                    ].join(" ")}
                     key={`${message.index}-${message.timestamp}`}
                   >
                     <div className="message-meta">
@@ -81,5 +115,16 @@ export function MemoryUnitDetailPage({ unitId }: { unitId: string }) {
         <pre className="json-block">{jsonPreview(unit.metadata)}</pre>
       </section>
     </section>
+  );
+}
+
+function RecordRow({ label, value }: { label: string; value: string }) {
+  return (
+    <tr>
+      <td>
+        <strong>{label}</strong>
+      </td>
+      <td>{value}</td>
+    </tr>
   );
 }

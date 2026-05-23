@@ -91,6 +91,11 @@ export type StatsResponse = {
   metadata: {
     index?: Record<string, unknown>;
   };
+  top_owners?: Array<{
+    owner_id: string;
+    namespace: string | null;
+    unit_count: number;
+  }>;
 };
 
 export type ReindexResponse = {
@@ -103,6 +108,7 @@ export type OperationLog = {
   log_id: string;
   operation_type: string;
   created_at: string;
+  scope: MemoryScope | null;
   status: string;
   summary: Record<string, unknown>;
   payload: Record<string, unknown>;

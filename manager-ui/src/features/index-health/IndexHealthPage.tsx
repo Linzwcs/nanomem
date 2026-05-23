@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Loader2, RefreshCw } from "lucide-react";
 
 import { getStats, rebuildIndex } from "../../api/client";
 import { Badge, ErrorState, LoadingState } from "../../components/Status";
-import { formatTime, jsonPreview } from "../../lib/format";
+import { formatNumber, formatTime, jsonPreview } from "../../lib/format";
 
 export function IndexHealthPage() {
   const queryClient = useQueryClient();
@@ -26,13 +27,38 @@ export function IndexHealthPage() {
 
   return (
     <section className="page-stack">
-      <header className="page-header">
+      <header className="page-header memory-page-header">
         <div>
           <p className="eyebrow">Retrieval backend</p>
           <h1>Index Health</h1>
         </div>
-        <Badge tone={healthTone}>{health}</Badge>
+        <div className="header-actions">
+          <Badge tone={healthTone}>{health}</Badge>
+          <button
+            type="button"
+            disabled={rebuild.isPending}
+            onClick={() => rebuild.mutate()}
+          >
+            <span className="button-content">
+              {rebuild.isPending ? (
+                <Loader2 aria-hidden="true" className="loading-spinner" size={16} />
+              ) : (
+                <RefreshCw aria-hidden="true" size={16} />
+              )}
+              {rebuild.isPending ? "Rebuilding" : "Rebuild index"}
+            </span>
+          </button>
+        </div>
       </header>
+
+      <div className="results-strip">
+        <div className="filter-chip-list">
+          <span className="filter-hint">Backend {backend}</span>
+        </div>
+        <span className="result-count">
+          Last reindex {formatTime(payload?.last_reindex_at)}
+        </span>
+      </div>
 
       <div className="metric-grid">
         <Metric label="Active units" value={payload?.active_unit_count} />
@@ -41,22 +67,7 @@ export function IndexHealthPage() {
         <Metric label="Backend" value={backend} />
       </div>
 
-      <section className="panel">
-        <div className="panel-toolbar">
-          <div>
-            <h2>State</h2>
-            <p className="muted-line">
-              Last reindex: {formatTime(payload?.last_reindex_at)}
-            </p>
-          </div>
-          <button
-            type="button"
-            disabled={rebuild.isPending}
-            onClick={() => rebuild.mutate()}
-          >
-            {rebuild.isPending ? "Rebuilding..." : "Rebuild index"}
-          </button>
-        </div>
+      <section className="panel table-panel">
         {rebuild.error && <ErrorState error={rebuild.error} />}
         {rebuild.data && (
           <div className="notice">
@@ -64,34 +75,37 @@ export function IndexHealthPage() {
             {rebuild.data.index_backend}.
           </div>
         )}
-        <dl className="definition-grid">
-          <div className="definition-row">
-            <dt>backend</dt>
-            <dd>{backend}</dd>
-          </div>
-          <div className="definition-row">
-            <dt>health</dt>
-            <dd>{health}</dd>
-          </div>
-          <div className="definition-row">
-            <dt>active_unit_count</dt>
-            <dd>{String(payload?.active_unit_count ?? "unknown")}</dd>
-          </div>
-          <div className="definition-row">
-            <dt>document_count</dt>
-            <dd>{String(stats.data?.index_document_count ?? "unknown")}</dd>
-          </div>
-          <div className="definition-row">
-            <dt>unit_delta</dt>
-            <dd>{String(payload?.index_unit_delta ?? "unknown")}</dd>
-          </div>
-          {Object.entries(index).map(([key, value]) => (
-            <div className="definition-row" key={key}>
-              <dt>{key}</dt>
-              <dd>{typeof value === "object" ? jsonPreview(value) : String(value)}</dd>
-            </div>
-          ))}
-        </dl>
+        <table className="data-table record-table">
+          <thead>
+            <tr>
+              <th>State</th>
+              <th>Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            <RecordRow label="backend" value={backend} />
+            <RecordRow label="health" value={health} />
+            <RecordRow
+              label="active_unit_count"
+              value={String(payload?.active_unit_count ?? "unknown")}
+            />
+            <RecordRow
+              label="document_count"
+              value={String(payload?.index_document_count ?? "unknown")}
+            />
+            <RecordRow
+              label="unit_delta"
+              value={String(payload?.index_unit_delta ?? "unknown")}
+            />
+            {Object.entries(index).map(([key, value]) => (
+              <RecordRow
+                key={key}
+                label={key}
+                value={typeof value === "object" ? jsonPreview(value) : String(value)}
+              />
+            ))}
+          </tbody>
+        </table>
       </section>
     </section>
   );
@@ -101,7 +115,18 @@ function Metric({ label, value }: { label: string; value: unknown }) {
   return (
     <div className="metric">
       <span>{label}</span>
-      <strong>{String(value ?? "unknown")}</strong>
+      <strong>{formatNumber(value)}</strong>
     </div>
+  );
+}
+
+function RecordRow({ label, value }: { label: string; value: string }) {
+  return (
+    <tr>
+      <td>
+        <strong>{label}</strong>
+      </td>
+      <td>{value}</td>
+    </tr>
   );
 }

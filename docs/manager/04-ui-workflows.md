@@ -11,6 +11,15 @@ Default to the `Memory Units` list. Operators should be able to scan recent
 facts, filter by owner, namespace, type, time range, and redaction, then open a
 full-page detail route.
 
+Time filtering should be prominent but precise. The list should provide quick
+presets such as all time, recent days, and current month, plus explicit start
+and end dates. The visible dates are local calendar dates; requests must send
+concrete ISO boundaries so a selected end date includes the whole day.
+
+The list should also expose ordering next to the time controls. `newest_first`
+is the default review mode; `oldest_first` is useful when auditing historical
+imports or retention boundaries.
+
 The detail page should use this structure:
 
 ```text
@@ -56,11 +65,21 @@ Retrieval Lab is a runtime recall simulator, not general search. It should show:
 
 From each ranked result, link back to MemoryUnit detail and source evidence.
 
+Retrieval Lab has two separate time controls:
+
+- `query_time`: the simulated current time for recency ranking;
+- `memory time range`: a hard filter over MemoryUnit evidence timestamps.
+
+These controls should remain visually separate because changing `query_time`
+changes ranking, while changing the memory range changes which facts are
+eligible for retrieval at all.
+
 ## Operation Logs
 
 Operation logs should support filters for operation type, status, owner/scope,
-and time range. A log detail view should show summary first and raw payload only
-when useful.
+and time range. The operation-log time range applies to log creation time, not
+the underlying memory evidence time. A log detail view should show summary first
+and raw payload only when useful.
 
 ## Empty And Error States
 

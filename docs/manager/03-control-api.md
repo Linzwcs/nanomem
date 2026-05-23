@@ -61,6 +61,19 @@ change the stored memory model.
 Responses include `count`, `total_count`, `offset`, `limit`, and `has_more` so
 the UI can paginate without loading the whole memory store.
 
+Time selector semantics:
+
+- `memory-units.start` and `memory-units.end` filter `MemoryUnit.timestamp`;
+- `operation-logs.start` and `operation-logs.end` filter `OperationLog.created_at`;
+- `retrieval-preview.time_range` hard-filters candidate `MemoryUnit.timestamp`;
+- `retrieval-preview.query_time` is separate and only controls recency-aware
+  ranking policy.
+
+The API accepts ISO timestamp strings. The browser manager may expose date-only
+inputs, but it must convert those local calendar dates into explicit ISO start
+and end boundaries before calling the API. End dates are inclusive at the UI
+level and should be sent as the end of the selected local day.
+
 Each source chunk should include:
 
 - `status`: `ok`, `missing_dialogue`, `redacted_dialogue`,
@@ -80,6 +93,11 @@ POST /manager/api/reindex
 `retrieval-preview` must call `NanoMemService.read()` so the result matches
 agent runtime behavior. It should mark logs as manager previews or allow preview
 logging to be disabled.
+
+Preview payloads should expose the same tuning controls used by runtime reads:
+`query_time`, `time_range`, `max_units`, and `context_budget_tokens`. Manager UI
+defaults may be opinionated, but the API request should keep these controls
+explicit in the payload.
 
 `reindex` rebuilds derived index state from the authoritative store. If partial
 reindex is introduced, the response must clearly say whether the active index

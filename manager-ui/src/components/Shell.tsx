@@ -21,6 +21,8 @@ type ShellProps = {
 };
 
 export function Shell({ children }: ShellProps) {
+  const currentHash = window.location.hash || "#/";
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -31,8 +33,17 @@ export function Shell({ children }: ShellProps) {
         <nav className="nav-list" aria-label="Manager sections">
           {navItems.map((item) => {
             const Icon = item.icon;
+            const active =
+              item.href === "#/"
+                ? currentHash === "#/" || currentHash === ""
+                : currentHash.startsWith(item.href);
             return (
-              <a className="nav-link" href={item.href} key={item.href}>
+              <a
+                aria-current={active ? "page" : undefined}
+                className={`nav-link${active ? " nav-link-active" : ""}`}
+                href={item.href}
+                key={item.href}
+              >
                 <Icon size={17} />
                 <span>{item.label}</span>
               </a>
