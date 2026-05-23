@@ -1,106 +1,73 @@
 # NanoMem
 
-NanoMem 是一个面向智能体的长期个人记忆数据库。它只管理跨会话、用户相关、可长期保留的个人记忆，不替代项目文档、代码搜索、任务状态或工作区知识库。
+[![CI](https://github.com/Linzwcs/nanomem/actions/workflows/ci.yml/badge.svg)](https://github.com/Linzwcs/nanomem/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
 
-现代 coding/local agent 已经可以直接读取文件、搜索仓库、查看日志、使用 git 和检查构建产物。NanoMem 的设计假设是：这些本地工具应该继续作为 workspace context 的 source of truth；NanoMem 只负责 local file storage 不擅长管理的长期个人记忆。
+NanoMem is a local-first long-term personal memory backend for AI agents.
 
-一句话定位：
-
-```text
-Agent can read the workspace. NanoMem helps it remember the user.
-```
-
-核心接口保持很小：
-
-- `capture`：从用户可见事件中提取并写入个人事实记忆单元。
-- `read`：按查询、时间范围和作用域读取相关记忆，并生成可放入上下文的摘要文本。
-
-模块化设计规范见 [docs/nanomem/README.md](docs/nanomem/README.md)。系统设计总入口见 [docs/system-design.md](docs/system-design.md)。详细产品边界见 [docs/nanomem-product-rfc.md](docs/nanomem-product-rfc.md)，agent 场景下的读写准则见 [docs/agent-memory-positioning.md](docs/agent-memory-positioning.md)，插件适配方案见 [docs/plugins/README.md](docs/plugins/README.md)，架构总览见 [docs/architecture-overview.md](docs/architecture-overview.md)，索引后端策略见 [docs/index-backends.md](docs/index-backends.md)，代码架构见 [docs/nanomem-code-architecture.md](docs/nanomem-code-architecture.md)。
-
-## 项目定位
-
-NanoMem 不是 all-in-one memory layer。它不试图把文档、代码、日志、任务状态、对话历史和用户偏好全部放进同一个系统。那类宽记忆系统适合没有强本地工具、需要托管统一上下文的 agent；NanoMem 更适合已经具备本地读取能力的 agent。
-
-边界如下：
-
-| 信息类型 | 归属 |
-| --- | --- |
-| README、设计文档、ADR、代码、配置 | 本地文件 / repo |
-| PDF、图片、音频、视频、截图、数据集 | 本地文件 / 对象存储 / 专用媒体库 |
-| 当前任务计划、CI 日志、构建输出 | session / logs / artifacts |
-| 项目测试命令、项目约定 | repo docs / `AGENTS.md` |
-| 用户偏好、沟通风格 | NanoMem |
-| 用户纠正过的 agent 行为 | NanoMem |
-| 用户长期习惯、个人背景、关系事实 | NanoMem |
-| 与用户长期相关的重要事件 | NanoMem |
-
-这可以避免重复 source of truth，也避免项目文档、旧日志和用户偏好在同一个检索池里竞争上下文预算。
-
-## 记忆单元
-
-长期个人记忆不只包括静态偏好，也包括与用户长期相关的事件事实。NanoMem 存储的是细粒度 personal memory units，例如：
-
-- 用户偏好：`用户更喜欢简洁的中文回答。`
-- 行为纠正：`用户明确要求不要自动提交代码。`
-- 长期习惯：`用户通常希望先讨论设计边界，再进入实现。`
-- 个人事件：`用户决定 NanoMem 只做 long-term personal memory，不做通用 workspace memory。`
-- agent 交互事件：`agent 曾自动提交代码，用户对此表达了负面反馈。`
-- 背景或关系事实：`用户正在设计一个面向 agent 的长期记忆后端。`
-
-不应写入 NanoMem 的内容包括：项目文件全文、代码片段、CI 日志、一次性任务计划、raw tool output、完整聊天归档、多模态资源原文件。需要审计时，可以保留不可检索的 `DialogueRecord`；正常记忆只通过 `DialogueRef` 指向用户可见对话。
-
-“发生了什么”可以进入 NanoMem，但必须是长期个人相关的事件事实，而不是完整事件流。用户发生的重要事件、用户做出的长期决定、agent 做过且会影响未来协作方式的可见行为，都可以被抽取成 MemoryUnit；agent 的普通工具调用、内部步骤、临时任务进展和操作日志仍然留在 harness、workspace 或日志系统中。
-
-多模态资源的处理方式也是同一原则：图片、音频、视频、PDF 或截图本身应保留在原始存储中；agent 或工具读取这些资源后，把对用户长期有用的信息体现在用户可见对话里。NanoMem 只从这段对话中抽取事实，例如“用户偏好用手绘草图讨论 UI 方向”，证据指向 `DialogueRecord`，而不是直接引用资源 URI、页码或片段。
-
-## 算法思路
-
-研究结论表明，在 long-term personal memory 场景下，细粒度 fact-form memory 比 raw chunk 更适合作为存储和检索单元。
-
-NanoMem 的管线设计是：
+It is built for agent harnesses that can already read files, search repos, run
+tools, inspect git, and use workspace-specific context. NanoMem keeps the part
+that does not belong in a repo: durable, cross-session, user-specific personal
+memory.
 
 ```text
-user-visible dialogue
-  -> chunk = n for extraction
-  -> role-aware / speaker-aware fact extraction
-  -> store fine-grained MemoryUnits
-  -> retrieve relevant facts
-  -> render facts under a post-render token budget
+The agent reads the workspace. NanoMem helps it remember the user.
 ```
 
-`chunk = n` 是抽取阶段的窗口参数，不是存储模型。持久化对象仍然是 `MemoryUnit`。读取阶段检索 fact，而不是检索原始对话块；render 阶段在相同 post-render token budget 下尽量放入更多相关 fact。每条渲染记忆必须保留时间；其他展示字段如 dialogue ref、namespace、memory type、tags 或项目提示由宿主自定义。
+Status: alpha. The core local backend is implemented and tested, but public
+contracts may still change before a stable release.
 
-## 当前状态
+## Why NanoMem
 
-本仓库处于早期实现阶段，当前包含 Python 源码、HTTP 服务、MCP 服务、CLI 管理命令、SQLite 存储、词法/向量/混合索引、可选 LanceDB 向量索引、启发式与 LLM 记忆提取器。项目已提供 `pyproject.toml`、pytest 回归测试和 GitHub Actions CI；依赖锁文件仍未引入。
+Most agent memory systems drift toward "store everything": chat transcripts,
+documents, code snippets, logs, search results, preferences, and task state in
+one retrieval pool. That makes source of truth unclear and lets large workspace
+artifacts bury the small personal facts that matter across sessions.
 
-## 目录结构
+NanoMem takes the opposite boundary:
 
-```text
-src/nanomem/
-  contracts.py        # 核心数据契约：MemoryScope、CaptureRequest、ReadRequest 等
-  config.py           # JSON / 简单 YAML 配置加载
-  factory.py          # 根据配置组装 store、index、extractor、service
-  service/            # capture/read 编排逻辑
-  store/              # SQLite 持久化
-  index/              # lexical、dense、hybrid、lancedb 索引 adapter
-  embeddings/         # hashing 与 OpenAI-compatible embedding
-  extraction/         # heuristic 与 LLM 提取器
-  server/             # HTTP API
-  mcp/                # MCP stdio 服务
-  cli/                # 管理命令
-  control/            # 统计、迁移、备份、导出、保留策略
-  maintenance/        # 维护计划和自动化执行
-  manager/            # 本地网页管理台静态资源
-manager-ui/           # React/Vite 管理台源码草案
-docs/                 # 产品与架构文档
-tests/                # pytest 回归测试
-.github/workflows/    # CI
-```
+- workspace facts stay in files, repos, logs, artifacts, and external systems;
+- NanoMem stores fine-grained personal `MemoryUnit`s;
+- indexes are derived and rebuildable;
+- `read` returns timestamped evidence, not a canonical user profile;
+- the agent-facing API stays small: `capture` and `read`.
 
-## 快速开始
+Good fits:
 
-建议先在本地虚拟环境中安装开发依赖：
+- coding/local agents such as Codex, Claude Code, and OpenClaw-like runtimes;
+- personal assistants that need durable user preferences and corrections;
+- MCP hosts that need a small memory sidecar;
+- local-first deployments where SQLite is enough as the source of truth.
+
+Non-goals:
+
+- workspace search replacement;
+- document ingestion or RAG over project files;
+- task database, scratchpad, or run log store;
+- raw event sourcing;
+- canonical truth maintenance for user profiles.
+
+## Feature Status
+
+| Area | Status | Notes |
+| --- | --- | --- |
+| Core contracts | Implemented | `CaptureRequest`, `ReadRequest`, `MemoryUnit`, `DialogueRecord` |
+| Local store | Implemented | SQLite fact store with migrations and operation logs |
+| Capture pipeline | Implemented | Heuristic extractor by default; LLM extractor optional |
+| Read pipeline | Implemented | retrieval, ranking, evidence rendering, token budget |
+| HTTP API | Implemented | `/v1/health`, `/v1/capture`, `/v1/read` |
+| Python SDK | Implemented | sync and async HTTP clients |
+| MCP server | Implemented | stdio server exposing normal memory tools |
+| CLI/control plane | Implemented | stats, list, backup, export, retention, reindex, dashboard |
+| Web manager | Local alpha | bundled static manager and React/Vite work-in-progress |
+| Index backends | Local alpha | lexical, dense, hybrid, optional LanceDB |
+| Agent plugins | Experimental | Codex and Claude Code plugin skeletons |
+| Managed deployment | Planned | Postgres + pgvector is a future path, not current default |
+
+## Quick Start
+
+Install locally from the repository root:
 
 ```bash
 python -m pip install -e ".[dev]"
@@ -109,7 +76,7 @@ nanomem-server --help
 nanomem-mcp --help
 ```
 
-创建一个最小配置文件 `nanomem.json`：
+Create `nanomem.json`:
 
 ```json
 {
@@ -130,101 +97,19 @@ nanomem-mcp --help
 }
 ```
 
-默认本地状态会集中在 `data_dir` 下：
-
-```text
-.nanomem/
-  nanomem.db      # SQLite fact store
-  lancedb/        # optional local LanceDB vector index
-  backups/        # optional backups
-  exports/        # optional exports
-```
-
-启动 HTTP 服务：
+Start the local HTTP sidecar:
 
 ```bash
 nanomem-server --config nanomem.json --host 127.0.0.1 --port 8765
 ```
 
-健康检查：
+Check health:
 
 ```bash
 curl http://127.0.0.1:8765/v1/health
 ```
 
-本地网页管理台：
-
-```text
-http://127.0.0.1:8765/manager
-```
-
-该页面是 control-plane，用于观察 MemoryUnit、DialogueRecord、operation logs、
-retrieval preview 和 index health；不要把这些 manager/control endpoints 暴露成 MCP
-或 agent-facing tools。`/admin` 仍保留为兼容别名，JSON control-plane API 位于
-`/manager/api/*`。
-
-## Agent 插件接入
-
-Codex 和 Claude Code 的 repo-local 插件骨架位于：
-
-```text
-.agents/plugins/marketplace.json
-plugins/nanomem-codex/
-plugins/nanomem-claude-code/
-```
-
-Codex 本地插件可通过仓库 marketplace 注册：
-
-```bash
-codex plugin marketplace add /path/to/nanomem
-```
-
-这是显式 opt-in 的宿主适配流程，不属于 NanoMem 默认系统安装。只有确认要让
-Codex 自动读写 NanoMem 时，才在 Codex `/plugins` 中安装 `nanomem-codex`，
-开启 `plugin_hooks`，并在 `/hooks` 中信任 NanoMem hooks。
-详细安装、验证和原理说明见
-[docs/plugins/codex-installation.md](docs/plugins/codex-installation.md)。
-完成 opt-in 安装后，可以运行：
-
-```bash
-bash scripts/smoke_codex_plugin.sh
-```
-
-两者共用 hook runner：
-
-```bash
-nanomem-agent-hook read --host codex
-nanomem-agent-hook capture --host codex
-nanomem-agent-hook read --host claude-code
-nanomem-agent-hook capture --host claude-code
-```
-
-插件默认通过 HTTP 连接本地 sidecar。先启动服务并设置环境变量：
-
-```bash
-nanomem-server --config .nanomem/config.json
-export NANOMEM_BASE_URL=http://127.0.0.1:8765
-export NANOMEM_OWNER_ID="$USER"
-export NANOMEM_NAMESPACE=personal
-```
-
-如果不设置 `NANOMEM_NAMESPACE`，hook 会按默认策略读取所有 namespace，并以
-无 namespace 的 scope 写入。
-
-真实宿主联调时可以临时开启 hook payload 调试：
-
-```bash
-export NANOMEM_HOOK_DEBUG_DIR=.nanomem/hook-debug
-```
-
-该目录会保存 hook stdin JSON，便于确认 Codex / Claude Code 实际字段。正常使用时不要开启，避免长期保存用户 prompt 或 transcript metadata。
-
-自动 capture 由 hook 直接调用 `/v1/capture`，不要走 MCP；MCP 只保留
-`nanomem_read` 和显式的 `nanomem_capture`。
-
-## HTTP API 示例
-
-写入一条用户偏好：
+Write a memory from user-visible dialogue:
 
 ```bash
 curl -X POST http://127.0.0.1:8765/v1/capture \
@@ -236,18 +121,18 @@ curl -X POST http://127.0.0.1:8765/v1/capture \
         {
           "role": "user",
           "speaker_id": "user:demo-user",
-          "content": "我更喜欢简洁的中文回答。",
+          "content": "I prefer concise Chinese answers. Please remember that I usually want architecture first, then code.",
           "timestamp": "2026-05-19T10:00:00+08:00"
         }
       ],
       "occurred_at": "2026-05-19T10:00:00+08:00",
-      "metadata": {"host_log": "local-demo"}
+      "metadata": {"host": "quickstart"}
     },
     "capture_time": "2026-05-19T10:00:05+08:00"
   }'
 ```
 
-读取相关记忆：
+Read relevant memory:
 
 ```bash
 curl -X POST http://127.0.0.1:8765/v1/read \
@@ -255,68 +140,263 @@ curl -X POST http://127.0.0.1:8765/v1/read \
   -d '{
     "owner_id": "demo-user",
     "namespaces": ["personal"],
-    "query": "回答风格偏好",
-    "query_time": "2026-05-19T10:01:00+08:00",
-    "max_units": 5,
-    "context_budget_tokens": 600
+    "query": "answer style architecture first",
+    "query_time": "2026-05-19T10:10:00+08:00",
+    "max_units": 3,
+    "context_budget_tokens": 512
   }'
 ```
 
-## CLI 管理
+The response includes ranked units and a packed context string similar to:
 
-CLI 面向本地 SQLite 数据库管理和维护：
-
-```bash
-PYTHONPATH=src python -m nanomem.cli stats --config nanomem.json
-PYTHONPATH=src python -m nanomem.cli list --config nanomem.json --limit 20
-PYTHONPATH=src python -m nanomem.cli migrations --config nanomem.json
-PYTHONPATH=src python -m nanomem.cli integrity-check --config nanomem.json
-PYTHONPATH=src python -m nanomem.cli dashboard --config nanomem.json
+```json
+{
+  "context": {
+    "text": "Relevant memory units:\n- [2026-05-19T10:00:00+08:00, namespace=personal] Please remember that I usually want architecture first, then code.",
+    "token_count": 42,
+    "unit_count": 1
+  },
+  "ranked_units": [
+    {
+      "rank": 1,
+      "score": 0.38,
+      "unit": {
+        "memory_type": "background",
+        "text": "Please remember that I usually want architecture first, then code.",
+        "timestamp": "2026-05-19T10:00:00+08:00"
+      }
+    }
+  ]
+}
 ```
 
-备份和导出示例：
+Open the local manager while the server is running:
 
-```bash
-PYTHONPATH=src python -m nanomem.cli backup --config nanomem.json --output backup.db
-PYTHONPATH=src python -m nanomem.cli export --config nanomem.json --output export.json
+```text
+http://127.0.0.1:8765/manager
 ```
 
-## MCP 服务
+The manager is a control-plane UI for inspecting memory units, dialogue records,
+operation logs, retrieval preview, and index health. Do not expose manager or
+control endpoints as agent-facing tools.
 
-MCP 入口通过 stdio 运行，适合集成到支持 MCP 的宿主智能体：
+## Core Model
 
-```bash
-PYTHONPATH=src python -m nanomem.mcp --config nanomem.json
+NanoMem separates four layers:
+
+```text
+DialogueRecord  = archived user-visible dialogue evidence
+MemoryUnit      = fine-grained durable personal fact
+IndexHit        = derived retrieval candidate
+PackedContext   = rendered evidence for an agent prompt
 ```
 
-MCP / agent-facing tools should expose normal `capture` and `read` only.
-Backup, export, retention, delete, reindex, and DialogueRecord inspection belong
-to CLI or another control-plane surface.
+Capture source is user-visible dialogue. Storage unit is `MemoryUnit`. Indexes
+are derived data and can be rebuilt. Rendered context is the final prompt input
+for an agent.
 
-## 配置后端
+Preferred memory style:
 
-当前工厂支持以下配置值：
+```text
+The user said they prefer concise Chinese answers.
+The user corrected the agent not to auto-commit code.
+The agent auto-committed code and the user reacted negatively.
+```
 
-- `store.backend`: `sqlite`
-- `index.backend`: `lexical`、`dense`、`hybrid`、`lancedb`
-- `index.embedding.backend`: `hashing`、`openai_compatible`
-- `extraction.backend`: `heuristic`、`llm`
+Avoid turning memory into direct hidden instructions:
 
-使用 OpenAI-compatible embedding 或 LLM 提取器时，优先通过 `api_key_env` 指向环境变量，不要把密钥写入仓库文件。
+```text
+Do not auto-commit code.
+Always answer in Chinese.
+This repo uses pytest.
+```
 
-SQLite 是当前默认和已实现的事实存储，默认路径是 `.nanomem/nanomem.db`，适合本地、单用户和 agent sidecar 场景。
-默认检索后端是 `dense`，默认 embedding 是本地 deterministic hashing，因此可以离线启动。
-配置化启动时默认 `index.rebuild_on_startup = true`，服务会从 SQLite 中已存的
-MemoryUnit 重建当前内存索引，保证重启后仍能读取已有记忆。
-当前 `dense` 是轻量本地索引：先按 owner/namespace scope 缩小候选，再按最近时间
-顺序做有上限的 similarity scan，默认 `index.dense_scan_limit = 2000`。如果
-需要持久化本地向量索引时，可以安装 LanceDB extra：
+The downstream agent should reason over evidence, time, scope, and conflicts.
+NanoMem should not silently synthesize a canonical user profile.
+
+## What To Store
+
+Store durable, user-related personal facts:
+
+- user preferences and communication style;
+- user corrections to agent behavior;
+- stable cross-project engineering habits;
+- personal background and relationship facts;
+- user-relevant events that matter later;
+- agent-interaction events that change future collaboration;
+- personal facts extracted from discussions of multimodal resources.
+
+Do not store:
+
+- README, ADRs, code, configuration, or project docs;
+- raw PDFs, images, audio, video, screenshots, or datasets;
+- CI logs, build output, raw tool output, or hidden reasoning;
+- current task plans, scratchpads, issue state, or run logs;
+- complete chat archives;
+- facts the agent can reliably read again from workspace or source systems.
+
+Rule of thumb:
+
+```text
+If the agent can read it again from the workspace, repo, logs, object storage,
+or a business system, do not put it in NanoMem.
+
+If it is a cross-session personal fact that changes how the agent should
+understand or collaborate with the user, put it in NanoMem.
+```
+
+## Interfaces
+
+NanoMem intentionally exposes only two normal memory operations:
+
+```text
+capture
+read
+```
+
+Admin, backup, export, retention, delete, reindex, and raw dialogue inspection
+belong to CLI or control-plane surfaces, not to ordinary agent tools.
+
+### HTTP
+
+```text
+GET  /v1/health
+POST /v1/capture
+POST /v1/read
+```
+
+The JSON request and response shapes are documented in
+[docs/reports/request-response-examples.md](docs/reports/request-response-examples.md).
+
+### Python SDK
+
+```python
+from nanomem import (
+    CaptureDialogue,
+    CaptureRequest,
+    DialogueMessage,
+    MemoryScope,
+    NanoMemClient,
+    ReadRequest,
+)
+
+client = NanoMemClient("http://127.0.0.1:8765")
+
+client.capture(
+    CaptureRequest(
+        scope=MemoryScope(owner_id="demo-user", namespace="personal"),
+        dialogue=CaptureDialogue(
+            occurred_at="2026-05-19T10:00:00+08:00",
+            messages=(
+                DialogueMessage(
+                    role="user",
+                    content="I prefer concise Chinese answers.",
+                    timestamp="2026-05-19T10:00:00+08:00",
+                ),
+            ),
+        ),
+        capture_time="2026-05-19T10:00:05+08:00",
+    )
+)
+
+result = client.read(
+    ReadRequest(
+        owner_id="demo-user",
+        namespaces=("personal",),
+        query="answer language preference",
+        query_time="2026-05-19T10:01:00+08:00",
+        max_units=5,
+    )
+)
+
+print(result.context.text)
+```
+
+### MCP
+
+Run the stdio MCP server:
+
+```bash
+nanomem-mcp --config nanomem.json
+```
+
+MCP should expose normal `capture` and `read` tools only. Control-plane actions
+such as backup, export, retention, and reindex should stay out of the MCP
+surface.
+
+### CLI
+
+The CLI manages the local SQLite database and maintenance workflows:
+
+```bash
+nanomem stats --config nanomem.json
+nanomem list --config nanomem.json --limit 20
+nanomem logs --config nanomem.json
+nanomem migrations --config nanomem.json
+nanomem integrity-check --config nanomem.json
+nanomem reindex --config nanomem.json
+nanomem dashboard --config nanomem.json
+```
+
+Backup, export, and retention examples:
+
+```bash
+nanomem backup --config nanomem.json --output .nanomem/backups/backup.db
+nanomem export --config nanomem.json --output .nanomem/exports/export.json
+nanomem retention-preview --config nanomem.json --before 2026-01-01T00:00:00+00:00
+nanomem log-retention-preview --config nanomem.json --before 2026-01-01T00:00:00+00:00
+```
+
+If the package is not installed, use module entry points from the repo root:
+
+```bash
+PYTHONPATH=src python -m nanomem.cli --help
+PYTHONPATH=src python -m nanomem.server --help
+PYTHONPATH=src python -m nanomem.mcp --help
+```
+
+## Configuration
+
+Default local state lives under one data directory:
+
+```text
+.nanomem/
+  nanomem.db
+  lancedb/
+  backups/
+  exports/
+```
+
+Supported config values:
+
+| Key | Values |
+| --- | --- |
+| `store.backend` | `sqlite` |
+| `index.backend` | `lexical`, `dense`, `hybrid`, `lancedb` |
+| `index.embedding.backend` | `hashing`, `openai_compatible` |
+| `extraction.backend` | `heuristic`, `llm` |
+| `read.default_recency_policy` | `recent`, `balanced`, `historical` |
+
+The default local setup is dependency-light:
+
+- SQLite is the fact store;
+- `dense` is the default index backend;
+- deterministic local hashing is the default embedding model;
+- `heuristic` is the default extractor;
+- `index.rebuild_on_startup = true` rebuilds derived indexes from SQLite.
+
+Use environment variables for provider credentials. Do not put API keys in
+config files committed to the repository.
+
+### Optional LanceDB
+
+Install the optional dependency:
 
 ```bash
 python -m pip install -e ".[dev,lancedb]"
 ```
 
-并配置：
+Configure the local vector index:
 
 ```json
 {
@@ -329,37 +409,137 @@ python -m pip install -e ".[dev,lancedb]"
 }
 ```
 
-LanceDB 只保存检索字段和 embedding，SQLite 仍然是 MemoryUnit 与 DialogueRecord
-的 source of truth。更重的 Postgres + pgvector 适合之后的托管/多用户部署，
-不要把 SQLite 扩展成 JSON vector 扫描引擎。
+LanceDB stores retrieval fields and embeddings. SQLite remains the source of
+truth for `MemoryUnit` and `DialogueRecord`.
 
-验证本地 LanceDB 持久化检索链路：
+## Agent Integrations
 
-```bash
-python -m pytest tests/index/test_lancedb_integration.py
-```
-
-该测试会写入 SQLite、同步 LanceDB、模拟 service 重启，并确认 `read()` 从
-LanceDB 命中后仍返回 SQLite 中的 canonical MemoryUnit。
-
-## 开发说明
-
-代码采用 Python `src/` 布局。新增模块应保持现有依赖方向：`server -> service -> store/index/extraction/ranking/render -> contracts`。核心契约放在 `contracts.py`，HTTP JSON 转换放在 `serde.py`/`server/schemas.py`，跨模块组装放在 `factory.py`。
-
-建议新增测试时使用 `pytest`，并按源码路径组织，例如：
+NanoMem follows a simple lifecycle:
 
 ```text
-tests/service/test_core.py
-tests/store/test_sqlite.py
-tests/server/test_app.py
+before_turn:
+  agent reads workspace/tools
+  agent calls NanoMem.read for personal evidence
+
+after_turn:
+  agent sends user-visible dialogue to NanoMem.capture
 ```
 
-运行测试的预期命令：
+Repo-local plugin skeletons:
+
+```text
+.agents/plugins/marketplace.json
+plugins/nanomem-codex/
+plugins/nanomem-claude-code/
+```
+
+Hook runner examples:
+
+```bash
+nanomem-agent-hook read --host codex
+nanomem-agent-hook capture --host codex
+nanomem-agent-hook read --host claude-code
+nanomem-agent-hook capture --host claude-code
+```
+
+The plugins are explicit opt-in integrations. They connect to a local HTTP
+sidecar by default:
+
+```bash
+export NANOMEM_BASE_URL=http://127.0.0.1:8765
+export NANOMEM_OWNER_ID="$USER"
+export NANOMEM_NAMESPACE=personal
+```
+
+Detailed plugin docs:
+
+- [docs/plugins/README.md](docs/plugins/README.md)
+- [docs/plugins/codex.md](docs/plugins/codex.md)
+- [docs/plugins/codex-installation.md](docs/plugins/codex-installation.md)
+- [docs/plugins/claude-code.md](docs/plugins/claude-code.md)
+
+## Project Layout
+
+```text
+src/nanomem/
+  contracts.py        # core data contracts
+  config.py           # JSON / simple YAML config loading
+  factory.py          # config-driven construction
+  service/            # capture/read orchestration
+  store/              # SQLite persistence
+  index/              # lexical, dense, hybrid, LanceDB adapters
+  embeddings/         # hashing and OpenAI-compatible embeddings
+  extraction/         # heuristic and LLM extractors
+  ranking/            # relevance and recency ranking
+  render/             # packed context rendering
+  server/             # HTTP API and manager routes
+  mcp/                # stdio MCP server
+  sdk/                # Python HTTP clients
+  cli/                # command-line administration
+  control/            # stats, backup, export, retention, reindex
+  maintenance/        # configured maintenance workflows
+  adapters/           # host integration adapters
+  manager/            # bundled manager assets
+manager-ui/           # React/Vite manager source
+docs/                 # product, architecture, manager, and plugin docs
+tests/                # pytest regression tests
+```
+
+Architecture rule of thumb:
+
+```text
+server -> service -> store/index/extraction/ranking/render -> contracts
+```
+
+The service layer owns orchestration. Stores and indexes expose capabilities;
+they should not decide capture/read behavior.
+
+## Development
+
+Install dev dependencies:
+
+```bash
+python -m pip install -e ".[dev]"
+```
+
+Run tests:
 
 ```bash
 PYTHONPATH=src python -m pytest
 ```
 
-## 安全与数据
+Run a focused LanceDB integration test after installing the extra:
 
-NanoMem 存储的是个人记忆数据。不要提交本地数据库、导出的记忆 JSON、API key、`.env` 或包含真实用户内容的测试夹具。涉及删除、保留策略、备份和导出功能时，应优先使用临时路径和最小化样例数据。
+```bash
+python -m pip install -e ".[dev,lancedb]"
+PYTHONPATH=src python -m pytest tests/index/test_lancedb_integration.py
+```
+
+CI runs compile and pytest on Python 3.10, 3.11, and 3.12.
+
+## Security And Data
+
+NanoMem stores personal memory data.
+
+- Do not commit `.nanomem/`, local databases, exports, backups, `.env`, or API keys.
+- Bind the HTTP server to `127.0.0.1` for local use.
+- Do not expose `/manager` or `/manager/api/*` to untrusted networks.
+- Keep raw workspace files, logs, tool output, and multimodal assets outside NanoMem.
+- Use backup/export/retention commands with temporary paths in tests.
+- Enable hook debug payloads only temporarily; they may contain prompt or transcript metadata.
+
+## Documentation Map
+
+- [docs/system-design.md](docs/system-design.md): top-level product and architecture design.
+- [docs/nanomem/README.md](docs/nanomem/README.md): modular design specs.
+- [docs/nanomem-product-rfc.md](docs/nanomem-product-rfc.md): product boundary and memory semantics.
+- [docs/agent-memory-positioning.md](docs/agent-memory-positioning.md): agent read/write guidance.
+- [docs/architecture-overview.md](docs/architecture-overview.md): diagrams, runtime layout, and store/index split.
+- [docs/index-backends.md](docs/index-backends.md): in-memory, LanceDB, and Postgres/pgvector strategy.
+- [docs/nanomem-code-architecture.md](docs/nanomem-code-architecture.md): module-level implementation architecture.
+- [docs/manager/README.md](docs/manager/README.md): web manager and control-plane design.
+- [docs/reports/request-response-examples.md](docs/reports/request-response-examples.md): complete API examples.
+
+## License
+
+MIT. See package metadata in [pyproject.toml](pyproject.toml).
