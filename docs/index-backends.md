@@ -91,6 +91,17 @@ embedding
 The store remains authoritative. The LanceDB index must be rebuildable from
 stored MemoryUnits.
 
+Smoke verification:
+
+```bash
+python -m pip install -e '.[dev,lancedb]'
+python -m pytest tests/index/test_lancedb_integration.py
+```
+
+The integration test writes MemoryUnits through the normal service, reopens the
+service with `rebuild_on_startup = false`, and confirms reads are served through
+the persistent LanceDB index while canonical units still come from SQLite.
+
 ## 4. Postgres + pgvector
 
 Use Postgres + pgvector when NanoMem becomes a managed or multi-user service and

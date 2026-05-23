@@ -98,6 +98,17 @@ The implemented adapter stores `unit_id`, scope fields, timestamps,
 returning candidate ids. The read pipeline still fetches canonical units from
 the store before ranking and rendering.
 
+Smoke verification:
+
+```bash
+python -m pip install -e '.[dev,lancedb]'
+python -m pytest tests/index/test_lancedb_integration.py
+```
+
+The integration test confirms that a MemoryUnit captured into SQLite is indexed
+in LanceDB, survives a service restart without startup reindex, and is returned
+through the normal `read()` pipeline.
+
 ## 5. Postgres + pgvector
 
 Use Postgres + pgvector only when deployment requirements justify a managed

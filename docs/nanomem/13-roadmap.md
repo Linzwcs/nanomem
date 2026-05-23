@@ -143,11 +143,13 @@ Current baseline:
 - `lancedb` backend is available behind `MemoryUnitIndex`;
 - the adapter duplicates only search-time fields and remains rebuildable from
   SQLite;
+- `tests/index/test_lancedb_integration.py` verifies SQLite capture,
+  LanceDB persistence, service restart, and read-pipeline retrieval when the
+  optional dependency is installed;
 - default installs stay lightweight because LanceDB is optional.
 
 Work:
 
-- add runtime smoke tests for LanceDB persistence and restart behavior;
 - keep dense in-memory and lexical indexes as test/dev baselines;
 - add index metadata, freshness checks, and safe rebuild behavior;
 - ensure redacted units are excluded from index rebuilds.

@@ -313,7 +313,7 @@ MemoryUnit 重建当前内存索引，保证重启后仍能读取已有记忆。
 需要持久化本地向量索引时，可以安装 LanceDB extra：
 
 ```bash
-python -m pip install -e ".[lancedb]"
+python -m pip install -e ".[dev,lancedb]"
 ```
 
 并配置：
@@ -332,6 +332,15 @@ python -m pip install -e ".[lancedb]"
 LanceDB 只保存检索字段和 embedding，SQLite 仍然是 MemoryUnit 与 DialogueRecord
 的 source of truth。更重的 Postgres + pgvector 适合之后的托管/多用户部署，
 不要把 SQLite 扩展成 JSON vector 扫描引擎。
+
+验证本地 LanceDB 持久化检索链路：
+
+```bash
+python -m pytest tests/index/test_lancedb_integration.py
+```
+
+该测试会写入 SQLite、同步 LanceDB、模拟 service 重启，并确认 `read()` 从
+LanceDB 命中后仍返回 SQLite 中的 canonical MemoryUnit。
 
 ## 开发说明
 

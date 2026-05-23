@@ -97,7 +97,7 @@ class LanceDBMemoryUnitIndex:
             table.delete(_where_in("unit_id", unit_ids))
 
     def _table(self, *, create: bool) -> Any | None:
-        if self.table_name in set(self._db.table_names()):
+        if self.table_name in _table_names(self._db):
             return self._db.open_table(self.table_name)
         if not create:
             return None
@@ -141,6 +141,14 @@ def _require_lancedb() -> Any:
             "Install NanoMem with the 'lancedb' extra."
         ) from exc
     return lancedb
+
+
+def _table_names(db: Any) -> set[str]:
+    if hasattr(db, "list_tables"):
+        response = db.list_tables()
+        names = response.tables if hasattr(response, "tables") else response
+        return set(str(name) for name in names)
+    return set(str(name) for name in db.table_names())
 
 
 def _schema(dimensions: int) -> Any:
