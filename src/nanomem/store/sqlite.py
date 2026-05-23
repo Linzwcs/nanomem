@@ -71,52 +71,16 @@ class SQLiteMemoryUnitStore:
         return tuple(by_id[unit_id] for unit_id in unit_ids if unit_id in by_id)
 
     def query_units(self, selector: MemoryUnitSelector) -> tuple[MemoryUnit, ...]:
-        clauses: list[str] = []
-        params: list[object] = []
-        if selector.owner_id is not None:
-            clauses.append("owner_id = ?")
-            params.append(selector.owner_id)
-        if selector.namespaces is not None:
-            if not selector.namespaces:
-                return ()
-            clauses.append(
-                "namespace IN (" + ", ".join("?" for _ in selector.namespaces) + ")"
-            )
-            params.extend(selector.namespaces)
-        if selector.unit_ids:
-            clauses.append(
-                "unit_id IN (" + ", ".join("?" for _ in selector.unit_ids) + ")"
-            )
-            params.extend(selector.unit_ids)
-        if selector.memory_types:
-            clauses.append(
-                "memory_type IN ("
-                + ", ".join("?" for _ in selector.memory_types)
-                + ")"
-            )
-            params.extend(selector.memory_types)
-        if selector.time_range is not None:
-            if selector.time_range.start is not None:
-                clauses.append("timestamp >= ?")
-                params.append(selector.time_range.start)
-            if selector.time_range.end is not None:
-                clauses.append("timestamp <= ?")
-                params.append(selector.time_range.end)
-        if not selector.include_redacted:
-            clauses.append("redacted_at IS NULL")
-
-        query = "SELECT * FROM memory_units"
-        if clauses:
-            query += " WHERE " + " AND ".join(clauses)
-        direction = "ASC" if selector.order == "oldest_first" else "DESC"
-        query += f" ORDER BY timestamp {direction}, unit_id ASC"
-        if selector.limit is not None:
-            query += " LIMIT ?"
-            params.append(selector.limit)
-
+        query, params = _query_units_sql(selector, count=False)
         with self._lock:
             rows = self._connection.execute(query, tuple(params)).fetchall()
         return tuple(_row_to_unit(row) for row in rows)
+
+    def count_units(self, selector: MemoryUnitSelector) -> int:
+        query, params = _query_units_sql(selector, count=True)
+        with self._lock:
+            row = self._connection.execute(query, tuple(params)).fetchone()
+        return int(row[0]) if row is not None else 0
 
     def put_dialogue(self, record: DialogueRecord) -> None:
         with self._lock:
@@ -568,6 +532,73 @@ def _schema_migration_records(
         }
         for row in rows
     )
+
+
+def _query_units_sql(
+    selector: MemoryUnitSelector,
+    *,
+    count: bool,
+) -> tuple[str, list[object]]:
+    if selector.offset < 0:
+        raise ValueError("MemoryUnitSelector.offset must be non-negative")
+    if selector.limit is not None and selector.limit < 0:
+        raise ValueError("MemoryUnitSelector.limit must be non-negative")
+    clauses: list[str] = []
+    params: list[object] = []
+    if selector.owner_id is not None:
+        clauses.append("owner_id = ?")
+        params.append(selector.owner_id)
+    if selector.namespaces is not None:
+        if not selector.namespaces:
+            clauses.append("0")
+        else:
+            clauses.append(
+                "namespace IN (" + ", ".join("?" for _ in selector.namespaces) + ")"
+            )
+            params.extend(selector.namespaces)
+    if selector.unit_ids:
+        clauses.append(
+            "unit_id IN (" + ", ".join("?" for _ in selector.unit_ids) + ")"
+        )
+        params.extend(selector.unit_ids)
+    if selector.memory_types:
+        clauses.append(
+            "memory_type IN ("
+            + ", ".join("?" for _ in selector.memory_types)
+            + ")"
+        )
+        params.extend(selector.memory_types)
+    if selector.text_query is not None:
+        text = selector.text_query.strip()
+        if text:
+            clauses.append("LOWER(text) LIKE ?")
+            params.append(f"%{text.lower()}%")
+    if selector.time_range is not None:
+        if selector.time_range.start is not None:
+            clauses.append("timestamp >= ?")
+            params.append(selector.time_range.start)
+        if selector.time_range.end is not None:
+            clauses.append("timestamp <= ?")
+            params.append(selector.time_range.end)
+    if not selector.include_redacted:
+        clauses.append("redacted_at IS NULL")
+
+    query = "SELECT COUNT(*) FROM memory_units" if count else "SELECT * FROM memory_units"
+    if clauses:
+        query += " WHERE " + " AND ".join(clauses)
+    if count:
+        return query, params
+    direction = "ASC" if selector.order == "oldest_first" else "DESC"
+    query += f" ORDER BY timestamp {direction}, unit_id ASC"
+    if selector.limit is not None:
+        query += " LIMIT ?"
+        params.append(selector.limit)
+    elif selector.offset:
+        query += " LIMIT -1"
+    if selector.offset:
+        query += " OFFSET ?"
+        params.append(selector.offset)
+    return query, params
 
 
 def _unit_row(unit: MemoryUnit) -> tuple[Any, ...]:

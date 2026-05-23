@@ -73,3 +73,36 @@ def test_sqlite_store_round_trips_dialogue_units_and_logs(tmp_path) -> None:
         assert stats["operation_log_count"] == 1
     finally:
         store.close()
+
+
+def test_sqlite_store_counts_and_offsets_memory_units(tmp_path) -> None:
+    store = SQLiteMemoryUnitStore(tmp_path / "nanomem.db")
+    try:
+        units = tuple(
+            MemoryUnit(
+                unit_id=f"unit-{index}",
+                scope=MemoryScope(owner_id="user-1", namespace="personal"),
+                text=f"The user prefers option {index}.",
+                memory_type="preference",
+                timestamp=f"2026-01-0{index}T00:00:00+00:00",
+                available_at=f"2026-01-0{index}T00:00:01+00:00",
+            )
+            for index in range(1, 4)
+        )
+        store.append_units(units)
+
+        selector = MemoryUnitSelector(
+            owner_id="user-1",
+            namespaces=("personal",),
+            text_query="option",
+            limit=1,
+            offset=1,
+        )
+
+        page = store.query_units(selector)
+
+        assert store.count_units(selector) == 3
+        assert len(page) == 1
+        assert page[0].unit_id == "unit-2"
+    finally:
+        store.close()

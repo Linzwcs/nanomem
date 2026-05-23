@@ -15,12 +15,14 @@ export function MemoryUnitDetailPage({ unitId }: { unitId: string }) {
   if (!detail.data) return null;
 
   const { unit, source_chunks: sourceChunks } = detail.data;
+  const backHref =
+    sessionStorage.getItem("nanomem.memoryUnitsHash") || "#/memory-units";
 
   return (
     <section className="page-stack">
       <header className="page-header">
         <div>
-          <a className="back-link" href="#/memory-units">Memory Units</a>
+          <a className="back-link" href={backHref}>Memory Units</a>
           <h1>{unit.memory_type}</h1>
         </div>
         <Badge tone={unit.redacted_at ? "warn" : "good"}>

@@ -32,9 +32,9 @@ def _selector_for_rebuild(
 ) -> MemoryUnitSelector:
     if selector is None:
         return MemoryUnitSelector(limit=None)
-    if selector.limit is None:
+    if selector.limit is None and selector.offset == 0:
         return selector
-    return replace(selector, limit=None)
+    return replace(selector, limit=None, offset=0)
 
 
 def _selector_is_filtered(selector: MemoryUnitSelector) -> bool:
@@ -45,6 +45,7 @@ def _selector_is_filtered(selector: MemoryUnitSelector) -> bool:
             bool(selector.unit_ids),
             selector.time_range is not None,
             bool(selector.memory_types),
+            selector.text_query is not None,
             selector.include_redacted,
         )
     )

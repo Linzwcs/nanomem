@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from http import HTTPStatus
 from importlib import resources
 import json
@@ -100,9 +100,22 @@ def _memory_units_payload(
 ) -> dict[str, Any]:
     selector = _selector_from_query(query)
     units = service.store.query_units(selector)
+    total_selector = replace(selector, limit=None, offset=0)
+    if hasattr(service.store, "count_units"):
+        total_count = service.store.count_units(  # type: ignore[attr-defined]
+            total_selector,
+        )
+    else:
+        total_count = len(service.store.query_units(total_selector))
+    offset = selector.offset
+    limit = selector.limit
     return {
         "selector": asdict(selector),
         "count": len(units),
+        "total_count": total_count,
+        "offset": offset,
+        "limit": limit,
+        "has_more": offset + len(units) < total_count,
         "units": [asdict(unit) for unit in units],
     }
 
@@ -305,8 +318,10 @@ def _selector_from_query(
         namespaces=_namespaces(query),
         time_range=_time_range_from_query(query),
         memory_types=tuple(_many(query, "memory_type")),
+        text_query=_single(query, "text"),
         include_redacted=_bool(_single(query, "include_redacted")),
         limit=_limit(query, default=50),
+        offset=_offset(query),
         order=_order(query),
     )
 
@@ -392,6 +407,23 @@ def _limit(query: dict[str, list[str]], *, default: int) -> int | None:
     if parsed < 0:
         raise ValueError("limit must be non-negative")
     return min(parsed, 500)
+
+
+def _offset(query: dict[str, list[str]]) -> int:
+    value = _single(query, "offset")
+    if value is None:
+        page = _single(query, "page")
+        limit = _limit(query, default=50)
+        if page is None or limit is None:
+            return 0
+        parsed_page = int(page)
+        if parsed_page < 1:
+            raise ValueError("page must be positive")
+        return (parsed_page - 1) * limit
+    parsed = int(value)
+    if parsed < 0:
+        raise ValueError("offset must be non-negative")
+    return parsed
 
 
 def _order(query: dict[str, list[str]]) -> str:

@@ -18,15 +18,16 @@ export function useHashRoute(): Route {
   }, []);
 
   const path = hash.replace(/^#\/?/, "");
-  if (path.startsWith("memory-units/")) {
+  const routePath = path.split("?")[0];
+  if (routePath.startsWith("memory-units/")) {
     return {
       name: "memory-unit-detail",
-      unitId: decodeURIComponent(path.replace("memory-units/", "")),
+      unitId: decodeURIComponent(routePath.replace("memory-units/", "")),
     };
   }
-  if (path === "memory-units") return { name: "memory-units" };
-  if (path === "retrieval-preview") return { name: "retrieval-preview" };
-  if (path === "operations") return { name: "operations" };
-  if (path === "index-health") return { name: "index-health" };
+  if (routePath === "memory-units") return { name: "memory-units" };
+  if (routePath === "retrieval-preview") return { name: "retrieval-preview" };
+  if (routePath === "operations") return { name: "operations" };
+  if (routePath === "index-health") return { name: "index-health" };
   return { name: "overview" };
 }

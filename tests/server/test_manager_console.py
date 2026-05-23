@@ -156,6 +156,53 @@ def test_manager_api_filters_memory_units_by_date_and_order() -> None:
     assert filtered["units"][0]["text"] == "I prefer fact-level memory units."
 
 
+def test_manager_api_paginates_memory_units_and_reports_totals() -> None:
+    service = NanoMemService()
+    for index, text in (
+        (1, "I prefer concise Chinese answers."),
+        (2, "I prefer fact-level memory units."),
+        (3, "I prefer local-first memory storage."),
+    ):
+        service.capture(
+            CaptureRequest(
+                scope=MemoryScope(owner_id="user-1", namespace="personal"),
+                dialogue=CaptureDialogue(
+                    occurred_at=f"2026-01-0{index}T00:00:00+00:00",
+                    messages=(
+                        DialogueMessage(
+                            role="user",
+                            content=text,
+                            timestamp=f"2026-01-0{index}T00:00:00+00:00",
+                        ),
+                    ),
+                ),
+                capture_time=f"2026-01-0{index}T00:00:01+00:00",
+            )
+        )
+
+    first_page = _json(
+        handle_manager_get(
+            service,
+            "/manager/api/memory-units?owner_id=user-1&limit=2&page=1&text=prefer",
+        )
+    )
+    second_page = _json(
+        handle_manager_get(
+            service,
+            "/manager/api/memory-units?owner_id=user-1&limit=2&page=2&text=prefer",
+        )
+    )
+
+    assert first_page["count"] == 2
+    assert first_page["total_count"] == 3
+    assert first_page["offset"] == 0
+    assert first_page["has_more"] is True
+    assert second_page["count"] == 1
+    assert second_page["total_count"] == 3
+    assert second_page["offset"] == 2
+    assert second_page["has_more"] is False
+
+
 def test_manager_api_retrieval_preview_and_reindex() -> None:
     service = NanoMemService()
     service.capture(

@@ -29,6 +29,10 @@ export type MemoryUnit = {
 
 export type MemoryUnitsResponse = {
   count: number;
+  total_count: number;
+  offset: number;
+  limit: number | null;
+  has_more: boolean;
   units: MemoryUnit[];
 };
 

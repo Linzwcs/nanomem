@@ -157,6 +157,20 @@ a:hover {
   padding: 10px 12px;
 }
 
+.pagination-bar {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  font-size: 13px;
+  gap: 14px;
+  justify-content: space-between;
+}
+
+.pagination-bar div {
+  display: flex;
+  gap: 8px;
+}
+
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -189,7 +203,7 @@ a:hover {
 }
 
 .filter-bar {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
 .form-grid {

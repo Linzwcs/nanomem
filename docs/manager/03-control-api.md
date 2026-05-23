@@ -52,6 +52,15 @@ Memory list endpoints return canonical `MemoryUnit` fields. Detail endpoints may
 add derived audit fields such as `source_chunks`, but those fields must not
 change the stored memory model.
 
+`GET /manager/api/memory-units` supports:
+
+- selectors: `owner_id`, `namespace`, `memory_type`, `start`, `end`, `text`;
+- pagination: `limit`, `offset`, or one-based `page`;
+- ordering: `newest_first` by default, or `oldest_first`.
+
+Responses include `count`, `total_count`, `offset`, `limit`, and `has_more` so
+the UI can paginate without loading the whole memory store.
+
 Each source chunk should include:
 
 - `status`: `ok`, `missing_dialogue`, `redacted_dialogue`,

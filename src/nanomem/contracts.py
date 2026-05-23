@@ -173,8 +173,10 @@ class MemoryUnitSelector:
     unit_ids: tuple[str, ...] = ()
     time_range: TimeRange | None = None
     memory_types: tuple[str, ...] = ()
+    text_query: str | None = None
     include_redacted: bool = False
     limit: int | None = None
+    offset: int = 0
     order: Literal["newest_first", "oldest_first"] = "newest_first"
 
 
