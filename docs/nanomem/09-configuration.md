@@ -1,23 +1,15 @@
 # Configuration
 
-Status: draft
+Status: developer preview candidate
 
-This document defines the intended configuration shape for NanoMem.
+This document defines the current configuration shape implemented by NanoMem.
+It intentionally describes the working local sidecar path first, then optional
+provider and index extensions.
 
-## 1. Goals
-
-Configuration should be explicit, local-first, and backend-neutral. Defaults
-should work for a single-user sidecar without external services.
-
-## 2. Minimal Config
+## 1. Developer Preview Defaults
 
 ```yaml
 data_dir: .nanomem
-
-scope:
-  default_namespace: personal
-  allowed_namespaces:
-    - personal
 
 store:
   backend: sqlite
@@ -33,27 +25,24 @@ read:
   default_max_units: 10
 ```
 
-If `store.path` is omitted, it resolves to `${data_dir}/nanomem.db`.
+With this config, NanoMem uses SQLite as the authoritative fact store,
+deterministic local hashing embeddings, an in-memory dense index, and the
+heuristic extractor. It requires no network providers.
 
-## 3. Scope Config
+Default local state resolves under `data_dir`:
 
-```yaml
-scope:
-  default_namespace: personal
-  allowed_namespaces:
-    - personal
-    - work
-    - research
+```text
+.nanomem/
+  nanomem.db      # authoritative SQLite store
+  lancedb/        # optional persistent local vector index
+  backups/        # recommended backup output directory
+  exports/        # recommended export output directory
 ```
 
-Rules:
+If `store.path` is omitted, it resolves to `${data_dir}/nanomem.db`. If
+`index.path` is omitted, it resolves to `${data_dir}/lancedb`.
 
-- `default_namespace` must be in `allowed_namespaces`;
-- capture writes to one namespace;
-- read defaults to all allowed namespaces;
-- extractors must not invent namespaces.
-
-## 4. Store Config
+## 2. Store Config
 
 ```yaml
 store:
@@ -64,18 +53,13 @@ store:
 `path` may be omitted for the default local layout. `:memory:` may be used for
 tests and smoke runs.
 
-Future managed deployments may add:
-
-```yaml
-store:
-  backend: postgres
-  dsn_env: NANOMEM_POSTGRES_DSN
-```
+Developer preview supports only `store.backend: sqlite`. Future managed
+deployments may add Postgres, but it is not a current local target.
 
 Secrets should be referenced through environment variables, not committed config
 files.
 
-## 5. Index Config
+## 3. Dense Local Index
 
 ```yaml
 index:
@@ -88,25 +72,56 @@ index:
     dimensions: 128
 ```
 
-Backend choices:
+`dense` is the default. It is a bounded in-memory vector index over stored
+MemoryUnits. It is good for local development, tests, and small personal stores.
+It is not an ANN backend.
 
-- `dense`: default bounded in-memory embedding retrieval;
-- `lexical`: deterministic token fallback and debugging baseline;
-- `hybrid`: lexical + dense merge;
-- `lancedb`: future local persistent ANN;
-- `pgvector`: future managed vector index.
-
-LanceDB should default to `${data_dir}/lancedb` when no explicit path is set.
-`metadata_filter_keys` defaults to empty. Add keys only when the host wants
-those metadata fields copied into the index for filtering.
-
-`rebuild_on_startup` defaults to `true`. With the current in-memory index
+`rebuild_on_startup` defaults to `true`. With the current in-memory dense index
 backends, NanoMem treats SQLite as the authoritative fact store and rebuilds the
 active index from stored `MemoryUnit` records whenever a configured service
 starts. Set it to `false` only for specialized tests or hosts that rebuild the
 index explicitly.
 
-## 6. Extraction Config
+`dense_scan_limit` caps per-query in-memory similarity work. For larger local
+stores, prefer the optional LanceDB backend instead of raising this indefinitely.
+
+## 4. Optional LanceDB Index
+
+Use LanceDB when a local sidecar needs a persistent vector index without running
+another server.
+
+```yaml
+data_dir: .nanomem
+
+store:
+  backend: sqlite
+
+index:
+  backend: lancedb
+  path: .nanomem/lancedb
+  table: memory_units
+  distance_type: cosine
+  embedding:
+    backend: hashing
+    dimensions: 128
+```
+
+Install with:
+
+```bash
+python -m pip install -e ".[dev,lancedb]"
+```
+
+SQLite remains the source of truth. LanceDB stores retrieval fields and vectors
+only and must be rebuildable from SQLite.
+
+Other implemented index backends:
+
+- `lexical`: deterministic token-overlap baseline;
+- `hybrid`: merges lexical and dense scores;
+- `dense`: default local in-memory vector baseline.
+
+## 5. Extraction Config
 
 ```yaml
 extraction:
@@ -136,44 +151,50 @@ invalid units individually.
 `max_messages_per_chunk` and `max_chars_per_chunk` are extractor-internal
 windowing limits. They are deliberately not part of capture requests.
 
-## 7. Read And Render Config
+## 6. Read Config
 
 ```yaml
 read:
   default_recency_policy: balanced
   default_max_units: 10
-  default_context_budget_tokens: 1200
-  renderer:
-    show_namespace: false
-    show_dialogue_ref: false
-    show_memory_type: false
 ```
 
-Rendered text must always include time. Other labels are configurable.
-`default_recency_policy` affects ranking when `time_range` is omitted; it is not
-a default hard time filter.
+`default_recency_policy` affects ranking when a read request omits
+`recency_policy`. It is not a hard time filter. Read requests may still provide
+`time_range` for candidate filtering, `max_units`, and
+`context_budget_tokens`.
 
-## 8. Maintenance Config
+Rendered text always includes time. Render formatting is not configurable in the
+current developer preview.
+
+## 7. Maintenance Config
 
 ```yaml
 maintenance:
-  backups:
+  integrity_check: true
+  backup:
     enabled: true
     path: .nanomem/backups/nanomem.backup.db
-  exports:
-    path: .nanomem/exports
+    overwrite: false
+  export:
+    enabled: true
+    path: .nanomem/exports/export.json
+    include_operation_logs: true
+    overwrite: false
   retention:
     enabled: false
     before: null
+    max_age_days: null
   operation_log_retention:
-    enabled: true
-    days: 30
+    enabled: false
+    before: null
+    max_age_days: null
 ```
 
 MemoryUnit, DialogueRecord, and operation-log retention should remain separate
 policy paths.
 
-## 9. Path Resolution
+## 8. Path Resolution
 
 Relative paths resolve from the process working directory unless a host adapter
 provides an explicit config root.
@@ -189,3 +210,23 @@ Recommended local layout:
 ```
 
 All generated local state should stay under `data_dir` by default.
+
+## 9. Sidecar Installation Guidance
+
+For developer preview, prefer project-local or user-local configuration:
+
+```text
+project/.nanomem/nanomem.db
+project/nanomem.json
+```
+
+or:
+
+```text
+~/.config/nanomem/nanomem.json
+~/.local/share/nanomem/nanomem.db
+```
+
+Do not require system-wide installation for ordinary agent integration. Agent
+hooks should connect to a local HTTP sidecar through `NANOMEM_BASE_URL`,
+`NANOMEM_OWNER_ID`, and optional `NANOMEM_NAMESPACE`.

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from nanomem.config import config_from_mapping
+from nanomem.config import config_from_mapping, load_config
 from nanomem.contracts import (
     CaptureDialogue,
     CaptureRequest,
@@ -10,7 +10,95 @@ from nanomem.contracts import (
     MemoryScope,
 )
 from nanomem.extraction.llm import LLMMemoryUnitExtractor
-from nanomem.factory import extractor_from_config, service_from_config
+from nanomem.factory import (
+    embedding_from_config,
+    extractor_from_config,
+    service_from_config,
+)
+
+
+def test_developer_preview_defaults_resolve_under_data_dir() -> None:
+    config = config_from_mapping({"data_dir": ".nanomem"})
+
+    assert config.store.backend == "sqlite"
+    assert config.store.path == ".nanomem/nanomem.db"
+    assert config.index.backend == "dense"
+    assert config.index.path == ".nanomem/lancedb"
+    assert config.index.embedding.backend == "hashing"
+    assert config.index.embedding.dimensions == 128
+    assert config.index.rebuild_on_startup is True
+    assert config.extraction.backend == "heuristic"
+    assert config.read.default_recency_policy == "balanced"
+    assert config.read.default_max_units == 10
+
+
+def test_developer_preview_yaml_config_matches_documented_minimal_shape(
+    tmp_path,
+) -> None:
+    config_path = tmp_path / "nanomem.yaml"
+    config_path.write_text(
+        """
+data_dir: .nanomem
+store:
+  backend: sqlite
+index:
+  backend: dense
+extraction:
+  backend: heuristic
+read:
+  default_recency_policy: balanced
+  default_max_units: 10
+""".strip(),
+        encoding="utf-8",
+    )
+
+    config = load_config(config_path)
+
+    assert config.store.path == ".nanomem/nanomem.db"
+    assert config.index.backend == "dense"
+    assert config.index.path == ".nanomem/lancedb"
+    assert config.extraction.backend == "heuristic"
+
+
+def test_lancedb_config_keeps_sqlite_as_fact_store() -> None:
+    config = config_from_mapping(
+        {
+            "data_dir": ".nanomem",
+            "store": {"backend": "sqlite"},
+            "index": {
+                "backend": "lancedb",
+                "path": ".nanomem/lancedb",
+                "table": "memory_units",
+                "distance_type": "cosine",
+                "embedding": {
+                    "backend": "hashing",
+                    "dimensions": 128,
+                },
+            },
+        }
+    )
+
+    assert config.store.backend == "sqlite"
+    assert config.store.path == ".nanomem/nanomem.db"
+    assert config.index.backend == "lancedb"
+    assert config.index.path == ".nanomem/lancedb"
+    assert config.index.table == "memory_units"
+    assert config.index.distance_type == "cosine"
+
+
+def test_openai_compatible_embedding_config_requires_model() -> None:
+    config = config_from_mapping(
+        {
+            "index": {
+                "embedding": {
+                    "backend": "openai_compatible",
+                }
+            }
+        }
+    )
+
+    with pytest.raises(ValueError, match="openai_compatible embedding requires model"):
+        embedding_from_config(config)
 
 
 def test_llm_extraction_config_requires_model() -> None:
