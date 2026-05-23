@@ -12,37 +12,32 @@ agent/dialogue -> capture -> DialogueRecord -> extraction -> MemoryUnit
 
 ## Verified Baseline
 
-Validation date: 2026-05-20.
+Validation date: 2026-05-23.
 
 Commands run:
 
 ```bash
-PYTHONPATH=src python -m pytest
-PYTHONPATH=src python -m compileall -q src/nanomem scripts/build_complete_test_db.py
-node --check src/nanomem/manager/assets/app.js
-PYTHONPATH=src python scripts/build_complete_test_db.py --force
+python -m pytest
+python -m pytest tests/product/test_local_memory_flow.py
 ```
 
 Observed results:
 
 ```text
-49 passed, 1 skipped
-unit_count=8
-dialogue_count=7
-missing_dialogue_refs=0
+62 passed, 5 skipped
+1 product-flow regression passed
 ```
 
-HTTP and manager smoke checks also passed:
+The product-flow regression verifies the local developer-preview path:
 
-- `/v1/health` returns `200`.
-- `/manager` and packaged assets return `200`.
-- `/manager/api/stats` reports 8 units and 7 dialogue records.
-- all memory detail source chunks resolve with status `ok`;
-- each source chunk includes exact extracted `messages` and full
-  multi-turn `dialogue_messages`;
-- `/manager/api/reindex` indexes 8 units;
-- retrieval preview for `concise Chinese answers` returns 3 ranked units and
-  renders 3 context units.
+- `capture` archives `DialogueRecord`s before extracting `MemoryUnit`s;
+- SQLite persists units, dialogues, and operation logs across service restart;
+- startup reindex rebuilds the derived dense index from SQLite;
+- `read` retrieves namespace-scoped facts and renders timestamped context under
+  a token budget;
+- time range filters exclude ineligible memory evidence;
+- Manager APIs expose stats, memory list/detail, source dialogue evidence,
+  retrieval preview, reindex, and operation logs.
 
 Agent adapter E2E also passed:
 
@@ -70,13 +65,27 @@ Implemented:
 Known limits:
 
 - extraction quality is MVP-level unless an LLM extractor is configured;
-- dense index is in-memory and must be rebuilt after restart;
+- dense index is in-memory and is rebuilt from SQLite on startup by default;
 - LanceDB is available as an optional persistent local vector index, but still
   needs broader runtime smoke coverage with real embedding providers;
 - render format is simple and not yet optimized for maximum facts per budget;
 - control-plane maintenance workflows are partly CLI/service-level and not fully exposed
   in Manager;
 - operation log payloads still need stricter minimization before sensitive use.
+
+## Developer Preview Gate
+
+NanoMem can be treated as a local alpha product when the product-flow regression
+passes. Developer preview should additionally require:
+
+- frozen HTTP/SDK/MCP contract examples for `capture`, `read`, and manager
+  retrieval preview;
+- one recommended local configuration using SQLite plus dense or LanceDB index;
+- explicit setup docs for sidecar usage without system-wide installation;
+- browser-verified Manager UI for memory list, source evidence, retrieval lab,
+  operation logs, and index health;
+- documented limitations for heuristic extraction, hashing embeddings, and
+  operation-log payload sensitivity.
 
 ## Milestone 1: Contract Freeze
 
