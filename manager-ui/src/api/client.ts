@@ -2,6 +2,7 @@ import type {
   MemoryUnitDetailResponse,
   MemoryUnitsResponse,
   OperationLogsResponse,
+  ReindexResponse,
   RetrievalPreviewResponse,
   StatsResponse,
 } from "./types";
@@ -35,6 +36,10 @@ export async function previewRetrieval(payload: Record<string, unknown>) {
     "/manager/api/retrieval-preview",
     payload,
   );
+}
+
+export async function rebuildIndex(payload: Record<string, unknown> = {}) {
+  return apiPost<ReindexResponse>("/manager/api/reindex", payload);
 }
 
 async function apiGet<T>(path: string): Promise<T> {

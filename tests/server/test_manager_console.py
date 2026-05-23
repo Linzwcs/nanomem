@@ -76,7 +76,11 @@ def test_manager_api_lists_stats_units_dialogue_and_logs() -> None:
 
     stats = _json(handle_manager_get(service, "/manager/api/stats"))
     assert stats["unit_count"] == 1
+    assert stats["active_unit_count"] == 1
     assert stats["index_backend"] == "dense_cosine_v1"
+    assert stats["index_document_count"] == 1
+    assert stats["index_health"] == "synced"
+    assert stats["index_unit_delta"] == 0
 
     legacy_stats = _json(handle_manager_get(service, "/admin/api/stats"))
     assert legacy_stats["unit_count"] == 1
@@ -188,6 +192,40 @@ def test_manager_api_retrieval_preview_and_reindex() -> None:
     reindex = _json(handle_manager_post(service, "/manager/api/reindex", {}))
     assert reindex["indexed_unit_count"] == 1
     assert reindex["index_backend"] == "dense_cosine_v1"
+
+    stats = _json(handle_manager_get(service, "/manager/api/stats"))
+    assert stats["last_reindex_at"] is not None
+
+    logs = _json(handle_manager_get(service, "/manager/api/operation-logs?limit=10"))
+    assert any(log["operation_type"] == "reindex" for log in logs["logs"])
+
+
+def test_manager_stats_reports_stale_index_after_index_clear() -> None:
+    service = NanoMemService()
+    service.capture(
+        CaptureRequest(
+            scope=MemoryScope(owner_id="user-1", namespace="personal"),
+            dialogue=CaptureDialogue(
+                occurred_at="2026-01-01T00:00:00+00:00",
+                messages=(
+                    DialogueMessage(
+                        role="user",
+                        content="I prefer concise Chinese answers.",
+                        timestamp="2026-01-01T00:00:00+00:00",
+                    ),
+                ),
+            ),
+            capture_time="2026-01-01T00:00:01+00:00",
+        )
+    )
+    service.index.clear()
+
+    stats = _json(handle_manager_get(service, "/manager/api/stats"))
+
+    assert stats["active_unit_count"] == 1
+    assert stats["index_document_count"] == 0
+    assert stats["index_health"] == "stale"
+    assert stats["index_unit_delta"] == 1
 
 
 def _json(response) -> dict:

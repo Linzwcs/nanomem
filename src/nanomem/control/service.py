@@ -26,6 +26,7 @@ class DatabaseStats:
     schema_version: int
     latest_schema_version: int
     unit_count: int
+    active_unit_count: int
     owner_count: int
     namespace_count: int
     dialogue_count: int
@@ -38,6 +39,9 @@ class DatabaseStats:
     top_owners: tuple[dict[str, Any], ...] = ()
     index_backend: str | None = None
     index_document_count: int | None = None
+    index_health: str = "unknown"
+    index_unit_delta: int | None = None
+    last_reindex_at: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
@@ -147,6 +151,14 @@ class NanoMemControlService:
         index_count = None
         if hasattr(self.index, "document_count"):
             index_count = int(self.index.document_count())  # type: ignore[attr-defined]
+        active_unit_count = int(payload["active_unit_count"])
+        last_reindex = self.store.list_operation_logs(
+            OperationLogSelector(
+                operation_type="reindex",
+                status="ok",
+                limit=1,
+            )
+        )
         return DatabaseStats(
             store=str(payload["store"]),
             path=str(payload["path"]),
@@ -154,6 +166,7 @@ class NanoMemControlService:
             schema_version=int(payload["schema_version"]),
             latest_schema_version=int(payload["latest_schema_version"]),
             unit_count=int(payload["unit_count"]),
+            active_unit_count=active_unit_count,
             owner_count=int(payload["owner_count"]),
             namespace_count=int(payload["namespace_count"]),
             dialogue_count=int(payload["dialogue_count"]),
@@ -170,6 +183,11 @@ class NanoMemControlService:
             top_owners=tuple(payload.get("top_owners", ())),
             index_backend=getattr(self.index, "name", type(self.index).__name__),
             index_document_count=index_count,
+            index_health=_index_health(active_unit_count, index_count),
+            index_unit_delta=(
+                None if index_count is None else active_unit_count - index_count
+            ),
+            last_reindex_at=last_reindex[0].created_at if last_reindex else None,
             metadata={
                 "index": _index_metadata(self.index),
             },
@@ -412,6 +430,14 @@ def _index_metadata(index: MemoryUnitIndex) -> dict[str, Any]:
     if lexical is not None:
         payload["lexical"] = _index_metadata(lexical)
     return payload
+
+
+def _index_health(active_unit_count: int, index_count: int | None) -> str:
+    if index_count is None:
+        return "unknown"
+    if index_count == active_unit_count:
+        return "synced"
+    return "stale"
 
 
 # Backward-compatible public name. New code should use NanoMemControlService.

@@ -235,6 +235,10 @@ class SQLiteMemoryUnitStore:
             schema_version = _schema_version(self._connection)
             migrations = _schema_migration_records(self._connection)
             unit_count = _scalar(self._connection, "SELECT COUNT(*) FROM memory_units")
+            active_unit_count = _scalar(
+                self._connection,
+                "SELECT COUNT(*) FROM memory_units WHERE redacted_at IS NULL",
+            )
             owner_count = _scalar(
                 self._connection,
                 "SELECT COUNT(DISTINCT owner_id) FROM memory_units",
@@ -285,6 +289,7 @@ class SQLiteMemoryUnitStore:
                 ]
             ),
             "unit_count": unit_count,
+            "active_unit_count": active_unit_count,
             "owner_count": owner_count,
             "namespace_count": namespace_count,
             "dialogue_count": dialogue_count,

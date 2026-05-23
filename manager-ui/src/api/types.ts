@@ -72,6 +72,7 @@ export type StatsResponse = {
   schema_version: number;
   latest_schema_version: number;
   unit_count: number;
+  active_unit_count: number;
   owner_count: number;
   namespace_count: number;
   dialogue_count: number;
@@ -81,9 +82,18 @@ export type StatsResponse = {
   newest_timestamp: string | null;
   index_backend: string | null;
   index_document_count: number | null;
+  index_health: "synced" | "stale" | "unknown" | string;
+  index_unit_delta: number | null;
+  last_reindex_at: string | null;
   metadata: {
     index?: Record<string, unknown>;
   };
+};
+
+export type ReindexResponse = {
+  indexed_unit_count: number;
+  index_backend: string;
+  stats: Record<string, unknown>;
 };
 
 export type OperationLog = {

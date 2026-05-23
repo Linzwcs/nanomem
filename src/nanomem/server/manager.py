@@ -11,9 +11,11 @@ from nanomem.control.service import NanoMemControlService
 from nanomem.contracts import (
     MemoryUnit,
     MemoryUnitSelector,
+    OperationLogEntry,
     OperationLogSelector,
     TimeRange,
 )
+from nanomem.ids import new_id
 from nanomem.serde import read_request_from_json, read_result_to_json
 from nanomem.service.core import NanoMemService
 from nanomem.time import now_utc_iso
@@ -71,7 +73,9 @@ def handle_manager_post(
         return None
     if normalized_path == "/manager/api/reindex":
         selector = _selector_from_payload(payload)
-        return _json_response(asdict(service.reindex(selector)))
+        result = service.reindex(selector)
+        _record_reindex_log(service, selector, result)
+        return _json_response(asdict(result))
     if normalized_path == "/manager/api/retrieval-preview":
         request = read_request_from_json(_read_preview_payload(payload))
         result = service.read(request)
@@ -265,6 +269,32 @@ def _operation_logs_payload(
         "count": len(logs),
         "logs": [asdict(log) for log in logs],
     }
+
+
+def _record_reindex_log(
+    service: NanoMemService,
+    selector: MemoryUnitSelector,
+    result: Any,
+) -> None:
+    created_at = now_utc_iso()
+    service.store.append_operation_log(
+        OperationLogEntry(
+            log_id=new_id("oplog"),
+            operation_type="reindex",
+            created_at=created_at,
+            scope=None,
+            status="ok",
+            summary={
+                "indexed_unit_count": result.indexed_unit_count,
+                "index_backend": result.index_backend,
+                "selector_filtered": result.stats.get("selector_filtered"),
+            },
+            payload={
+                "selector": asdict(selector),
+                "stats": result.stats,
+            },
+        )
+    )
 
 
 def _selector_from_query(

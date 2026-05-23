@@ -51,7 +51,8 @@ URLs by hand.
 - `dialogues`: log-style source display and produced-unit navigation.
 - `retrieval-preview`: query form, ranked hits, rendered context diagnostics.
 - `operations`: operation logs, backup/export, retention and redaction previews.
-- `index-health`: backend name, document count, freshness, rebuild state.
+- `index-health`: backend name, active store count, index document count,
+  synced/stale state, last reindex timestamp, and rebuild action result.
 
 `components/` owns reusable UI primitives: page shell, toolbar, table, empty
 state, badges, time range controls, JSON preview, and confirm dialogs.

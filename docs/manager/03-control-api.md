@@ -30,6 +30,14 @@ GET /manager/api/operation-logs
 Observation endpoints are read-only. They should support selectors and
 pagination for large stores.
 
+`stats` includes index health fields for the active backend:
+
+- `active_unit_count`: non-redacted MemoryUnits in the authoritative store;
+- `index_document_count`: documents visible to the active index when supported;
+- `index_health`: `synced`, `stale`, or `unknown`;
+- `index_unit_delta`: `active_unit_count - index_document_count`;
+- `last_reindex_at`: latest successful manager reindex operation timestamp.
+
 ## Memory And Evidence Endpoints
 
 ```text
@@ -67,6 +75,9 @@ logging to be disabled.
 `reindex` rebuilds derived index state from the authoritative store. If partial
 reindex is introduced, the response must clearly say whether the active index
 was fully rebuilt or incrementally updated.
+
+Manager-triggered reindex operations write an operation log entry with operation
+type `reindex`, affected count, backend name, and selector metadata.
 
 ## Maintenance Endpoints
 
