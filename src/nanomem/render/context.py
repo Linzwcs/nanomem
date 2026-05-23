@@ -54,5 +54,9 @@ def _render_line(item: RankedMemoryUnit) -> str:
     return f"- [{', '.join(labels)}] {unit.text}"
 
 
+def render_line_for_diagnostics(item: RankedMemoryUnit) -> str:
+    return _render_line(item)
+
+
 def estimate_tokens(text: str) -> int:
     return len(TOKEN_PATTERN.findall(str(text or "")))

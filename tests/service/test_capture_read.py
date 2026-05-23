@@ -4,6 +4,7 @@ from nanomem.contracts import (
     CaptureDialogue,
     CaptureRequest,
     DialogueMessage,
+    MemoryUnit,
     MemoryScope,
     OperationLogSelector,
     ReadRequest,
@@ -98,3 +99,45 @@ def test_repeated_reads_do_not_collide_operation_log_ids() -> None:
     logs = service.store.list_operation_logs(OperationLogSelector(limit=None))
     assert len(logs) == 2
     assert logs[0].log_id != logs[1].log_id
+
+
+def test_read_reports_render_budget_diagnostics() -> None:
+    service = NanoMemService()
+    units = (
+        MemoryUnit(
+            unit_id="unit-1",
+            scope=MemoryScope(owner_id="user-1", namespace="personal"),
+            text="alpha",
+            memory_type="preference",
+            timestamp="2026",
+            available_at="2026",
+        ),
+        MemoryUnit(
+            unit_id="unit-2",
+            scope=MemoryScope(owner_id="user-1", namespace="personal"),
+            text="beta",
+            memory_type="preference",
+            timestamp="2026",
+            available_at="2026",
+        ),
+    )
+    service.store.append_units(units)
+    service.index.upsert(units)
+
+    read = service.read(
+        ReadRequest(
+            owner_id="user-1",
+            namespaces=("personal",),
+            query="alpha beta",
+            query_time="2026-01-02T00:00:00+00:00",
+            max_units=2,
+            context_budget_tokens=18,
+        )
+    )
+
+    assert read.stats["ranked_count"] == 2
+    assert read.stats["returned_unit_count"] == 1
+    assert read.stats["skipped_due_to_budget_count"] == 1
+    assert len(read.stats["rendered_unit_ids"]) == 1
+    assert len(read.stats["skipped_unit_ids"]) == 1
+    assert len(read.stats["ranked_token_estimates"]) == 2

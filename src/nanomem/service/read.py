@@ -17,7 +17,11 @@ from nanomem.ids import new_id
 from nanomem.index.base import MemoryUnitIndex
 from nanomem.index.lexical import tokenize
 from nanomem.ranking.ranker import MemoryUnitRanker
-from nanomem.render.context import EvidenceContextRenderer
+from nanomem.render.context import (
+    EvidenceContextRenderer,
+    estimate_tokens,
+    render_line_for_diagnostics,
+)
 from nanomem.store.base import MemoryStore
 from nanomem.time import now_utc_iso
 
@@ -86,6 +90,11 @@ class ReadPipeline:
             ranked,
             budget_tokens=request.context_budget_tokens,
         )
+        render_diagnostics = _render_diagnostics(
+            ranked,
+            rendered_text=context.text,
+            budget_tokens=request.context_budget_tokens,
+        )
         result = ReadResult(
             request=request,
             ranked_units=ranked,
@@ -99,7 +108,16 @@ class ReadPipeline:
                 "candidate_count": len(hits),
                 "ranked_count": len(ranked),
                 "returned_unit_count": context.unit_count,
+                "rendered_unit_ids": render_diagnostics["rendered_unit_ids"],
+                "skipped_unit_ids": render_diagnostics["skipped_unit_ids"],
+                "skipped_due_to_budget_count": render_diagnostics[
+                    "skipped_due_to_budget_count"
+                ],
+                "context_budget_tokens": request.context_budget_tokens,
                 "context_tokens": context.token_count,
+                "ranked_token_estimates": render_diagnostics[
+                    "ranked_token_estimates"
+                ],
                 "index_backend": getattr(self.index, "name", type(self.index).__name__),
                 "recency_policy": recency_policy,
                 "ranking_policy": self.ranker.name,
@@ -215,4 +233,46 @@ def _ranked_unit_log_payload(item: RankedMemoryUnit) -> dict[str, object]:
             for ref in item.unit.dialogue_refs
         ],
         "score_breakdown": item.score_breakdown,
+    }
+
+
+def _render_diagnostics(
+    ranked: tuple[RankedMemoryUnit, ...],
+    *,
+    rendered_text: str,
+    budget_tokens: int | None,
+) -> dict[str, object]:
+    del rendered_text
+    lines = ["Relevant memory units:"]
+    rendered_unit_ids: list[str] = []
+    skipped_unit_ids: list[str] = []
+    for index, item in enumerate(ranked):
+        line = render_line_for_diagnostics(item)
+        candidate = "\n".join([*lines, line])
+        if budget_tokens is not None and estimate_tokens(candidate) > budget_tokens:
+            skipped_unit_ids.append(item.unit.unit_id)
+            if rendered_unit_ids:
+                skipped_unit_ids.extend(
+                    later.unit.unit_id
+                    for later in ranked[index + 1:]
+                )
+                break
+            continue
+        lines.append(line)
+        rendered_unit_ids.append(item.unit.unit_id)
+    return {
+        "rendered_unit_ids": tuple(rendered_unit_ids),
+        "skipped_unit_ids": tuple(skipped_unit_ids),
+        "skipped_due_to_budget_count": len(skipped_unit_ids)
+        if budget_tokens is not None
+        else 0,
+        "ranked_token_estimates": [
+            {
+                "unit_id": item.unit.unit_id,
+                "render_line_tokens": estimate_tokens(
+                    render_line_for_diagnostics(item),
+                ),
+            }
+            for item in ranked
+        ],
     }

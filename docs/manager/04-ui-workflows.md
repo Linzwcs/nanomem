@@ -51,6 +51,8 @@ Retrieval Lab is a runtime recall simulator, not general search. It should show:
 - score breakdown;
 - rendered context;
 - candidate/ranked/returned counts;
+- skipped-due-to-budget count;
+- per-ranked-unit rendered/skipped state and render-line token estimate;
 - index backend.
 
 From each ranked result, link back to MemoryUnit detail and source evidence.

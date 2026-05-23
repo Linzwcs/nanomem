@@ -235,6 +235,10 @@ def test_manager_api_retrieval_preview_and_reindex() -> None:
     )
     assert preview["context"]["unit_count"] == 1
     assert preview["stats"]["index_backend"] == "dense_cosine_v1"
+    assert preview["stats"]["returned_unit_count"] == 1
+    assert preview["stats"]["skipped_due_to_budget_count"] == 0
+    assert len(preview["stats"]["rendered_unit_ids"]) == 1
+    assert len(preview["stats"]["ranked_token_estimates"]) == 1
 
     reindex = _json(handle_manager_post(service, "/manager/api/reindex", {}))
     assert reindex["indexed_unit_count"] == 1

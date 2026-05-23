@@ -49,7 +49,8 @@ URLs by hand.
 
 - `memory-units`: list, filters, review queues, detail route, evidence status.
 - `dialogues`: log-style source display and produced-unit navigation.
-- `retrieval-preview`: query form, ranked hits, rendered context diagnostics.
+- `retrieval-preview`: query form, ranked hits, ranked/rendered comparison,
+  skipped-due-to-budget diagnostics, and rendered context.
 - `operations`: operation logs, backup/export, retention and redaction previews.
 - `index-health`: backend name, active store count, index document count,
   synced/stale state, last reindex timestamp, and rebuild action result.

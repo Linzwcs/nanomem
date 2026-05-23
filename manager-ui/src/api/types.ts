@@ -126,5 +126,25 @@ export type RetrievalPreviewResponse = {
     token_count: number;
     unit_count: number;
   };
-  stats: Record<string, unknown>;
+  stats: RetrievalStats;
+};
+
+export type RetrievalStats = {
+  candidate_count?: number;
+  ranked_count?: number;
+  returned_unit_count?: number;
+  skipped_due_to_budget_count?: number;
+  context_budget_tokens?: number | null;
+  context_tokens?: number;
+  rendered_unit_ids?: string[];
+  skipped_unit_ids?: string[];
+  ranked_token_estimates?: Array<{
+    unit_id: string;
+    render_line_tokens: number;
+  }>;
+  index_backend?: string;
+  recency_policy?: string;
+  ranking_policy?: string;
+  render_policy?: string;
+  [key: string]: unknown;
 };
