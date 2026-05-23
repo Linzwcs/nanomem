@@ -165,7 +165,45 @@ Current JSON parsing intentionally keeps these compatibility aliases:
 These aliases are input compatibility only. New examples should use the frozen
 field names.
 
-## 5. Internal Extension Contracts
+## 5. Wire JSON Rules
+
+Public serializers emit canonical JSON-compatible objects:
+
+- tuples are serialized as JSON arrays;
+- `scope.user_id` is never emitted, only `scope.owner_id`;
+- legacy `events` are never emitted, only `dialogue.messages`;
+- `DialogueRef.message_range` is emitted as a two-item array;
+- `namespaces=None` is emitted as JSON `null` and means all namespaces for the
+  owner;
+- explicit namespace filters are emitted as ordered arrays;
+- response `stats` remain a diagnostics object and individual keys are not part
+  of the frozen semantic contract unless documented elsewhere.
+
+HTTP, SDK, MCP structured results, and Manager retrieval preview should all use
+these same wire shapes.
+
+## 6. Integration Surfaces
+
+Frozen agent-facing surfaces:
+
+- HTTP `POST /v1/capture`;
+- HTTP `POST /v1/read`;
+- Python SDK `NanoMemClient.capture` and `NanoMemClient.read`;
+- MCP tools `nanomem_capture` and `nanomem_read`.
+
+Control-plane surfaces that mirror read contracts but remain manager-specific:
+
+- Manager `POST /manager/api/retrieval-preview`;
+- Manager `GET /manager/api/memory-units`;
+- Manager `GET /manager/api/memory-units/{unit_id}`;
+- Manager `GET /manager/api/operation-logs`.
+
+Manager preview must preserve `query_time`, `time_range`, `max_units`, and
+`context_budget_tokens` in the normalized `ReadRequest` that appears in the
+response. `query_time` affects recency ranking; `time_range` is a hard evidence
+timestamp filter.
+
+## 7. Internal Extension Contracts
 
 These remain internal and may evolve without breaking agent-facing API:
 
@@ -181,12 +219,21 @@ These remain internal and may evolve without breaking agent-facing API:
 They are still important for extension authors, but they are not normal agent
 tools.
 
-## 6. Validated Behaviors
+## 8. Validated Behaviors
 
 Contract tests now cover:
 
 - capture JSON parsing and serialization;
 - read JSON parsing and serialization;
+- capture result and read result JSON round trips;
+- public JSON serializers returning arrays, not Python tuples;
+- HTTP `400` contract errors for malformed requests;
+- SDK error wrapping for HTTP contract failures;
+- MCP tool schemas for `nanomem_capture` and `nanomem_read`;
+- MCP tool calls returning structured public results;
+- Manager retrieval preview preserving read tuning fields;
+- request/response example JSON blocks parsing successfully;
+- examples avoiding legacy emitted fields such as `user_id` and `events`;
 - legacy event payload compatibility;
 - `namespaces=None` meaning all namespaces;
 - explicit namespace lists preserving order;
@@ -199,10 +246,10 @@ Contract tests now cover:
 Validation command:
 
 ```bash
-PYTHONPATH=src python -m pytest tests/test_serde.py
+python -m pytest tests/test_serde.py tests/server/test_http_sdk.py tests/server/test_manager_console.py tests/mcp/test_schema.py tests/docs/test_request_response_examples.py
 ```
 
-## 7. Still Flexible
+## 9. Still Flexible
 
 These should not be frozen yet:
 
@@ -213,7 +260,7 @@ These should not be frozen yet:
 - metadata conventions;
 - persistent vector backend configuration.
 
-## 8. Explicit Non-Goals For V1
+## 10. Explicit Non-Goals For V1
 
 - no session/project/tenant fields in `MemoryScope`;
 - no request-level capture idempotency;

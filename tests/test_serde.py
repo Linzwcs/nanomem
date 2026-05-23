@@ -2,13 +2,23 @@ from __future__ import annotations
 
 import pytest
 
-from nanomem.contracts import CaptureDialogue, CaptureRequest, DialogueMessage, MemoryScope
+from nanomem.contracts import (
+    CaptureDialogue,
+    CaptureRequest,
+    DialogueMessage,
+    MemoryScope,
+    ReadRequest,
+)
 from nanomem.serde import (
     capture_request_from_json,
+    capture_result_from_json,
     capture_request_to_json,
+    capture_result_to_json,
     memory_unit_from_json,
     read_request_from_json,
+    read_result_from_json,
     read_request_to_json,
+    read_result_to_json,
 )
 from nanomem.service.core import NanoMemService
 
@@ -40,6 +50,7 @@ def test_capture_request_from_dialogue_json() -> None:
 
     serialized = capture_request_to_json(request)
     assert serialized["scope"] == {"owner_id": "user-1", "namespace": "personal"}
+    assert isinstance(serialized["dialogue"]["messages"], list)
     assert serialized["dialogue"]["messages"][0]["role"] == "user"
     assert serialized["dialogue"]["messages"][0]["metadata"] == {}
 
@@ -59,7 +70,7 @@ def test_read_request_uses_owner_namespace_and_optional_recency_policy() -> None
 
     serialized = read_request_to_json(request)
     assert serialized["owner_id"] == "legacy-user"
-    assert serialized["namespaces"] == ("personal",)
+    assert serialized["namespaces"] == ["personal"]
 
 
 def test_read_request_rejects_unknown_recency_policy() -> None:
@@ -206,3 +217,102 @@ def test_capture_service_requires_message_timestamps() -> None:
                 capture_time="2026-01-05T00:00:01+00:00",
             )
         )
+
+
+def test_capture_result_json_contract_round_trip() -> None:
+    service = NanoMemService()
+    result = service.capture(
+        CaptureRequest(
+            scope=MemoryScope(owner_id="user-1", namespace="personal"),
+            dialogue=CaptureDialogue(
+                occurred_at="2026-01-05T00:00:00+00:00",
+                messages=(
+                    DialogueMessage(
+                        role="user",
+                        speaker_id="user-1",
+                        content="I prefer concise Chinese answers.",
+                        timestamp="2026-01-05T00:00:00+00:00",
+                    ),
+                ),
+            ),
+            capture_time="2026-01-05T00:00:01+00:00",
+        )
+    )
+
+    payload = capture_result_to_json(result)
+
+    assert set(payload) == {
+        "dialogue_id",
+        "accepted_message_count",
+        "unit_count",
+        "units",
+        "skipped",
+        "stats",
+        "trace_ref",
+    }
+    assert payload["accepted_message_count"] == 1
+    assert payload["unit_count"] == 1
+    assert payload["units"][0]["scope"] == {
+        "owner_id": "user-1",
+        "namespace": "personal",
+    }
+    assert payload["units"][0]["dialogue_refs"][0]["message_range"] == [0, 1]
+
+    parsed = capture_result_from_json(payload)
+    assert parsed.dialogue_id == result.dialogue_id
+    assert parsed.units[0].dialogue_refs[0].message_range == (0, 1)
+
+
+def test_read_result_json_contract_round_trip() -> None:
+    service = NanoMemService()
+    service.capture(
+        CaptureRequest(
+            scope=MemoryScope(owner_id="user-1", namespace="personal"),
+            dialogue=CaptureDialogue(
+                occurred_at="2026-01-05T00:00:00+00:00",
+                messages=(
+                    DialogueMessage(
+                        role="user",
+                        content="I prefer concise Chinese answers.",
+                        timestamp="2026-01-05T00:00:00+00:00",
+                    ),
+                ),
+            ),
+            capture_time="2026-01-05T00:00:01+00:00",
+        )
+    )
+    result = service.read(
+        ReadRequest(
+            owner_id="user-1",
+            namespaces=None,
+            query="concise Chinese answers",
+            query_time="2026-01-06T00:00:00+00:00",
+            max_units=3,
+            context_budget_tokens=80,
+        )
+    )
+
+    payload = read_result_to_json(result)
+
+    assert set(payload) == {
+        "request",
+        "ranked_units",
+        "context",
+        "stats",
+        "trace_ref",
+    }
+    assert payload["request"]["owner_id"] == "user-1"
+    assert payload["request"]["namespaces"] is None
+    assert payload["context"]["unit_count"] == 1
+    assert payload["context"]["token_count"] > 0
+    assert "2026-01-05T00:00:00+00:00" in payload["context"]["text"]
+    assert payload["ranked_units"][0]["unit"]["dialogue_refs"][0][
+        "message_range"
+    ] == [0, 1]
+    assert payload["stats"]["returned_unit_count"] == 1
+    assert payload["stats"]["index_backend"] == "dense_cosine_v1"
+
+    parsed = read_result_from_json(payload)
+    assert parsed.request.owner_id == "user-1"
+    assert parsed.ranked_units[0].unit.text == "I prefer concise Chinese answers."
+    assert parsed.context.unit_count == 1

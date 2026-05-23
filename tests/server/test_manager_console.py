@@ -230,11 +230,29 @@ def test_manager_api_retrieval_preview_and_reindex() -> None:
                 "owner_id": "user-1",
                 "namespaces": None,
                 "query": "concise Chinese answers",
+                "query_time": "2026-01-02T00:00:00+00:00",
+                "time_range": {
+                    "start": "2026-01-01T00:00:00+00:00",
+                    "end": "2026-01-01T23:59:59+00:00",
+                },
+                "max_units": 5,
+                "context_budget_tokens": 80,
             },
         )
     )
+    assert preview["request"]["query_time"] == "2026-01-02T00:00:00+00:00"
+    assert preview["request"]["time_range"] == {
+        "start": "2026-01-01T00:00:00+00:00",
+        "end": "2026-01-01T23:59:59+00:00",
+    }
+    assert preview["request"]["max_units"] == 5
+    assert preview["request"]["context_budget_tokens"] == 80
     assert preview["context"]["unit_count"] == 1
     assert preview["stats"]["index_backend"] == "dense_cosine_v1"
+    assert preview["stats"]["time_range_filter"] == {
+        "start": "2026-01-01T00:00:00+00:00",
+        "end": "2026-01-01T23:59:59+00:00",
+    }
     assert preview["stats"]["returned_unit_count"] == 1
     assert preview["stats"]["skipped_due_to_budget_count"] == 0
     assert len(preview["stats"]["rendered_unit_ids"]) == 1

@@ -1,14 +1,18 @@
 # Request And Response Examples
 
-Status: draft
+Status: contract freeze candidate
 
-Date: 2026-05-19
+Date: 2026-05-23
 
 These examples use the current NanoMem JSON contracts. HTTP endpoints accept and
 return the same shapes shown here:
 
 - `POST /v1/capture`
 - `POST /v1/read`
+- `POST /manager/api/retrieval-preview`
+
+All examples use canonical wire JSON: arrays are JSON arrays, `owner_id` is the
+emitted owner field, and legacy `events` payloads are input compatibility only.
 
 ## 1. Capture Preference
 
@@ -246,7 +250,7 @@ Response:
 {
   "context": {
     "text": "Relevant memory units:\n- [2026-05-19T10:00:00+08:00, namespace=personal] Please remember that I usually want architecture first, then code.",
-    "token_count": 42,
+    "token_count": 36,
     "unit_count": 1
   },
   "ranked_units": [
@@ -305,14 +309,26 @@ Response:
   },
   "stats": {
     "candidate_count": 1,
-    "context_tokens": 42,
+    "context_budget_tokens": 512,
+    "context_tokens": 36,
     "index_backend": "dense_cosine_v1",
     "query": "answer style architecture first",
     "ranked_count": 1,
+    "ranked_token_estimates": [
+      {
+        "render_line_tokens": 32,
+        "unit_id": "unit_bdb41289ee2ad308eecd9a0f"
+      }
+    ],
     "ranking_policy": "relevance_recency_v1",
     "recency_policy": "balanced",
     "render_policy": "evidence_context_v1",
+    "rendered_unit_ids": [
+      "unit_bdb41289ee2ad308eecd9a0f"
+    ],
     "returned_unit_count": 1,
+    "skipped_due_to_budget_count": 0,
+    "skipped_unit_ids": [],
     "time_range_filter": {
       "end": null,
       "start": null
@@ -367,14 +383,19 @@ Response:
   },
   "stats": {
     "candidate_count": 0,
+    "context_budget_tokens": null,
     "context_tokens": 0,
     "index_backend": "dense_cosine_v1",
     "query": "answer style architecture first",
     "ranked_count": 0,
+    "ranked_token_estimates": [],
     "ranking_policy": "relevance_recency_v1",
     "recency_policy": "balanced",
     "render_policy": "evidence_context_v1",
+    "rendered_unit_ids": [],
     "returned_unit_count": 0,
+    "skipped_due_to_budget_count": 0,
+    "skipped_unit_ids": [],
     "time_range_filter": {
       "end": null,
       "start": null
@@ -384,7 +405,131 @@ Response:
 }
 ```
 
-## 5. Bad Capture Request
+## 5. Manager Retrieval Preview
+
+Manager retrieval preview is a control-plane endpoint that mirrors the public
+read contract. It is useful for UI diagnostics and should preserve the same
+`ReadRequest` tuning fields in the response.
+
+Request:
+
+```json
+{
+  "context_budget_tokens": 512,
+  "max_units": 3,
+  "namespaces": [
+    "personal"
+  ],
+  "owner_id": "user-demo",
+  "query": "raw tool logs",
+  "query_time": "2026-05-19T10:10:00+08:00",
+  "time_range": {
+    "end": "2026-05-19T10:10:00+08:00",
+    "start": "2026-05-19T10:00:00+08:00"
+  }
+}
+```
+
+Response:
+
+```json
+{
+  "context": {
+    "text": "Relevant memory units:\n- [2026-05-19T10:05:02+08:00, namespace=personal] Please remember that I do not want raw tool logs stored as long-term personal memory.",
+    "token_count": 42,
+    "unit_count": 1
+  },
+  "ranked_units": [
+    {
+      "rank": 1,
+      "retrieval_text": "Please remember that I do not want raw tool logs stored as long-term personal memory.",
+      "score": 0.5747307874393096,
+      "score_breakdown": {
+        "dense": 0.4330127018922194,
+        "embedding_model": "hashing_embedding_128",
+        "recency": 0.9998850440805803,
+        "recency_policy": "balanced",
+        "relevance": 0.4330127018922194,
+        "scan_limit": 2000,
+        "scanned_count": 1
+      },
+      "unit": {
+        "available_at": "2026-05-19T10:05:05+08:00",
+        "dialogue_refs": [
+          {
+            "dialogue_id": "dlg_ef68f73b7519337295141013",
+            "message_range": [
+              2,
+              3
+            ]
+          }
+        ],
+        "memory_type": "correction",
+        "metadata": {
+          "extractor": "heuristic_v1",
+          "source_role": "user",
+          "speaker_id": "user-demo"
+        },
+        "redacted_at": null,
+        "retention_until": null,
+        "scope": {
+          "namespace": "personal",
+          "owner_id": "user-demo"
+        },
+        "text": "Please remember that I do not want raw tool logs stored as long-term personal memory.",
+        "timestamp": "2026-05-19T10:05:02+08:00",
+        "unit_id": "unit_a0ed51ee38ab7722c066a45d"
+      }
+    }
+  ],
+  "request": {
+    "context_budget_tokens": 512,
+    "max_units": 3,
+    "metadata": {},
+    "namespaces": [
+      "personal"
+    ],
+    "owner_id": "user-demo",
+    "query": "raw tool logs",
+    "query_time": "2026-05-19T10:10:00+08:00",
+    "recency_policy": null,
+    "time_range": {
+      "end": "2026-05-19T10:10:00+08:00",
+      "start": "2026-05-19T10:00:00+08:00"
+    }
+  },
+  "stats": {
+    "candidate_count": 1,
+    "context_budget_tokens": 512,
+    "context_tokens": 42,
+    "index_backend": "dense_cosine_v1",
+    "query": "raw tool logs",
+    "ranked_count": 1,
+    "ranked_token_estimates": [
+      {
+        "render_line_tokens": 38,
+        "unit_id": "unit_a0ed51ee38ab7722c066a45d"
+      }
+    ],
+    "ranking_policy": "relevance_recency_v1",
+    "recency_policy": "balanced",
+    "render_policy": "evidence_context_v1",
+    "rendered_unit_ids": [
+      "unit_a0ed51ee38ab7722c066a45d"
+    ],
+    "returned_unit_count": 1,
+    "skipped_due_to_budget_count": 0,
+    "skipped_unit_ids": [],
+    "time_range_filter": {
+      "end": "2026-05-19T10:10:00+08:00",
+      "start": "2026-05-19T10:00:00+08:00"
+    }
+  },
+  "trace_ref": null
+}
+```
+
+## 6. Bad Capture Request
 
 Request:
 
@@ -418,5 +563,7 @@ HTTP 400 response:
   currently `balanced`.
 - `DialogueRecord` rows are archived internally and referenced by
   `dialogue_refs`; they are not returned by normal `read`.
+- Manager retrieval preview returns the same read result shape, but it is a
+  control-plane diagnostic endpoint rather than a normal agent API.
 - Operation logs are append-only diagnostics and are not exposed in normal
   capture/read responses.

@@ -21,19 +21,19 @@ from nanomem.contracts import (
 
 
 def capture_request_to_json(request: CaptureRequest) -> dict[str, Any]:
-    return asdict(request)
+    return _jsonable(asdict(request))
 
 
 def read_request_to_json(request: ReadRequest) -> dict[str, Any]:
-    return asdict(request)
+    return _jsonable(asdict(request))
 
 
 def capture_result_to_json(result: CaptureResult) -> dict[str, Any]:
-    return asdict(result)
+    return _jsonable(asdict(result))
 
 
 def read_result_to_json(result: ReadResult) -> dict[str, Any]:
-    return asdict(result)
+    return _jsonable(asdict(result))
 
 
 def capture_request_from_json(payload: dict[str, Any]) -> CaptureRequest:
@@ -269,3 +269,13 @@ def _optional_recency_policy(value: Any) -> str | None:
     if text not in {"recent", "balanced", "historical"}:
         raise ValueError(f"Unsupported recency_policy: {text}")
     return text
+
+
+def _jsonable(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {str(key): _jsonable(item) for key, item in value.items()}
+    if isinstance(value, tuple):
+        return [_jsonable(item) for item in value]
+    if isinstance(value, list):
+        return [_jsonable(item) for item in value]
+    return value
