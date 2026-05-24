@@ -98,6 +98,13 @@ The implemented adapter stores `unit_id`, scope fields, timestamps,
 returning candidate ids. The read pipeline still fetches canonical units from
 the store before ranking and rendering.
 
+The adapter also writes a small sidecar metadata file beside the LanceDB table.
+The file records backend version, table name, embedding model, vector
+dimensions, and distance type. Normal search/upsert fails fast if the existing
+table metadata does not match the current config. `reindex` is the supported
+way to intentionally replace an incompatible table, because reindex clears the
+derived table and rebuilds it from SQLite.
+
 Smoke verification:
 
 ```bash

@@ -32,13 +32,14 @@ class LanceDBMemoryUnitIndex:
         self.embedding_model = embedding_model or HashingEmbeddingModel()
         self.dimensions = dimensions or getattr(self.embedding_model, "dimensions", 128)
         self.distance_type = _normalized_distance_type(distance_type)
+        self._metadata_path = self.path / _metadata_filename(self.table_name)
         self.path.mkdir(parents=True, exist_ok=True)
         self._db = _require_lancedb().connect(str(self.path))
 
     def clear(self) -> None:
-        table = self._table(create=False)
-        if table is not None:
-            table.delete("unit_id IS NOT NULL")
+        if self.table_name in _table_names(self._db):
+            _drop_table(self._db, self.table_name)
+        self._write_metadata()
 
     def document_count(self) -> int:
         table = self._table(create=False)
@@ -49,6 +50,7 @@ class LanceDBMemoryUnitIndex:
     def upsert(self, units: tuple[MemoryUnit, ...]) -> None:
         if not units:
             return
+        self._ensure_metadata_compatible()
         table = self._table(create=True)
         assert table is not None
         rows = self._rows(units)
@@ -59,6 +61,7 @@ class LanceDBMemoryUnitIndex:
         table = self._table(create=False)
         if table is None:
             return ()
+        self._ensure_metadata_compatible()
         query_vector = list(self.embedding_model.embed((request.query,))[0])
         limit = request.limit or 20
         query = (
@@ -94,6 +97,7 @@ class LanceDBMemoryUnitIndex:
             return
         table = self._table(create=False)
         if table is not None:
+            self._ensure_metadata_compatible()
             table.delete(_where_in("unit_id", unit_ids))
 
     def _table(self, *, create: bool) -> Any | None:
@@ -101,7 +105,44 @@ class LanceDBMemoryUnitIndex:
             return self._db.open_table(self.table_name)
         if not create:
             return None
+        self._write_metadata()
         return self._db.create_table(self.table_name, schema=_schema(self.dimensions))
+
+    def _metadata(self) -> dict[str, Any]:
+        return {
+            "format_version": 1,
+            "backend": self.name,
+            "table_name": self.table_name,
+            "embedding_model": self.embedding_model.name,
+            "dimensions": self.dimensions,
+            "distance_type": self.distance_type,
+        }
+
+    def _write_metadata(self) -> None:
+        self._metadata_path.write_text(
+            json.dumps(self._metadata(), sort_keys=True, indent=2),
+            encoding="utf-8",
+        )
+
+    def _ensure_metadata_compatible(self) -> None:
+        if self.table_name not in _table_names(self._db):
+            self._write_metadata()
+            return
+        if not self._metadata_path.exists():
+            self._write_metadata()
+            return
+        stored = json.loads(self._metadata_path.read_text(encoding="utf-8"))
+        expected = self._metadata()
+        mismatches = {
+            key: {"stored": stored.get(key), "expected": expected[key]}
+            for key in ("backend", "embedding_model", "dimensions", "distance_type")
+            if stored.get(key) != expected[key]
+        }
+        if mismatches:
+            raise ValueError(
+                "LanceDB index metadata mismatch. Run reindex or clear the "
+                f"index before using this configuration: {mismatches}"
+            )
 
     def _rows(self, units: tuple[MemoryUnit, ...]) -> list[dict[str, Any]]:
         vectors = self.embedding_model.embed(tuple(unit.text for unit in units))
@@ -149,6 +190,21 @@ def _table_names(db: Any) -> set[str]:
         names = response.tables if hasattr(response, "tables") else response
         return set(str(name) for name in names)
     return set(str(name) for name in db.table_names())
+
+
+def _drop_table(db: Any, table_name: str) -> None:
+    if hasattr(db, "drop_table"):
+        db.drop_table(table_name)
+        return
+    db.open_table(table_name).delete("unit_id IS NOT NULL")
+
+
+def _metadata_filename(table_name: str) -> str:
+    safe = "".join(
+        char if char.isalnum() or char in {"-", "_", "."} else "_"
+        for char in table_name
+    ).strip("._")
+    return f"{safe or 'memory_units'}.index.json"
 
 
 def _schema(dimensions: int) -> Any:

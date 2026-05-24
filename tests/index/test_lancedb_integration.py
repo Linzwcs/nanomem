@@ -199,6 +199,101 @@ def test_lancedb_retention_reindex_removes_deleted_units(tmp_path) -> None:
     ]
 
 
+def test_lancedb_metadata_mismatch_requires_reindex(tmp_path) -> None:
+    store_path = tmp_path / "nanomem.db"
+    index_path = tmp_path / "lancedb"
+    initial_config = config_from_mapping(
+        {
+            "store": {
+                "backend": "sqlite",
+                "path": str(store_path),
+            },
+            "index": {
+                "backend": "lancedb",
+                "path": str(index_path),
+                "rebuild_on_startup": False,
+                "embedding": {
+                    "backend": "hashing",
+                    "dimensions": 32,
+                },
+            },
+        }
+    )
+    writer = service_from_config(initial_config)
+    try:
+        _capture(
+            writer,
+            content="I prefer concise Chinese answers.",
+            occurred_at="2026-01-01T00:00:00+00:00",
+        )
+        assert (index_path / "memory_units.index.json").exists()
+    finally:
+        writer.store.close()  # type: ignore[attr-defined]
+
+    mismatched_config = config_from_mapping(
+        {
+            "store": {
+                "backend": "sqlite",
+                "path": str(store_path),
+            },
+            "index": {
+                "backend": "lancedb",
+                "path": str(index_path),
+                "rebuild_on_startup": False,
+                "embedding": {
+                    "backend": "hashing",
+                    "dimensions": 64,
+                },
+            },
+        }
+    )
+    mismatched = service_from_config(mismatched_config)
+    try:
+        with pytest.raises(ValueError, match="metadata mismatch"):
+            mismatched.read(
+                ReadRequest(
+                    owner_id="user-1",
+                    namespaces=("personal",),
+                    query="concise Chinese answers",
+                    query_time="2026-01-01T00:01:00+00:00",
+                )
+            )
+    finally:
+        mismatched.store.close()  # type: ignore[attr-defined]
+
+    rebuild_config = config_from_mapping(
+        {
+            "store": {
+                "backend": "sqlite",
+                "path": str(store_path),
+            },
+            "index": {
+                "backend": "lancedb",
+                "path": str(index_path),
+                "rebuild_on_startup": True,
+                "embedding": {
+                    "backend": "hashing",
+                    "dimensions": 64,
+                },
+            },
+        }
+    )
+    rebuilt = service_from_config(rebuild_config)
+    try:
+        result = rebuilt.read(
+            ReadRequest(
+                owner_id="user-1",
+                namespaces=("personal",),
+                query="concise Chinese answers",
+                query_time="2026-01-01T00:01:00+00:00",
+            )
+        )
+    finally:
+        rebuilt.store.close()  # type: ignore[attr-defined]
+
+    assert result.ranked_units[0].unit.text == "I prefer concise Chinese answers."
+
+
 def _capture(
     service,
     *,
