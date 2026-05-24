@@ -115,6 +115,13 @@ python -m pip install -e ".[dev,lancedb]"
 SQLite remains the source of truth. LanceDB stores retrieval fields and vectors
 only and must be rebuildable from SQLite.
 
+Validate the local LanceDB path with:
+
+```bash
+bash scripts/smoke_lancedb_index.sh
+python -m pytest tests/index/test_lancedb_integration.py
+```
+
 Other implemented index backends:
 
 - `lexical`: deterministic token-overlap baseline;

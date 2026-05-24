@@ -73,7 +73,7 @@ Install with the optional dependency:
 python -m pip install -e '.[lancedb]'
 ```
 
-The LanceDB table may duplicate only search-time fields:
+The LanceDB table duplicates only search-time fields:
 
 ```text
 unit_id
@@ -84,13 +84,13 @@ available_at
 memory_type
 retrieval_text
 embedding_model
-embedding
-metadata filters selected by config
+metadata_json
+vector
 ```
 
 The authoritative MemoryUnit remains in SQLite. LanceDB must be rebuildable from
-the fact store. Arbitrary `metadata` must not be indexed by default; only
-configured filter keys may be duplicated into backend-specific columns.
+the fact store. Arbitrary `metadata` is stored as JSON for diagnostics in the
+developer preview, but it is not promoted into filter columns by default.
 
 The implemented adapter stores `unit_id`, scope fields, timestamps,
 `memory_type`, `retrieval_text`, `embedding_model`, `metadata_json`, and
@@ -102,12 +102,15 @@ Smoke verification:
 
 ```bash
 python -m pip install -e '.[dev,lancedb]'
+bash scripts/smoke_lancedb_index.sh
 python -m pytest tests/index/test_lancedb_integration.py
 ```
 
 The integration test confirms that a MemoryUnit captured into SQLite is indexed
 in LanceDB, survives a service restart without startup reindex, and is returned
-through the normal `read()` pipeline.
+through the normal `read()` pipeline. The broader product tests also verify that
+startup reindex can build a fresh LanceDB table from SQLite and that retention
+deletion followed by reindex removes stale vector candidates.
 
 ## 5. Postgres + pgvector
 

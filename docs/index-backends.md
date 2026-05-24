@@ -58,11 +58,18 @@ LanceDBMemoryUnitIndex = .nanomem/lancedb
 Configuration:
 
 ```yaml
+store:
+  backend: sqlite
+  path: .nanomem/nanomem.db
+
 index:
   backend: lancedb
   path: .nanomem/lancedb
   table: memory_units
   distance_type: cosine
+  embedding:
+    backend: hashing
+    dimensions: 128
 ```
 
 Install with:
@@ -74,33 +81,36 @@ python -m pip install -e '.[lancedb]'
 Use a single NanoMem data directory so local state can be backed up, moved, or
 deleted as one unit.
 
-The LanceDB table should duplicate only the metadata required for search-time
-filtering:
+The LanceDB table duplicates only retrieval fields and vectors:
 
 ```text
 unit_id
 owner_id
 namespace
-tags / metadata filters
-timestamp / available_at
+timestamp
+available_at
+memory_type
 retrieval_text
 embedding_model
-embedding
+metadata_json
+vector
 ```
 
 The store remains authoritative. The LanceDB index must be rebuildable from
-stored MemoryUnits.
+stored MemoryUnits. In the developer preview, arbitrary metadata is not promoted
+into filter columns by default.
 
 Smoke verification:
 
 ```bash
 python -m pip install -e '.[dev,lancedb]'
+bash scripts/smoke_lancedb_index.sh
 python -m pytest tests/index/test_lancedb_integration.py
 ```
 
-The integration test writes MemoryUnits through the normal service, reopens the
-service with `rebuild_on_startup = false`, and confirms reads are served through
-the persistent LanceDB index while canonical units still come from SQLite.
+The integration tests write MemoryUnits through the normal service, reopen the
+service with `rebuild_on_startup = false`, rebuild a fresh LanceDB index from
+SQLite, and confirm retention reindex removes deleted units from search.
 
 ## 4. Postgres + pgvector
 

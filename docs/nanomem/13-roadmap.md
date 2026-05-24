@@ -66,8 +66,8 @@ Known limits:
 
 - extraction quality is MVP-level unless an LLM extractor is configured;
 - dense index is in-memory and is rebuilt from SQLite on startup by default;
-- LanceDB is available as an optional persistent local vector index, but still
-  needs broader runtime smoke coverage with real embedding providers;
+- LanceDB has local persistent-index smoke coverage with hashing embeddings,
+  but still needs runtime quality checks with real embedding providers;
 - render format is simple and not yet optimized for maximum facts per budget;
 - control-plane maintenance workflows are partly CLI/service-level and not fully exposed
   in Manager;
