@@ -57,27 +57,37 @@ CaptureRequest(
   scope: MemoryScope,
   dialogue: CaptureDialogue,
   capture_time: str,
+  session_id: str | None = None,
 )
 ```
 
 Capture has no `chunk_size`, idempotency key, extractor options, or index
-controls. Those are implementation/configuration concerns.
+controls. `session_id` is only a routing key for dialogue buffering. Other
+algorithm choices are implementation/configuration concerns.
 
 ```python
 DialogueRecord(
   dialogue_id: str,
+  scope: MemoryScope,
+  session_id: str | None,
   messages: tuple[DialogueMessage, ...],
-  captured_at: str,
-  occurred_at: str,
+  status: "open" | "sealed" | "extracted" | "failed",
+  started_at: str,
+  ended_at: str,
+  created_at: str,
+  updated_at: str,
+  token_count: int,
   checksum: str | None = None,
   metadata: dict = {},
+  extracted_at: str | None = None,
   retention_until: str | None = None,
   redacted_at: str | None = None,
 )
 ```
 
-Dialogue records are control-plane evidence. They have no namespace; produced
-memory units carry scope.
+Dialogue records are control-plane evidence. They carry scope/session for
+storage routing and filtering, but produced memory units remain the
+agent-facing facts.
 
 ```python
 DialogueRef(

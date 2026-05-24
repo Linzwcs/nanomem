@@ -11,6 +11,7 @@ from nanomem.contracts import (
     DialogueMessage,
     DialogueRecord,
     DialogueRef,
+    DialogueSelector,
     MemoryScope,
     MemoryUnit,
     MemoryUnitSelector,
@@ -21,11 +22,12 @@ from nanomem.contracts import (
 from nanomem.time import now_utc_iso
 
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 MIGRATIONS: tuple[tuple[int, str], ...] = (
     (1, "legacy_initial_schema"),
     (2, "legacy_scope_indexes"),
     (3, "dialogue_centered_memory_store"),
+    (4, "session_dialogue_windows"),
 )
 
 
@@ -83,19 +85,32 @@ class SQLiteMemoryUnitStore:
         return int(row[0]) if row is not None else 0
 
     def put_dialogue(self, record: DialogueRecord) -> None:
+        namespace = record.scope.namespace
+        if namespace is None:
+            raise ValueError("Stored DialogueRecord namespace must be resolved")
         with self._lock:
             with self._connection:
                 self._connection.execute(
                     """
                     INSERT OR REPLACE INTO dialogue_records (
-                      dialogue_id, occurred_at, captured_at, checksum,
-                      messages_json, metadata_json, retention_until, redacted_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                      dialogue_id, owner_id, namespace, session_id, status,
+                      started_at, ended_at, created_at, updated_at, extracted_at,
+                      token_count, checksum, messages_json, metadata_json,
+                      retention_until, redacted_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         record.dialogue_id,
-                        record.occurred_at,
-                        record.captured_at,
+                        record.scope.owner_id,
+                        namespace,
+                        record.session_id,
+                        record.status,
+                        record.started_at,
+                        record.ended_at,
+                        record.created_at,
+                        record.updated_at,
+                        record.extracted_at,
+                        record.token_count,
                         record.checksum,
                         _json([asdict(message) for message in record.messages]),
                         _json(record.metadata),
@@ -111,6 +126,15 @@ class SQLiteMemoryUnitStore:
                 (dialogue_id,),
             ).fetchone()
         return None if row is None else _row_to_dialogue(row)
+
+    def query_dialogues(
+        self,
+        selector: DialogueSelector,
+    ) -> tuple[DialogueRecord, ...]:
+        query, params = _query_dialogues_sql(selector)
+        with self._lock:
+            rows = self._connection.execute(query, tuple(params)).fetchall()
+        return tuple(_row_to_dialogue(row) for row in rows)
 
     def append_operation_log(self, entry: OperationLogEntry) -> None:
         scope = entry.scope
@@ -456,8 +480,16 @@ def _apply_schema(connection: sqlite3.Connection) -> None:
     connection.execute("""
         CREATE TABLE IF NOT EXISTS dialogue_records (
           dialogue_id TEXT PRIMARY KEY,
-          occurred_at TEXT NOT NULL,
-          captured_at TEXT NOT NULL,
+          owner_id TEXT NOT NULL,
+          namespace TEXT NOT NULL,
+          session_id TEXT,
+          status TEXT NOT NULL,
+          started_at TEXT NOT NULL,
+          ended_at TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          extracted_at TEXT,
+          token_count INTEGER NOT NULL,
           checksum TEXT,
           messages_json TEXT NOT NULL,
           metadata_json TEXT NOT NULL,
@@ -465,9 +497,25 @@ def _apply_schema(connection: sqlite3.Connection) -> None:
           redacted_at TEXT
         )
     """)
+    _ensure_column(connection, "dialogue_records", "owner_id", "TEXT")
+    _ensure_column(connection, "dialogue_records", "namespace", "TEXT")
+    _ensure_column(connection, "dialogue_records", "session_id", "TEXT")
+    _ensure_column(connection, "dialogue_records", "status", "TEXT DEFAULT 'extracted'")
+    _ensure_column(connection, "dialogue_records", "started_at", "TEXT")
+    _ensure_column(connection, "dialogue_records", "ended_at", "TEXT")
+    _ensure_column(connection, "dialogue_records", "created_at", "TEXT")
+    _ensure_column(connection, "dialogue_records", "updated_at", "TEXT")
+    _ensure_column(connection, "dialogue_records", "extracted_at", "TEXT")
+    _ensure_column(connection, "dialogue_records", "token_count", "INTEGER DEFAULT 0")
     connection.execute("""
         CREATE INDEX IF NOT EXISTS dialogue_records_time_idx
-        ON dialogue_records (occurred_at, captured_at)
+        ON dialogue_records (started_at, ended_at, updated_at)
+    """)
+    connection.execute("""
+        CREATE INDEX IF NOT EXISTS dialogue_records_scope_session_idx
+        ON dialogue_records (
+          owner_id, namespace, session_id, status, updated_at
+        )
     """)
     connection.execute("""
         CREATE TABLE IF NOT EXISTS operation_logs (
@@ -510,6 +558,18 @@ def _record_migration(
         """,
         (version, name, now_utc_iso(), f"{version}:{name}"),
     )
+
+
+def _ensure_column(
+    connection: sqlite3.Connection,
+    table: str,
+    column: str,
+    definition: str,
+) -> None:
+    rows = connection.execute(f"PRAGMA table_info({table})").fetchall()
+    if column in {str(row["name"]) for row in rows}:
+        return
+    connection.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
 
 
 def _schema_migration_records(
@@ -600,6 +660,54 @@ def _query_units_sql(
     return query, params
 
 
+def _query_dialogues_sql(selector: DialogueSelector) -> tuple[str, list[object]]:
+    if selector.offset < 0:
+        raise ValueError("DialogueSelector.offset must be non-negative")
+    if selector.limit is not None and selector.limit < 0:
+        raise ValueError("DialogueSelector.limit must be non-negative")
+    clauses: list[str] = []
+    params: list[object] = []
+    if selector.owner_id is not None:
+        clauses.append("owner_id = ?")
+        params.append(selector.owner_id)
+    if selector.namespaces is not None:
+        if not selector.namespaces:
+            clauses.append("0")
+        else:
+            clauses.append(
+                "namespace IN (" + ", ".join("?" for _ in selector.namespaces) + ")"
+            )
+            params.extend(selector.namespaces)
+    if selector.session_id is not None:
+        clauses.append("session_id = ?")
+        params.append(selector.session_id)
+    if selector.statuses:
+        clauses.append("status IN (" + ", ".join("?" for _ in selector.statuses) + ")")
+        params.extend(selector.statuses)
+    if selector.dialogue_ids:
+        clauses.append(
+            "dialogue_id IN (" + ", ".join("?" for _ in selector.dialogue_ids) + ")"
+        )
+        params.extend(selector.dialogue_ids)
+    if not selector.include_redacted:
+        clauses.append("redacted_at IS NULL")
+
+    query = "SELECT * FROM dialogue_records"
+    if clauses:
+        query += " WHERE " + " AND ".join(clauses)
+    direction = "ASC" if selector.order == "oldest_first" else "DESC"
+    query += f" ORDER BY updated_at {direction}, dialogue_id ASC"
+    if selector.limit is not None:
+        query += " LIMIT ?"
+        params.append(selector.limit)
+    elif selector.offset:
+        query += " LIMIT -1"
+    if selector.offset:
+        query += " OFFSET ?"
+        params.append(selector.offset)
+    return query, params
+
+
 def _unit_row(unit: MemoryUnit) -> tuple[Any, ...]:
     namespace = unit.scope.namespace
     if namespace is None:
@@ -638,13 +746,44 @@ def _row_to_unit(row: sqlite3.Row) -> MemoryUnit:
 
 
 def _row_to_dialogue(row: sqlite3.Row) -> DialogueRecord:
+    metadata = _load_json(row["metadata_json"])
+    owner_id = _row_value(row, "owner_id") or metadata.get("owner_id") or ""
+    namespace = _row_value(row, "namespace") or metadata.get("namespace") or "personal"
+    started_at = (
+        _row_value(row, "started_at")
+        or _row_value(row, "occurred_at")
+        or _first_message_timestamp(row["messages_json"])
+        or ""
+    )
+    ended_at = (
+        _row_value(row, "ended_at")
+        or _last_message_timestamp(row["messages_json"])
+        or started_at
+    )
+    created_at = (
+        _row_value(row, "created_at")
+        or _row_value(row, "captured_at")
+        or ended_at
+    )
+    updated_at = (
+        _row_value(row, "updated_at")
+        or _row_value(row, "captured_at")
+        or created_at
+    )
     return DialogueRecord(
         dialogue_id=row["dialogue_id"],
-        occurred_at=row["occurred_at"],
-        captured_at=row["captured_at"],
+        scope=MemoryScope(owner_id=str(owner_id), namespace=str(namespace)),
+        session_id=_optional_str(_row_value(row, "session_id")),
         checksum=row["checksum"],
         messages=_messages_from_json(row["messages_json"]),
-        metadata=_load_json(row["metadata_json"]),
+        status=str(_row_value(row, "status") or "extracted"),  # type: ignore[arg-type]
+        started_at=str(started_at),
+        ended_at=str(ended_at),
+        created_at=str(created_at),
+        updated_at=str(updated_at),
+        extracted_at=_optional_str(_row_value(row, "extracted_at")),
+        token_count=int(_row_value(row, "token_count") or 0),
+        metadata=metadata,
         retention_until=row["retention_until"],
         redacted_at=row["redacted_at"],
     )
@@ -683,6 +822,16 @@ def _messages_from_json(payload: str | None) -> tuple[DialogueMessage, ...]:
                 )
             )
     return tuple(messages)
+
+
+def _first_message_timestamp(payload: str | None) -> str | None:
+    messages = _messages_from_json(payload)
+    return messages[0].timestamp if messages else None
+
+
+def _last_message_timestamp(payload: str | None) -> str | None:
+    messages = _messages_from_json(payload)
+    return messages[-1].timestamp if messages else None
 
 
 def _dialogue_refs_from_json(payload: str | None) -> tuple[DialogueRef, ...]:
@@ -731,6 +880,10 @@ def _mapping(value: object) -> dict[str, Any]:
 
 def _optional_str(value: object) -> str | None:
     return None if value is None else str(value)
+
+
+def _row_value(row: sqlite3.Row, key: str) -> object | None:
+    return row[key] if key in row.keys() else None
 
 
 def _scalar(connection: sqlite3.Connection, query: str) -> int:

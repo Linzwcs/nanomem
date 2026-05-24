@@ -80,10 +80,17 @@ def _request(messages: tuple[DialogueMessage, ...]) -> ExtractionRequest:
         scope=MemoryScope(owner_id="user-1", namespace="personal"),
         dialogue=DialogueRecord(
             dialogue_id="dlg-1",
+            scope=MemoryScope(owner_id="user-1", namespace="personal"),
+            session_id="session-1",
             messages=messages,
-            captured_at="2026-01-01T00:00:30+00:00",
-            occurred_at="2026-01-01T00:00:00+00:00",
+            status="sealed",
+            started_at="2026-01-01T00:00:00+00:00",
+            ended_at="2026-01-01T00:00:30+00:00",
+            created_at="2026-01-01T00:00:00+00:00",
+            updated_at="2026-01-01T00:00:30+00:00",
+            token_count=32,
         ),
+        extraction_time="2026-01-01T00:00:30+00:00",
     )
 
 

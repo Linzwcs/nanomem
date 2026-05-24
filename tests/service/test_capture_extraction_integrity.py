@@ -26,8 +26,8 @@ class BadDialogueRefExtractor:
                     scope=request.scope,
                     text="The user prefers concise answers.",
                     memory_type="preference",
-                    timestamp=request.dialogue.occurred_at,
-                    available_at=request.dialogue.captured_at,
+                    timestamp=request.dialogue.started_at,
+                    available_at=request.extraction_time or request.dialogue.updated_at,
                     dialogue_refs=(
                         DialogueRef(
                             dialogue_id=request.dialogue.dialogue_id,
@@ -50,8 +50,8 @@ class HiddenDialogueRefExtractor:
                     scope=request.scope,
                     text="The user prefers concise answers.",
                     memory_type="preference",
-                    timestamp=request.dialogue.occurred_at,
-                    available_at=request.dialogue.captured_at,
+                    timestamp=request.dialogue.started_at,
+                    available_at=request.extraction_time or request.dialogue.updated_at,
                     dialogue_refs=(
                         DialogueRef(
                             dialogue_id=request.dialogue.dialogue_id,

@@ -28,6 +28,7 @@ def test_developer_preview_defaults_resolve_under_data_dir() -> None:
     assert config.index.embedding.dimensions == 128
     assert config.index.rebuild_on_startup is True
     assert config.extraction.backend == "heuristic"
+    assert config.extraction.max_dialogue_tokens == 512
     assert config.read.default_recency_policy == "balanced"
     assert config.read.default_max_units == 10
 
@@ -58,6 +59,7 @@ read:
     assert config.index.backend == "dense"
     assert config.index.path == ".nanomem/lancedb"
     assert config.extraction.backend == "heuristic"
+    assert config.extraction.max_dialogue_tokens == 512
 
 
 def test_lancedb_config_keeps_sqlite_as_fact_store() -> None:
@@ -135,6 +137,19 @@ def test_llm_extraction_config_builds_extractor_options() -> None:
     assert extractor.max_messages_per_chunk == 6
     assert extractor.max_chars_per_chunk == 2000
     assert extractor.fallback is not None
+
+
+def test_extraction_config_parses_dialogue_window_limit() -> None:
+    config = config_from_mapping(
+        {
+            "extraction": {
+                "backend": "heuristic",
+                "max_dialogue_tokens": 256,
+            }
+        }
+    )
+
+    assert config.extraction.max_dialogue_tokens == 256
 
 
 def test_llm_extraction_config_rejects_unknown_fallback_backend() -> None:

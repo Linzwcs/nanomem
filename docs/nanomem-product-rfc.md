@@ -239,6 +239,11 @@ CaptureDialogue:
 contains project-local information, NanoMem should only store it when it is a
 durable user-specific preference or correction.
 
+`session_id` belongs on `CaptureRequest`, not `CaptureDialogue`. Without it,
+capture treats the payload as one complete dialogue and extracts immediately.
+With it, capture appends messages to an open dialogue window and extraction
+runs when the window is flushed or reaches the configured token limit.
+
 Assistant events may be extracted, but only from final user-visible replies.
 NanoMem must not capture hidden reasoning, chain-of-thought, tool calls, tool
 results, or intermediate assistant planning as long-term memory.

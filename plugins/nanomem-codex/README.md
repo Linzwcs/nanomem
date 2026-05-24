@@ -15,16 +15,26 @@ nanomem-server --config .nanomem/config.json
 ```
 
 Register this repository as a local Codex marketplace, then install the plugin
-from Codex `/plugins`:
+from Codex `/plugins` only if you want the plugin skill/package:
 
 ```bash
+nanomem install-codex-hooks --project-dir .
 codex plugin marketplace add /path/to/nanomem
 ```
 
-Enable `plugin_hooks` and trust the NanoMem hooks in `/hooks` before expecting
-automatic read/capture to run.
+Project-level `.codex/hooks.json` is the recommended executable path for
+automatic read/capture. Enable `plugin_hooks` only when validating the
+plugin-bundled hook template. On local `codex-cli 0.133.0`, interactive Codex
+executed project hooks after hook trust, while `codex exec` did not execute
+project, user, or plugin-bundled hooks.
 
-After install/trust, run the repo smoke test:
+Run the project-hook smoke test as a non-interactive diagnostic:
+
+```bash
+bash scripts/smoke_codex_project_hooks.sh
+```
+
+Run the plugin smoke test only after plugin install/trust:
 
 ```bash
 bash scripts/smoke_codex_plugin.sh
@@ -46,6 +56,8 @@ seems relevant.
 
 ## Behavior
 
+When hooks execute, behavior is:
+
 - `UserPromptSubmit`: runs `nanomem-agent-hook spool --host codex` first, then
   `nanomem-agent-hook read --host codex`. `spool` writes only a transient turn
   record for the later Stop hook. `read` is pure retrieval: it injects relevant
@@ -58,7 +70,10 @@ seems relevant.
   that final reply. If the assistant reply is missing, automatic capture is
   skipped by default. Set `NANOMEM_CAPTURE_ASSISTANT=0` only to explicitly store
   user-only turns.
-- MCP exposes `nanomem_read` only for agent-selected memory lookup. The Stop
-  hook owns normal writes.
+- If Codex provides a session id, capture appends to a dialogue window and
+  MemoryUnits become searchable after token-limit sealing or `nanomem flush`.
+  Without a session id, the capture payload is extracted as a one-shot dialogue.
+- When MCP is configured, it exposes `nanomem_read` only for agent-selected
+  memory lookup. The Stop hook owns normal writes.
 
 Manager/control endpoints are intentionally not exposed.

@@ -37,9 +37,10 @@ These rules are part of the first-version contract:
   host may provide them only when it can guarantee uniqueness.
 - Capture and read requests may omit namespace, but persisted MemoryUnits must
   carry a resolved, validated, non-null namespace.
-- Normal capture archives a `DialogueRecord` before extraction. A MemoryUnit
-  should carry at least one `DialogueRef` unless a deployment explicitly
-  disables dialogue retention for privacy.
+- Capture archives a `DialogueRecord` before extraction. Without `session_id`,
+  the request is treated as one complete dialogue and may be extracted
+  immediately. With `session_id`, capture appends to the session's open
+  dialogue window until it is sealed by token limit or explicit flush.
 - `DialogueRef.message_range` is a message-index range, not a token, byte, or
   character range. It uses half-open `[start, end)` semantics.
 - DialogueRecord message indices are immutable. Redaction must preserve index
@@ -86,9 +87,9 @@ ci-run-789
 repo-nanomem
 ```
 
-Project, session, agent, and tool references belong in `DialogueRecord`
-control-plane metadata or `MemoryUnit.metadata` unless a future deployment
-requires stronger isolation.
+Project, agent, and tool references belong in metadata. `session_id` is a core
+capture-routing field because it decides which visible messages should be
+buffered together before extraction.
 
 ## 4. Namespace Rules
 
@@ -170,13 +171,12 @@ consume them, and only user-visible dialogue should be archived for reference.
 ## 6. DialogueRecord
 
 `DialogueRecord` is control-plane evidence. It stores one user-visible dialogue
-as a structured message list so operators can audit, debug, delete, or
-re-extract memories. Default capture should create a DialogueRecord before
-extraction.
+window as a structured message list so operators can audit, debug, delete, or
+re-extract memories.
 
-`DialogueRecord` does not carry `owner_id` or `namespace`. A single dialogue may
-contain multiple speakers and may produce MemoryUnits for different
-owner/namespace pairs. Ownership and namespace belong on `MemoryUnit`.
+`DialogueRecord` carries `scope` and `session_id` because capture needs a
+durable way to find the open dialogue window for an owner and namespace. It is
+still not agent-facing memory: normal read never returns raw DialogueRecords.
 
 ```python
 DialogueMessage:
@@ -195,11 +195,18 @@ belong in metadata if needed. An agent is a valid speaker.
 ```python
 DialogueRecord:
   dialogue_id: str
+  scope: MemoryScope
+  session_id: str | None
   messages: tuple[DialogueMessage, ...]
-  captured_at: str
-  occurred_at: str
+  status: "open" | "sealed" | "extracted" | "failed"
+  started_at: str
+  ended_at: str
+  created_at: str
+  updated_at: str
+  token_count: int
   checksum: str | None
   metadata: dict
+  extracted_at: str | None
   retention_until: str | None
   redacted_at: str | None
 ```
@@ -208,10 +215,9 @@ DialogueRecord:
 experiment, adapter fields, or host log references, but NanoMem must not
 require any metadata key for core semantics.
 
-Time is required. `timestamp`, `occurred_at`, `captured_at`, and `available_at`
-are first-class fields, not metadata. If the host does not know an exact message
-time, it should use the dialogue `occurred_at`; if that is unavailable, use the
-capture time.
+Every message has its own `timestamp`. Dialogue-level times describe the
+window lifecycle: `started_at`, `ended_at`, `created_at`, `updated_at`, and
+`extracted_at`.
 
 DialogueRecords:
 
@@ -229,8 +235,9 @@ but in separate tables and separate access paths.
 Capture source material is `CaptureDialogue`: a message list visible to the
 user and agent. It is the request payload for capture, not a storage object. It
 is not a raw tool log, document ingestion stream, or multimodal asset archive.
-It is also not a session or full conversation history. Host sessions may be
-long-running or concurrent; NanoMem only receives bounded capture payloads.
+It is not a full conversation history. Host sessions may be long-running or
+concurrent; NanoMem receives bounded capture payloads and appends them to an
+open DialogueRecord only when the request includes `session_id`.
 
 ```python
 CaptureDialogue:
@@ -239,12 +246,15 @@ CaptureDialogue:
   metadata: dict
 ```
 
-Capture turns `CaptureDialogue` into a `DialogueRecord`, then extracts
-MemoryUnits whose `dialogue_refs` point back to that record.
+Capture without `session_id` turns `CaptureDialogue` into a sealed
+`DialogueRecord` and extracts MemoryUnits immediately. Capture with
+`session_id` appends the messages to that session's open DialogueRecord; flush
+or token-limit sealing then extracts MemoryUnits whose `dialogue_refs` point
+back to that record.
 
-If the host needs to remember where the payload came from, it can use
-`metadata`. NanoMem does not require `session_id`, `conversation_id`,
-`turn_id`, host references, or window counters.
+If the host needs buffered extraction, it must provide `session_id` on the
+capture request. Other host identifiers such as conversation id, turn id, run
+id, and external log pointers stay in metadata.
 
 Allowed source messages include user messages, user corrections, explicit
 preferences, durable decisions, user-visible assistant final replies, and

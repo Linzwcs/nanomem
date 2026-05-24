@@ -2,7 +2,14 @@ from __future__ import annotations
 
 import asyncio
 
-from nanomem.contracts import CaptureRequest, CaptureResult, ReadRequest, ReadResult
+from nanomem.contracts import (
+    CaptureRequest,
+    CaptureResult,
+    FlushRequest,
+    FlushResult,
+    ReadRequest,
+    ReadResult,
+)
 from nanomem.service.core import NanoMemService
 
 
@@ -25,3 +32,7 @@ class AsyncNanoMemService:
     async def read(self, request: ReadRequest) -> ReadResult:
         async with self._lock:
             return await asyncio.to_thread(self.service.read, request)
+
+    async def flush(self, request: FlushRequest | None = None) -> FlushResult:
+        async with self._lock:
+            return await asyncio.to_thread(self.service.flush, request)

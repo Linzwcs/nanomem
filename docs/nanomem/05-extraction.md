@@ -22,6 +22,7 @@ should stay simple rather than performing complex text rewriting.
 ExtractionRequest:
   scope: MemoryScope
   dialogue: DialogueRecord
+  extraction_time: str | None
 ```
 
 ```python
@@ -33,7 +34,8 @@ ExtractionResult:
 
 `DialogueRecord` is already archived before extraction. Extractors read it as
 evidence, but they must not expose raw dialogue through agent-facing read.
-The record represents one capture payload, not a whole host session.
+The record represents one sealed dialogue window. It may come from one capture
+payload or from multiple captures sharing a `session_id`.
 
 ## 3. Pipeline
 
@@ -51,11 +53,10 @@ DialogueRecord
   -> return units and skip reasons
 ```
 
-`chunk = n` is an extraction window, not a storage unit. Chunk sizing is an
-extractor configuration or implementation policy; it must not appear in
-`CaptureDialogue` or per-request capture payloads. Implementations may choose
-the tokenizer and windowing strategy, but should record enough stats to compare
-quality and cost.
+`chunk = n` is an extractor-internal LLM window, not a capture parameter and
+not a storage unit. Capture controls DialogueRecord buffering with
+`max_dialogue_tokens`; extraction may then split the sealed dialogue into role-
+aware chunks and keep original message indexes.
 
 Chunking is internal to extraction. LLM-backed extraction should build chunks
 from visible extractable messages, preserve original message indexes, split at
@@ -119,8 +120,8 @@ Every MemoryUnit needs `timestamp` and `available_at`.
 - If a fact comes from one message, use that message timestamp.
 - If a fact spans multiple messages, use the latest message timestamp in the
   `DialogueRef.message_range`.
-- If exact message time is unavailable, use `DialogueRecord.occurred_at`.
-- `available_at` is assigned by capture when the unit is accepted.
+- If exact message time is unavailable, use `DialogueRecord.started_at`.
+- `available_at` is the extraction time when the unit becomes searchable.
 
 All timestamps must be ISO 8601 with timezone.
 

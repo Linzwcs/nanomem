@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Protocol
 
 from nanomem.contracts import (
+    DialogueSelector,
     DialogueRecord,
     MemoryUnit,
     MemoryUnitSelector,
@@ -25,6 +26,9 @@ class MemoryStore(Protocol):
         ...
 
     def get_dialogue(self, dialogue_id: str) -> DialogueRecord | None:
+        ...
+
+    def query_dialogues(self, selector: DialogueSelector) -> tuple[DialogueRecord, ...]:
         ...
 
     def append_operation_log(self, entry: OperationLogEntry) -> None:

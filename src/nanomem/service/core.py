@@ -14,6 +14,8 @@ from nanomem.store.sqlite import SQLiteMemoryUnitStore
 from nanomem.contracts import (
     CaptureRequest,
     CaptureResult,
+    FlushRequest,
+    FlushResult,
     MemoryUnitSelector,
     ReadRequest,
     ReadResult,
@@ -30,18 +32,21 @@ class NanoMemService:
         extractor: MemoryUnitExtractor | None = None,
         default_recency_policy: str = "balanced",
         default_max_units: int = 10,
+        max_dialogue_tokens: int = 512,
     ) -> None:
         self.store = store or SQLiteMemoryUnitStore()
         self.index = index or DenseMemoryUnitIndex()
         self.extractor = extractor or HeuristicMemoryUnitExtractor()
         self.default_recency_policy = default_recency_policy
         self.default_max_units = default_max_units
+        self.max_dialogue_tokens = max_dialogue_tokens
         self.renderer = EvidenceContextRenderer()
         self.ranker = MemoryUnitRanker()
         self._capture_pipeline = CapturePipeline(
             store=self.store,
             index=self.index,
             extractor=self.extractor,
+            max_dialogue_tokens=self.max_dialogue_tokens,
         )
         self._read_pipeline = ReadPipeline(
             store=self.store,
@@ -54,6 +59,9 @@ class NanoMemService:
 
     def capture(self, request: CaptureRequest) -> CaptureResult:
         return self._capture_pipeline.run(request)
+
+    def flush(self, request: FlushRequest | None = None) -> FlushResult:
+        return self._capture_pipeline.flush(request or FlushRequest())
 
     def read(self, request: ReadRequest) -> ReadResult:
         return self._read_pipeline.run(request)

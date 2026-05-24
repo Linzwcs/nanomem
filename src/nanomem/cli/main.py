@@ -12,9 +12,11 @@ from nanomem.control import (
     RetentionPolicy,
 )
 from nanomem.config import NanoMemConfig, load_config
-from nanomem.contracts import MemoryScope, MemoryUnit, TimeRange
-from nanomem.factory import index_from_config
+from nanomem.contracts import FlushRequest, MemoryScope, MemoryUnit, TimeRange
+from nanomem.factory import extractor_from_config, index_from_config
+from nanomem.integrations.codex import install_codex_hooks
 from nanomem.maintenance import NanoMemMaintenanceService
+from nanomem.service.core import NanoMemService
 from nanomem.store.sqlite import SQLiteMemoryUnitStore
 from nanomem.tui.dashboard import (
     build_dashboard,
@@ -27,6 +29,9 @@ def main(argv: list[str] | None = None, *, stdout: TextIO | None = None) -> int:
     output = stdout or sys.stdout
     parser = _parser()
     args = parser.parse_args(argv)
+    if args.command == "install-codex-hooks":
+        return _install_codex_hooks(args, stdout=output)
+
     config = load_config(args.config) if getattr(args, "config", None) else None
     store = _store_from_args(args, config)
     try:
@@ -62,6 +67,12 @@ def main(argv: list[str] | None = None, *, stdout: TextIO | None = None) -> int:
             )
         if args.command == "reindex":
             return _reindex(control, json_output=args.json, stdout=output)
+        if args.command == "flush":
+            return _flush(
+                _service_from_cli_parts(store, config),
+                args=args,
+                stdout=output,
+            )
         if args.command == "retention-preview":
             return _retention_preview(control, args=args, stdout=output)
         if args.command == "retention-apply":
@@ -105,7 +116,11 @@ def _parser() -> argparse.ArgumentParser:
     logs.add_argument("--agent-id")
     logs.add_argument("--project-id")
     logs.add_argument("--session-id")
-    logs.add_argument("--type", dest="operation_type", choices=("capture", "read"))
+    logs.add_argument(
+        "--type",
+        dest="operation_type",
+        choices=("capture", "flush", "read"),
+    )
     logs.add_argument("--limit", type=int, default=20)
     logs.add_argument("--json", action="store_true", help="Emit JSON.")
 
@@ -173,6 +188,17 @@ def _parser() -> argparse.ArgumentParser:
     _add_db_or_config_args(reindex)
     reindex.add_argument("--json", action="store_true", help="Emit JSON.")
 
+    flush = subparsers.add_parser(
+        "flush",
+        help="Seal pending dialogue windows and extract MemoryUnits.",
+    )
+    _add_db_or_config_args(flush)
+    flush.add_argument("--user-id", help="Restrict flush to one owner.")
+    flush.add_argument("--namespace", help="Restrict flush to one namespace.")
+    flush.add_argument("--session-id", help="Restrict flush to one session.")
+    flush.add_argument("--flush-time", help="ISO timestamp for extraction time.")
+    flush.add_argument("--json", action="store_true", help="Emit JSON.")
+
     retention_preview = subparsers.add_parser(
         "retention-preview",
         help="Preview units that would be removed by retention.",
@@ -238,6 +264,22 @@ def _parser() -> argparse.ArgumentParser:
         "--retention-before",
         help="Include a retention preview for units older than this value.",
     )
+
+    codex_hooks = subparsers.add_parser(
+        "install-codex-hooks",
+        help="Write project-level Codex hooks for NanoMem.",
+    )
+    codex_hooks.add_argument(
+        "--project-dir",
+        default=".",
+        help="Project directory where .codex/hooks.json should be written.",
+    )
+    codex_hooks.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite an existing .codex/hooks.json.",
+    )
+    codex_hooks.add_argument("--json", action="store_true", help="Emit JSON.")
     return parser
 
 
@@ -529,6 +571,30 @@ def _reindex(
     return 0
 
 
+def _flush(
+    service: NanoMemService,
+    *,
+    args: argparse.Namespace,
+    stdout: TextIO,
+) -> int:
+    result = service.flush(
+        FlushRequest(
+            scope=_flush_scope_from_args(args),
+            session_id=args.session_id,
+            flush_time=args.flush_time,
+        )
+    )
+    payload = asdict(result)
+    if args.json:
+        _write_json(payload, stdout)
+        return 0
+    stdout.write("Flushed dialogue windows\n")
+    stdout.write(f"  dialogues: {result.dialogue_count}\n")
+    stdout.write(f"  units: {result.unit_count}\n")
+    stdout.write(f"  skipped: {len(result.skipped)}\n")
+    return 0
+
+
 def _retention_preview(
     control: NanoMemControlService,
     *,
@@ -653,6 +719,26 @@ def _dashboard(
     return 0
 
 
+def _install_codex_hooks(
+    args: argparse.Namespace,
+    *,
+    stdout: TextIO,
+) -> int:
+    try:
+        result = install_codex_hooks(args.project_dir, force=args.force)
+    except FileExistsError as exc:
+        stdout.write(f"{exc}\n")
+        return 2
+    payload = asdict(result)
+    if args.json:
+        _write_json(payload, stdout)
+        return 0
+    stdout.write(f"Codex hooks written to {result.hook_path}.\n")
+    if result.overwritten:
+        stdout.write("Existing hooks file overwritten.\n")
+    return 0
+
+
 def _add_retention_args(parser: argparse.ArgumentParser) -> None:
     _add_db_or_config_args(parser)
     parser.add_argument(
@@ -729,6 +815,28 @@ def _maintenance_service(
         control=control,
         config=config.maintenance,
     )
+
+
+def _service_from_cli_parts(
+    store: SQLiteMemoryUnitStore,
+    config: NanoMemConfig | None,
+) -> NanoMemService:
+    return NanoMemService(
+        store=store,
+        index=index_from_config(config) if config is not None else None,
+        extractor=extractor_from_config(config) if config is not None else None,
+        max_dialogue_tokens=(
+            config.extraction.max_dialogue_tokens if config is not None else 512
+        ),
+    )
+
+
+def _flush_scope_from_args(args: argparse.Namespace) -> MemoryScope | None:
+    if not args.user_id and not args.namespace:
+        return None
+    if not args.user_id:
+        raise SystemExit("--user-id is required when --namespace is provided")
+    return MemoryScope(owner_id=args.user_id, namespace=args.namespace)
 
 
 def _scope_from_args(args: argparse.Namespace) -> MemoryScope | None:

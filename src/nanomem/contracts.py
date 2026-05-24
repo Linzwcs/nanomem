@@ -32,14 +32,24 @@ class CaptureDialogue:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
+DialogueStatus = Literal["open", "sealed", "extracted", "failed"]
+
+
 @dataclass(frozen=True)
 class DialogueRecord:
     dialogue_id: str
+    scope: MemoryScope
+    session_id: str | None
     messages: tuple[DialogueMessage, ...]
-    captured_at: str
-    occurred_at: str
+    status: DialogueStatus
+    started_at: str
+    ended_at: str
+    created_at: str
+    updated_at: str
+    token_count: int
     checksum: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
+    extracted_at: str | None = None
     retention_until: str | None = None
     redacted_at: str | None = None
 
@@ -69,6 +79,7 @@ class CaptureRequest:
     scope: MemoryScope
     dialogue: CaptureDialogue
     capture_time: str
+    session_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -135,9 +146,26 @@ class ReindexResult:
 
 
 @dataclass(frozen=True)
+class FlushRequest:
+    scope: MemoryScope | None = None
+    session_id: str | None = None
+    flush_time: str | None = None
+
+
+@dataclass(frozen=True)
+class FlushResult:
+    dialogue_count: int
+    unit_count: int
+    units: tuple[MemoryUnit, ...]
+    skipped: tuple[CaptureSkip, ...] = ()
+    stats: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
 class ExtractionRequest:
     scope: MemoryScope
     dialogue: DialogueRecord
+    extraction_time: str | None = None
 
 
 @dataclass(frozen=True)
@@ -173,6 +201,19 @@ class MemoryUnitSelector:
     time_range: TimeRange | None = None
     memory_types: tuple[str, ...] = ()
     text_query: str | None = None
+    include_redacted: bool = False
+    limit: int | None = None
+    offset: int = 0
+    order: Literal["newest_first", "oldest_first"] = "newest_first"
+
+
+@dataclass(frozen=True)
+class DialogueSelector:
+    owner_id: str | None = None
+    namespaces: tuple[str, ...] | None = None
+    session_id: str | None = None
+    statuses: tuple[DialogueStatus, ...] = ()
+    dialogue_ids: tuple[str, ...] = ()
     include_redacted: bool = False
     limit: int | None = None
     offset: int = 0

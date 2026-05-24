@@ -53,7 +53,7 @@ class FakeFallbackExtractor:
                     text="The user prefers concise answers.",
                     memory_type="preference",
                     timestamp=request.dialogue.messages[0].timestamp,
-                    available_at=request.dialogue.captured_at,
+                    available_at=request.extraction_time or request.dialogue.updated_at,
                 ),
             ),
             skipped=(),
@@ -337,14 +337,21 @@ def _request(
         scope=MemoryScope(owner_id="user-1", namespace="personal"),
         dialogue=DialogueRecord(
             dialogue_id="dlg-1",
+            scope=MemoryScope(owner_id="user-1", namespace="personal"),
+            session_id="session-1",
             messages=messages
             or (
                 _message("assistant", "What should I remember?", 0),
                 _message("user", "I prefer concise Chinese answers.", 1),
             ),
-            captured_at="2026-01-01T00:00:30+00:00",
-            occurred_at="2026-01-01T00:00:00+00:00",
+            status="sealed",
+            started_at="2026-01-01T00:00:00+00:00",
+            ended_at="2026-01-01T00:00:30+00:00",
+            created_at="2026-01-01T00:00:00+00:00",
+            updated_at="2026-01-01T00:00:30+00:00",
+            token_count=32,
         ),
+        extraction_time="2026-01-01T00:00:30+00:00",
     )
 
 

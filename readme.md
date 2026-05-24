@@ -52,17 +52,17 @@ Non-goals:
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| Core contracts | Implemented | `CaptureRequest`, `ReadRequest`, `MemoryUnit`, `DialogueRecord` |
+| Core contracts | Implemented | `CaptureRequest`, `FlushRequest`, `ReadRequest`, `MemoryUnit`, `DialogueRecord` |
 | Local store | Implemented | SQLite fact store with migrations and operation logs |
 | Capture pipeline | Implemented | Heuristic extractor by default; LLM extractor optional |
 | Read pipeline | Implemented | retrieval, ranking, evidence rendering, token budget |
-| HTTP API | Implemented | `/v1/health`, `/v1/capture`, `/v1/read` |
+| HTTP API | Implemented | `/v1/health`, `/v1/capture`, `/v1/flush`, `/v1/read` |
 | Python SDK | Implemented | sync and async HTTP clients |
-| MCP server | Implemented | stdio server exposing normal memory tools |
-| CLI/control plane | Implemented | stats, list, backup, export, retention, reindex, dashboard |
+| MCP server | Implemented | stdio server exposing read-only `nanomem_read` |
+| CLI/control plane | Implemented | stats, list, backup, export, retention, reindex, dashboard, Codex hook install |
 | Web manager | Local alpha | bundled static manager and React/Vite work-in-progress |
 | Index backends | Local alpha | lexical, dense, hybrid, optional LanceDB |
-| Agent plugins | Experimental | Codex and Claude Code plugin skeletons |
+| Agent plugins | Experimental | Codex project hooks plus Codex and Claude Code plugin skeletons |
 | Managed deployment | Planned | Postgres + pgvector is a future path, not current default |
 
 ## Quick Start
@@ -247,22 +247,36 @@ understand or collaborate with the user, put it in NanoMem.
 
 ## Interfaces
 
-NanoMem intentionally exposes only two normal memory operations:
+NanoMem intentionally keeps the agent-facing surface small:
 
 ```text
 capture
 read
 ```
 
-Admin, backup, export, retention, delete, reindex, and raw dialogue inspection
-belong to CLI or control-plane surfaces, not to ordinary agent tools.
+`flush` is a session/window control operation. It seals pending dialogue
+buffers and makes extracted units searchable. Admin, backup, export, retention,
+delete, reindex, and raw dialogue inspection belong to CLI or control-plane
+surfaces, not to ordinary agent tools.
 
 ### HTTP
 
 ```text
 GET  /v1/health
 POST /v1/capture
+POST /v1/flush
 POST /v1/read
+```
+
+Capture without `session_id` is a complete dialogue and extracts immediately.
+Capture with `session_id` appends to an open dialogue window; call `/v1/flush`
+when a session pauses, exits, or should become searchable before the token
+window fills.
+
+CLI equivalent:
+
+```bash
+nanomem flush --config nanomem.json --user-id demo-user --session-id codex-session
 ```
 
 The JSON request and response shapes are documented in
@@ -446,7 +460,16 @@ nanomem-agent-hook capture --host claude-code
 ```
 
 The plugins are explicit opt-in integrations. They connect to a local HTTP
-sidecar by default:
+sidecar by default. For Codex, install project-level hooks first:
+
+```bash
+nanomem install-codex-hooks --project-dir .
+```
+
+Plugin-bundled Codex hooks remain an opt-in packaging path and should be
+validated separately. On the checked local CLI, interactive Codex executed
+project hooks after hook trust, while `codex exec` did not execute project,
+user, or plugin-bundled hooks.
 
 ```bash
 export NANOMEM_BASE_URL=http://127.0.0.1:8765

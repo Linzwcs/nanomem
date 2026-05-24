@@ -6,10 +6,19 @@ from typing import Any
 from urllib import request as urlrequest
 from urllib.error import HTTPError, URLError
 
-from nanomem.contracts import CaptureRequest, CaptureResult, ReadRequest, ReadResult
+from nanomem.contracts import (
+    CaptureRequest,
+    CaptureResult,
+    FlushRequest,
+    FlushResult,
+    ReadRequest,
+    ReadResult,
+)
 from nanomem.serde import (
     capture_request_to_json,
     capture_result_from_json,
+    flush_request_to_json,
+    flush_result_from_json,
     read_request_to_json,
     read_result_from_json,
 )
@@ -60,6 +69,14 @@ class NanoMemClient:
     def read(self, request: ReadRequest) -> ReadResult:
         payload = self._request("POST", "/v1/read", read_request_to_json(request))
         return read_result_from_json(payload)
+
+    def flush(self, request: FlushRequest | None = None) -> FlushResult:
+        payload = self._request(
+            "POST",
+            "/v1/flush",
+            flush_request_to_json(request or FlushRequest()),
+        )
+        return flush_result_from_json(payload)
 
     def close(self) -> None:
         return None
@@ -133,6 +150,9 @@ class AsyncNanoMemClient:
 
     async def read(self, request: ReadRequest) -> ReadResult:
         return await asyncio.to_thread(self._client.read, request)
+
+    async def flush(self, request: FlushRequest | None = None) -> FlushResult:
+        return await asyncio.to_thread(self._client.flush, request)
 
     async def close(self) -> None:
         await asyncio.to_thread(self._client.close)

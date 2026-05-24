@@ -28,6 +28,7 @@ def service_from_config(config: NanoMemConfig) -> NanoMemService:
         extractor=extractor_from_config(config),
         default_recency_policy=config.read.default_recency_policy,
         default_max_units=config.read.default_max_units,
+        max_dialogue_tokens=config.extraction.max_dialogue_tokens,
     )
     if config.index.rebuild_on_startup:
         service.reindex()

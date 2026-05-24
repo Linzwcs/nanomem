@@ -127,7 +127,7 @@ class HeuristicMemoryUnitExtractor:
                     text=sentence,
                     memory_type=_memory_type(sentence, message),
                     timestamp=message.timestamp,
-                    available_at=request.dialogue.captured_at,
+                    available_at=request.extraction_time or request.dialogue.updated_at,
                     dialogue_refs=(dialogue_ref,),
                     metadata={
                         "extractor": self.name,

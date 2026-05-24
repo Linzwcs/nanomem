@@ -225,17 +225,30 @@ CaptureDialogue:
   occurred_at: str
   metadata: dict
 
+CaptureRequest:
+  scope: MemoryScope
+  dialogue: CaptureDialogue
+  capture_time: str
+  session_id: str | None
+
 DialogueRef:
   dialogue_id: str
   message_range: tuple[int, int] | None
 
 DialogueRecord:
   dialogue_id: str
+  scope: MemoryScope
+  session_id: str | None
   messages: tuple[DialogueMessage, ...]
-  captured_at: str
-  occurred_at: str
+  status: "open" | "sealed" | "extracted" | "failed"
+  started_at: str
+  ended_at: str
+  created_at: str
+  updated_at: str
+  token_count: int
   checksum: str | None
   metadata: dict
+  extracted_at: str | None
   retention_until: str | None
   redacted_at: str | None
 

@@ -30,6 +30,8 @@ Core invariants:
 - request namespace may be omitted, but stored MemoryUnits must carry a
   resolved non-null namespace;
 - `CaptureDialogue` is a bounded message payload, not a session;
+- `CaptureRequest.session_id` is optional; when present, it groups multiple
+  capture payloads into one appendable dialogue window;
 - `DialogueRecord` is control-plane evidence, not agent-facing memory;
 - rendered MemoryUnits must include time;
 - NanoMem stores dialogue refs, not external resource refs, as first-version
@@ -46,6 +48,7 @@ CaptureDialogue
 DialogueRecord
 DialogueRef
 MemoryUnit
+FlushRequest / FlushResult
 CaptureRequest / CaptureResult
 ReadRequest / ReadResult
 RankedMemoryUnit
@@ -156,11 +159,18 @@ MemoryUnit back to that evidence.
 ```python
 DialogueRecord:
   dialogue_id: str
+  scope: MemoryScope
+  session_id: str | None
   messages: tuple[DialogueMessage, ...]
-  captured_at: str
-  occurred_at: str
+  status: "open" | "sealed" | "extracted" | "failed"
+  started_at: str
+  ended_at: str
+  created_at: str
+  updated_at: str
+  token_count: int
   checksum: str | None
   metadata: dict
+  extracted_at: str | None
   retention_until: str | None
   redacted_at: str | None
 ```
@@ -188,8 +198,10 @@ They must not:
 - be indexed as retrieval candidates;
 - be returned by agent-facing read;
 - be rendered into prompt context;
-- contain owner or namespace as authoritative fields;
 - introduce external resource references as first-version evidence.
+
+`scope` and `session_id` are authoritative only for storage routing and
+control-plane filtering. The agent-facing memory fact remains `MemoryUnit`.
 
 `DialogueRef.message_range` is a half-open message-index range `[start, end)`.
 It is not a token, byte, or character range.
@@ -241,6 +253,9 @@ class NanoMemService:
     def capture(self, request: CaptureRequest) -> CaptureResult:
         ...
 
+    def flush(self, request: FlushRequest | None = None) -> FlushResult:
+        ...
+
     def read(self, request: ReadRequest) -> ReadResult:
         ...
 ```
@@ -248,7 +263,8 @@ class NanoMemService:
 Responsibility:
 
 - validate owner, namespace, time, and metadata shape;
-- archive `DialogueRecord` before extraction;
+- archive or append `DialogueRecord` before extraction;
+- flush sealed/open dialogue windows into MemoryUnits when requested;
 - orchestrate extraction, storage, indexing, ranking, and rendering;
 - write operation logs;
 - keep admin operations out of agent-facing tools.
@@ -287,6 +303,7 @@ class MemoryStore:
     def query_units(self, selector: UnitSelector) -> tuple[MemoryUnit, ...]: ...
     def put_dialogue(self, record: DialogueRecord) -> None: ...
     def get_dialogue(self, dialogue_id: str) -> DialogueRecord | None: ...
+    def query_dialogues(self, selector: DialogueSelector) -> tuple[DialogueRecord, ...]: ...
     def append_operation_log(self, entry: OperationLogEntry) -> None: ...
 ```
 

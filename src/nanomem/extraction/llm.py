@@ -360,7 +360,7 @@ class LLMMemoryUnitExtractor:
                     text=text,
                     memory_type=memory_type,
                     timestamp=timestamp,
-                    available_at=request.dialogue.captured_at,
+                    available_at=request.extraction_time or request.dialogue.updated_at,
                     dialogue_refs=(dialogue_ref,),
                     metadata={
                         "extractor": self.name,
@@ -411,8 +411,8 @@ def _timestamp_for_range(
     start, end = message_range
     messages = request.dialogue.messages[start:end]
     if not messages:
-        return request.dialogue.occurred_at
-    return messages[-1].timestamp or request.dialogue.occurred_at
+        return request.dialogue.started_at
+    return messages[-1].timestamp or request.dialogue.started_at
 
 
 def _extractable_messages(

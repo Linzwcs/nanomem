@@ -93,6 +93,7 @@ class AgentMemoryAdapter:
         self,
         messages: Sequence[AgentMessage],
         *,
+        session_id: str | None = None,
         capture_time: str | None = None,
         occurred_at: str | None = None,
         metadata: dict[str, Any] | None = None,
@@ -117,6 +118,7 @@ class AgentMemoryAdapter:
                 scope=self.scope,
                 dialogue=dialogue,
                 capture_time=resolved_capture_time,
+                session_id=session_id or _metadata_session_id(metadata),
             )
         )
 
@@ -146,6 +148,7 @@ class AgentMemoryAdapter:
         assistant_message: str | None = None,
         timestamp: str | None = None,
         capture_assistant: bool = False,
+        session_id: str | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> CaptureResult:
         resolved_time = timestamp or now_utc_iso()
@@ -174,7 +177,15 @@ class AgentMemoryAdapter:
             )
         return self.capture_messages(
             messages,
+            session_id=session_id,
             capture_time=resolved_time,
             occurred_at=resolved_time,
             metadata=metadata,
         )
+
+
+def _metadata_session_id(metadata: dict[str, Any] | None) -> str | None:
+    if not metadata:
+        return None
+    value = metadata.get("session_id")
+    return str(value) if value else None

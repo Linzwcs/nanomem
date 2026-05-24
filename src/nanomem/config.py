@@ -42,6 +42,7 @@ class IndexConfig:
 @dataclass(frozen=True)
 class ExtractionConfig:
     backend: str = "heuristic"
+    max_dialogue_tokens: int = 512
     model: str | None = None
     base_url: str | None = None
     api_key: str | None = None
@@ -154,6 +155,9 @@ def config_from_mapping(payload: dict[str, Any]) -> NanoMemConfig:
         ),
         extraction=ExtractionConfig(
             backend=str(extraction_payload.get("backend", "heuristic")),
+            max_dialogue_tokens=int(
+                extraction_payload.get("max_dialogue_tokens", 512)
+            ),
             model=_optional_str(extraction_payload.get("model")),
             base_url=_optional_str(extraction_payload.get("base_url")),
             api_key=_optional_str(extraction_payload.get("api_key")),

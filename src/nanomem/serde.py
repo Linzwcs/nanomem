@@ -10,6 +10,8 @@ from nanomem.contracts import (
     CaptureSkip,
     DialogueMessage,
     DialogueRef,
+    FlushRequest,
+    FlushResult,
     MemoryScope,
     MemoryUnit,
     PackedContext,
@@ -28,7 +30,15 @@ def read_request_to_json(request: ReadRequest) -> dict[str, Any]:
     return _jsonable(asdict(request))
 
 
+def flush_request_to_json(request: FlushRequest) -> dict[str, Any]:
+    return _jsonable(asdict(request))
+
+
 def capture_result_to_json(result: CaptureResult) -> dict[str, Any]:
+    return _jsonable(asdict(result))
+
+
+def flush_result_to_json(result: FlushResult) -> dict[str, Any]:
     return _jsonable(asdict(result))
 
 
@@ -41,6 +51,7 @@ def capture_request_from_json(payload: dict[str, Any]) -> CaptureRequest:
         scope=memory_scope_from_json(payload.get("scope")),
         dialogue=capture_dialogue_from_json(payload),
         capture_time=str(payload.get("capture_time", "")),
+        session_id=_optional_str(payload.get("session_id")),
     )
 
 
@@ -64,6 +75,18 @@ def read_request_from_json(payload: dict[str, Any]) -> ReadRequest:
     )
 
 
+def flush_request_from_json(payload: dict[str, Any]) -> FlushRequest:
+    return FlushRequest(
+        scope=(
+            memory_scope_from_json(payload.get("scope"))
+            if payload.get("scope") is not None
+            else None
+        ),
+        session_id=_optional_str(payload.get("session_id")),
+        flush_time=_optional_str(payload.get("flush_time")),
+    )
+
+
 def capture_result_from_json(payload: dict[str, Any]) -> CaptureResult:
     return CaptureResult(
         dialogue_id=str(payload.get("dialogue_id", "")),
@@ -78,6 +101,16 @@ def capture_result_from_json(payload: dict[str, Any]) -> CaptureResult:
         skipped=tuple(capture_skip_from_json(item) for item in _list(payload.get("skipped"))),
         stats=_mapping(payload.get("stats")),
         trace_ref=_optional_str(payload.get("trace_ref")),
+    )
+
+
+def flush_result_from_json(payload: dict[str, Any]) -> FlushResult:
+    return FlushResult(
+        dialogue_count=int(payload.get("dialogue_count", 0)),
+        unit_count=int(payload.get("unit_count", 0)),
+        units=tuple(memory_unit_from_json(item) for item in _list(payload.get("units"))),
+        skipped=tuple(capture_skip_from_json(item) for item in _list(payload.get("skipped"))),
+        stats=_mapping(payload.get("stats")),
     )
 
 

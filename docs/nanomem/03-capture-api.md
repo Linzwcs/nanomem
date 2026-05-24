@@ -9,6 +9,14 @@ This document defines the current capture API contract.
 `capture` receives a user-visible dialogue and appends extracted personal
 MemoryUnits when appropriate.
 
+Capture has two modes:
+
+- no `session_id`: the payload is one complete dialogue and is extracted
+  immediately;
+- with `session_id`: the payload is appended to that session's open dialogue
+  window and extraction is deferred until the window is sealed by token limit
+  or explicit flush.
+
 Capture is not a generic event log, document ingestion API, workspace archive
 API, or multimodal asset ingestion API.
 
@@ -19,6 +27,7 @@ CaptureRequest:
   scope: MemoryScope
   dialogue: CaptureDialogue
   capture_time: str
+  session_id: str | None
 ```
 
 ```python
@@ -54,6 +63,8 @@ Capture has these first-version invariants:
 - Capture inputs describe what happened, not how extraction should chunk or
   process the dialogue. Algorithm parameters belong to extractor configuration,
   not `CaptureDialogue` or `CaptureRequest`.
+- `session_id` is optional. It is not a tag; it is the routing key for
+  accumulating multiple capture payloads into one dialogue window.
 - message `role` should describe a visible dialogue function. Hidden messages,
   tool calls, tool results, and raw outputs are skipped by extraction and should
   not be sent as ordinary capture evidence.
@@ -92,9 +103,9 @@ multi-owner capture API is introduced.
 capture call. It is normalized and archived as a control-plane
 `DialogueRecord` before extraction; it is not itself a stored memory object.
 
-It is not a session, conversation, turn, or transcript. NanoMem does not model
-session lifecycle. Concurrent sessions and long-running sessions are represented
-as multiple independent capture calls for the same `owner_id`.
+It is not a session, conversation, turn, or transcript. Concurrent sessions and
+long-running sessions are represented by repeated capture calls with the same
+`CaptureRequest.session_id`.
 
 ```python
 CaptureDialogue:
@@ -131,9 +142,9 @@ content matters, it should appear in user-visible dialogue, such as a user
 message, assistant final answer, or visible summary. NanoMem captures from that
 dialogue-level evidence.
 
-Host session ids, turn ids, run ids, log pointers, and window counters are
-optional host metadata. Put them in `metadata` only when useful for audit. They
-must not become required NanoMem fields.
+Turn ids, run ids, log pointers, and window counters are optional host
+metadata. `session_id` is separate because capture uses it to locate the open
+DialogueRecord.
 
 For long-running or multi-day sessions, the host should call capture repeatedly
 with bounded new messages. It should not replay the entire session transcript on
@@ -184,16 +195,13 @@ Do not auto-commit code.
 ```text
 CaptureRequest
   -> validate owner and namespace
-  -> archive DialogueRecord
+  -> resolve optional session_id
+  -> create or append DialogueRecord
   -> normalize messages
-  -> chunk = n over the message list
-  -> annotate role and speaker_id
-  -> extract personal facts
-  -> attach DialogueRefs
-  -> classify memory type
-  -> apply quality gates
-  -> append MemoryUnits
-  -> update derived index
+  -> if no session_id, extract immediately
+  -> if session_id and window remains below limit, defer extraction
+  -> if window is sealed, extract personal facts
+  -> append MemoryUnits and update derived index
   -> record operation log
 ```
 
@@ -225,3 +233,20 @@ Skip reasons should be explicit enough for operators to distinguish:
 - hidden/tool event;
 - empty extraction;
 - invalid namespace.
+
+## 10. Flush
+
+`flush` seals open dialogue windows and runs extraction. It is the control
+operation a host should call when a session pauses, exits, or wants pending
+dialogue made searchable.
+
+```python
+FlushRequest:
+  scope: MemoryScope | None
+  session_id: str | None
+  flush_time: str | None
+```
+
+Omitting `scope` flushes all open windows. Omitting `session_id` flushes every
+open session under the selected scope. Normal agent-facing read should not
+implicitly flush because read must stay a retrieval operation, not a write path.

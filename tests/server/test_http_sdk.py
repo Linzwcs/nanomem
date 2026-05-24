@@ -11,6 +11,7 @@ from nanomem.contracts import (
     CaptureDialogue,
     CaptureRequest,
     DialogueMessage,
+    FlushRequest,
     MemoryScope,
     ReadRequest,
 )
@@ -64,6 +65,38 @@ def test_http_server_and_sdk_round_trip_capture_and_read() -> None:
         server.shutdown()
         server.server_close()
         thread.join(timeout=2)
+
+
+def test_http_sdk_flushes_session_buffer() -> None:
+    with _RunningServer(NanoMemService()) as base_url:
+        client = NanoMemClient(base_url)
+        capture = client.capture(
+            CaptureRequest(
+                scope=MemoryScope(owner_id="user-1", namespace="personal"),
+                session_id="session-1",
+                dialogue=CaptureDialogue(
+                    occurred_at="2026-01-01T00:00:00+00:00",
+                    messages=(
+                        DialogueMessage(
+                            role="user",
+                            content="I prefer concise Chinese answers.",
+                            timestamp="2026-01-01T00:00:00+00:00",
+                        ),
+                    ),
+                ),
+                capture_time="2026-01-01T00:00:01+00:00",
+            )
+        )
+        flushed = client.flush(
+            FlushRequest(
+                scope=MemoryScope(owner_id="user-1", namespace="personal"),
+                session_id="session-1",
+            )
+        )
+
+        assert capture.unit_count == 0
+        assert flushed.dialogue_count == 1
+        assert flushed.unit_count == 1
 
 
 def test_http_contract_rejects_missing_capture_timestamp() -> None:

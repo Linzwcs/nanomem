@@ -366,6 +366,29 @@ def test_hook_debug_dir_records_raw_hook_payload(tmp_path) -> None:
     assert debug_payload["payload"]["prompt"] == "Remember this debug shape."
 
 
+def test_hook_debug_dir_does_not_overwrite_same_turn_payloads(tmp_path) -> None:
+    config = HookConfig(
+        host="codex",
+        base_url="http://127.0.0.1:1",
+        owner_id="user-1",
+        namespace="personal",
+        turn_dir=tmp_path / "turns",
+        debug_dir=tmp_path / "debug",
+    )
+    payload = json.dumps(
+        {
+            "session_id": "session-1",
+            "turn_id": "turn-1",
+            "prompt": "Remember this debug shape.",
+        }
+    )
+
+    run_spool(config, stdin=StringIO(payload), stdout=StringIO(), stderr=StringIO())
+    run_spool(config, stdin=StringIO(payload), stdout=StringIO(), stderr=StringIO())
+
+    assert len(tuple((tmp_path / "debug").glob("*-codex-spool-*.json"))) == 2
+
+
 def test_codex_sidecar_hook_flow_persists_across_restart(tmp_path) -> None:
     owner_id = "codex-user"
     namespace = "personal"

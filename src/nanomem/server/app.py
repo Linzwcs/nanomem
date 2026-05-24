@@ -10,6 +10,8 @@ from nanomem.service.core import NanoMemService
 from nanomem.server.schemas import (
     capture_request_from_json,
     capture_result_to_json,
+    flush_request_from_json,
+    flush_result_to_json,
     read_request_from_json,
     read_result_to_json,
 )
@@ -83,6 +85,10 @@ def make_handler(
                 if self.path == "/v1/capture":
                     result = service.capture(capture_request_from_json(payload))
                     _write_json(self, HTTPStatus.OK, capture_result_to_json(result))
+                    return
+                if self.path == "/v1/flush":
+                    result = service.flush(flush_request_from_json(payload))
+                    _write_json(self, HTTPStatus.OK, flush_result_to_json(result))
                     return
                 if self.path == "/v1/read":
                     result = service.read(read_request_from_json(payload))

@@ -19,6 +19,7 @@ index:
 
 extraction:
   backend: heuristic
+  max_dialogue_tokens: 512
 
 read:
   default_recency_policy: balanced
@@ -133,6 +134,7 @@ Other implemented index backends:
 ```yaml
 extraction:
   backend: heuristic
+  max_dialogue_tokens: 512
 ```
 
 LLM extraction should keep provider secrets out of config:
@@ -150,6 +152,11 @@ extraction:
 
 Extractor implementations may have their own chunking policy, but chunk size is
 not part of `CaptureDialogue` or the public capture request.
+
+`max_dialogue_tokens` controls capture buffering for requests with
+`session_id`. When the open dialogue window reaches this estimate, NanoMem
+seals it and runs extraction. Requests without `session_id` are treated as
+complete dialogues and extract immediately.
 
 `fallback_backend` may be `heuristic` or `null`. `strict_schema: true` means an
 invalid LLM payload fails the whole model result and falls back; `false` skips

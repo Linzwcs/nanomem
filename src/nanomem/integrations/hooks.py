@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import sys
 from typing import Any, TextIO
+import uuid
 
 from nanomem.adapters.agent import AgentMemoryAdapter, AgentMessage
 from nanomem.contracts import MemoryScope
@@ -464,7 +465,8 @@ def _write_debug_payload(
         config.debug_dir.mkdir(parents=True, exist_ok=True)
         path = config.debug_dir / (
             f"{now_utc_iso().replace(':', '').replace('+', 'Z')}-"
-            f"{config.host}-{action}-{_turn_key(payload)}.json"
+            f"{config.host}-{action}-{_turn_key(payload)}-"
+            f"{uuid.uuid4().hex[:8]}.json"
         )
         path.write_text(
             json.dumps(

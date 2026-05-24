@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SMOKE_DIR="${NANOMEM_SMOKE_DIR:-"$ROOT_DIR/.nanomem/smoke-codex-plugin"}"
+SMOKE_DIR="${NANOMEM_SMOKE_DIR:-"$ROOT_DIR/.nanomem/smoke-codex-project-hooks"}"
 DEBUG_DIR="$SMOKE_DIR/hook-debug"
 TURN_DIR="$SMOKE_DIR/turns"
 BIN_DIR="$SMOKE_DIR/bin"
@@ -10,17 +10,35 @@ CONFIG_FILE="$SMOKE_DIR/config.json"
 SERVER_LOG="$SMOKE_DIR/server.log"
 CODEX_LOG="$SMOKE_DIR/codex-exec.jsonl"
 DB_FILE="$SMOKE_DIR/nanomem.db"
+HOOK_FILE="$ROOT_DIR/.codex/hooks.json"
+HOOK_BACKUP="$SMOKE_DIR/original-hooks.json"
 OWNER_ID="${NANOMEM_SMOKE_OWNER_ID:-smoke-codex-user}"
 NAMESPACE="${NANOMEM_SMOKE_NAMESPACE:-personal}"
-PROMPT="${NANOMEM_SMOKE_PROMPT:-I prefer concise Chinese answers for NanoMem smoke tests. Reply exactly OK and do not run tools.}"
+PROMPT="${NANOMEM_SMOKE_PROMPT:-I prefer concise Chinese answers for NanoMem project-hook smoke tests. Reply exactly OK and do not run tools.}"
 
 SERVER_PID=""
+HOOK_EXISTED=0
+HOOK_TOUCHED=0
+
+restore_hooks() {
+  if [[ "$HOOK_TOUCHED" != "1" ]]; then
+    return
+  fi
+  if [[ "$HOOK_EXISTED" == "1" ]]; then
+    mkdir -p "$(dirname "$HOOK_FILE")"
+    cp "$HOOK_BACKUP" "$HOOK_FILE"
+  else
+    rm -f "$HOOK_FILE"
+    rmdir "$(dirname "$HOOK_FILE")" 2>/dev/null || true
+  fi
+}
 
 cleanup() {
   if [[ -n "$SERVER_PID" ]] && kill -0 "$SERVER_PID" 2>/dev/null; then
     kill "$SERVER_PID" >/dev/null 2>&1 || true
     wait "$SERVER_PID" 2>/dev/null || true
   fi
+  restore_hooks
 }
 trap cleanup EXIT
 
@@ -101,6 +119,19 @@ EOF
   chmod +x "$BIN_DIR/nanomem-agent-hook"
 }
 
+install_project_hooks() {
+  mkdir -p "$SMOKE_DIR"
+  HOOK_TOUCHED=1
+  if [[ -f "$HOOK_FILE" ]]; then
+    HOOK_EXISTED=1
+    cp "$HOOK_FILE" "$HOOK_BACKUP"
+  fi
+  PYTHONPATH="$ROOT_DIR/src${PYTHONPATH:+:$PYTHONPATH}" \
+    python -m nanomem.cli.main install-codex-hooks \
+      --project-dir "$ROOT_DIR" \
+      --force >/dev/null
+}
+
 validate_results() {
   python - "$DB_FILE" "$DEBUG_DIR" <<'PY'
 import json
@@ -152,14 +183,14 @@ else:
             errors.append("latest DialogueRecord has no assistant message")
 
 if errors:
-    print("Codex smoke validation failed:", file=sys.stderr)
+    print("Codex project-hook smoke validation failed:", file=sys.stderr)
     for error in errors:
         print(f"- {error}", file=sys.stderr)
     print("", file=sys.stderr)
     print("Likely causes:", file=sys.stderr)
-    print("- nanomem-codex is not installed from the local marketplace", file=sys.stderr)
-    print("- plugin_hooks is not enabled for this Codex run", file=sys.stderr)
-    print("- NanoMem hooks are not trusted in Codex /hooks", file=sys.stderr)
+    print("- this Codex non-interactive exec mode does not execute hooks", file=sys.stderr)
+    print("- Codex did not load project-level .codex/hooks.json", file=sys.stderr)
+    print("- NanoMem hooks are not trusted or bypassed for this run", file=sys.stderr)
     print("- nanomem-agent-hook is not reachable from Codex PATH", file=sys.stderr)
     sys.exit(1)
 
@@ -178,17 +209,19 @@ main() {
   mkdir -p "$SMOKE_DIR" "$DEBUG_DIR" "$TURN_DIR"
   write_config
   write_hook_shim
+  install_project_hooks
 
   local port="${NANOMEM_SMOKE_PORT:-$(free_port)}"
   local base_url="http://127.0.0.1:$port"
 
-  echo "NanoMem Codex plugin smoke test"
+  echo "NanoMem Codex project-hook smoke test"
   echo "repo: $ROOT_DIR"
   echo "work dir: $SMOKE_DIR"
   echo "base url: $base_url"
+  echo "hook file: $HOOK_FILE"
   echo ""
-  echo "This script does not install Codex plugins or persist hook trust."
-  echo "Precondition: install nanomem-codex from this repo's marketplace."
+  echo "This script temporarily writes project-level Codex hooks and restores them."
+  echo "It is diagnostic: some Codex exec builds do not execute hooks."
   echo ""
 
   PYTHONPATH="$ROOT_DIR/src${PYTHONPATH:+:$PYTHONPATH}" \
@@ -200,7 +233,7 @@ main() {
   SERVER_PID="$!"
   wait_for_server "$base_url"
 
-  echo "Running codex exec with plugin_hooks enabled..."
+  echo "Running codex exec with project hooks enabled..."
   PATH="$BIN_DIR:$PATH" \
     PYTHONPATH="$ROOT_DIR/src${PYTHONPATH:+:$PYTHONPATH}" \
     NANOMEM_BASE_URL="$base_url" \
@@ -210,8 +243,7 @@ main() {
     NANOMEM_HOOK_DEBUG_DIR="$DEBUG_DIR" \
     NANOMEM_CAPTURE_ASSISTANT=1 \
     codex exec \
-      --enable plugins \
-      --enable plugin_hooks \
+      --enable hooks \
       --dangerously-bypass-hook-trust \
       --json "$PROMPT" | tee "$CODEX_LOG"
 

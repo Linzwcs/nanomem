@@ -1,7 +1,7 @@
 {
   "name": "nanomem-claude-code",
   "version": "0.1.0",
-  "description": "Connect Claude Code to NanoMem long-term personal memory through hooks and optional MCP tools.",
+  "description": "Connect Claude Code to NanoMem long-term personal memory through hooks and read-only MCP.",
   "author": {
     "name": "NanoMem contributors",
     "url": "https://github.com/Linzwcs/nanomem"
@@ -21,7 +21,7 @@
   "interface": {
     "displayName": "NanoMem",
     "shortDescription": "Read and capture long-term personal memory.",
-    "longDescription": "Adds NanoMem as a sidecar memory layer for Claude Code. Hooks inject relevant personal memory before a turn and capture user-visible dialogue after a turn. MCP tools are available for explicit lookup or remember-this requests.",
+    "longDescription": "Adds NanoMem as a sidecar memory layer for Claude Code. Hooks inject relevant personal memory before a turn and capture user-visible dialogue after a turn. MCP exposes read-only memory lookup.",
     "developerName": "NanoMem contributors",
     "category": "Coding",
     "capabilities": [

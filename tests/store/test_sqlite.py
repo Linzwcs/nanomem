@@ -4,6 +4,7 @@ from nanomem.contracts import (
     DialogueMessage,
     DialogueRecord,
     DialogueRef,
+    DialogueSelector,
     MemoryScope,
     MemoryUnit,
     MemoryUnitSelector,
@@ -18,6 +19,8 @@ def test_sqlite_store_round_trips_dialogue_units_and_logs(tmp_path) -> None:
     try:
         dialogue = DialogueRecord(
             dialogue_id="dlg-1",
+            scope=MemoryScope(owner_id="user-1", namespace="personal"),
+            session_id="session-1",
             messages=(
                 DialogueMessage(
                     role="user",
@@ -26,8 +29,12 @@ def test_sqlite_store_round_trips_dialogue_units_and_logs(tmp_path) -> None:
                     timestamp="2026-01-05T00:00:00+00:00",
                 ),
             ),
-            occurred_at="2026-01-05T00:00:00+00:00",
-            captured_at="2026-01-05T00:00:01+00:00",
+            status="open",
+            started_at="2026-01-05T00:00:00+00:00",
+            ended_at="2026-01-05T00:00:00+00:00",
+            created_at="2026-01-05T00:00:01+00:00",
+            updated_at="2026-01-05T00:00:01+00:00",
+            token_count=8,
             checksum="checksum",
         )
         store.put_dialogue(dialogue)
@@ -55,6 +62,14 @@ def test_sqlite_store_round_trips_dialogue_units_and_logs(tmp_path) -> None:
         )
 
         assert store.get_dialogue("dlg-1") == dialogue
+        assert store.query_dialogues(
+            DialogueSelector(
+                owner_id="user-1",
+                namespaces=("personal",),
+                session_id="session-1",
+                statuses=("open",),
+            )
+        ) == (dialogue,)
         assert store.get_units(("unit-1",)) == (unit,)
         assert store.query_units(
             MemoryUnitSelector(owner_id="user-1", namespaces=("personal",))
