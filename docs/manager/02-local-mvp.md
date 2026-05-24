@@ -48,7 +48,7 @@ Browser UI
   -> active MemoryUnitIndex
 ```
 
-The UI reads authoritative memory and dialogue records from SQLite. Retrieval
+The UI reads authoritative memory and dialogues from SQLite. Retrieval
 preview calls the normal read pipeline. Reindex rebuilds the active index from
 stored memory units.
 

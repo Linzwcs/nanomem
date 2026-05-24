@@ -6,14 +6,17 @@ from nanomem.contracts import (
     CaptureRequest,
     CaptureResult,
     CaptureSkip,
-    DialogueRecord,
-    DialogueSelector,
+    DialogueMessage,
+    Dialogue,
+    DialogueWindow,
+    DialogueWindowSelector,
     ExtractionRequest,
     FlushRequest,
     FlushResult,
     MemoryScope,
     MemoryUnit,
     OperationLogEntry,
+    Session,
 )
 from nanomem.extraction.base import MemoryUnitExtractor
 from nanomem.extraction.events import is_extractable_message
@@ -47,15 +50,34 @@ class CapturePipeline:
         _validate_capture_request(request)
         scope = _resolve_scope(request.scope)
         session_id = _resolve_session_id(request)
-        dialogue = self._append_to_dialogue(request, scope=scope, session_id=session_id)
+        dialogue, window = self._append_to_dialogue(
+            request,
+            session_id=session_id,
+        )
 
-        if session_id is None or dialogue.token_count >= self.max_dialogue_tokens:
+        if window is None:
             result = self._extract_dialogue(
-                replace(dialogue, status="sealed"),
+                dialogue,
+                scope=scope,
+                session_id=None,
                 extraction_time=request.capture_time,
+            )
+        elif window.token_count >= self.max_dialogue_tokens:
+            result = self._extract_dialogue(
+                dialogue,
+                scope=scope,
+                session_id=window.session_id,
+                extraction_time=request.capture_time,
+                window=_seal_window(
+                    window,
+                    at=request.capture_time,
+                    reason="token_limit",
+                    dialogue=dialogue,
+                ),
             )
         else:
             self.store.put_dialogue(dialogue)
+            self.store.put_dialogue_window(window)
             result = CaptureResult(
                 dialogue_id=dialogue.dialogue_id,
                 accepted_message_count=len(request.dialogue.messages),
@@ -63,32 +85,48 @@ class CapturePipeline:
                 units=(),
                 stats={
                     "capture_mode": "dialogue_window",
-                    "dialogue_status": dialogue.status,
+                    "dialogue_status": window.status,
                     "extraction_deferred": True,
                     "session_id": session_id,
-                    "dialogue_token_count": dialogue.token_count,
+                    "dialogue_token_count": window.token_count,
                     "max_dialogue_tokens": self.max_dialogue_tokens,
                 },
             )
 
-        self._record_capture_log(scope, dialogue, result)
+        self._record_capture_log(scope, dialogue, result, session_id=session_id)
         return result
 
     def flush(self, request: FlushRequest) -> FlushResult:
         flush_time = request.flush_time or now_utc_iso()
-        selector = _flush_selector(request)
-        dialogues = self.store.query_dialogues(selector)
+        windows = self.store.query_dialogue_windows(_flush_selector(request))
+        if windows and request.session_id is None:
+            raise ValueError("FlushRequest.session_id is required")
+        if windows and request.scope is None:
+            raise ValueError("FlushRequest.scope is required for extraction routing")
+        scope = _resolve_scope(request.scope) if request.scope else None
         units: list[MemoryUnit] = []
         skipped: list[CaptureSkip] = []
-        for dialogue in dialogues:
+        flushed_dialogue_ids: list[str] = []
+        for window in windows:
+            dialogue = self.store.get_dialogue(window.dialogue_id)
+            if dialogue is None:
+                continue
             result = self._extract_dialogue(
-                replace(dialogue, status="sealed"),
+                dialogue,
+                scope=scope,
+                session_id=window.session_id,
                 extraction_time=flush_time,
+                window=_seal_window(
+                    window,
+                    at=flush_time,
+                    reason="explicit_flush",
+                    dialogue=dialogue,
+                ),
             )
             units.extend(result.units)
             skipped.extend(result.skipped)
+            flushed_dialogue_ids.append(window.dialogue_id)
 
-        scope = _resolve_scope(request.scope) if request.scope else None
         self.store.append_operation_log(
             OperationLogEntry(
                 log_id=new_id("oplog"),
@@ -97,12 +135,12 @@ class CapturePipeline:
                 scope=scope,
                 status="ok",
                 summary={
-                    "dialogue_count": len(dialogues),
+                    "dialogue_count": len(flushed_dialogue_ids),
                     "unit_count": len(units),
                     "skipped_count": len(skipped),
                 },
                 payload={
-                    "dialogue_ids": [dialogue.dialogue_id for dialogue in dialogues],
+                    "dialogue_ids": flushed_dialogue_ids,
                     "unit_ids": [unit.unit_id for unit in units],
                     "skipped": [_skip_payload(item) for item in skipped],
                     "session_id": request.session_id,
@@ -110,13 +148,13 @@ class CapturePipeline:
             )
         )
         return FlushResult(
-            dialogue_count=len(dialogues),
+            dialogue_count=len(flushed_dialogue_ids),
             unit_count=len(units),
             units=tuple(units),
             skipped=tuple(skipped),
             stats={
                 "capture_mode": "dialogue_window",
-                "flushed_dialogue_ids": [dialogue.dialogue_id for dialogue in dialogues],
+                "flushed_dialogue_ids": flushed_dialogue_ids,
             },
         )
 
@@ -124,56 +162,77 @@ class CapturePipeline:
         self,
         request: CaptureRequest,
         *,
-        scope: MemoryScope,
         session_id: str | None,
-    ) -> DialogueRecord:
-        current = (
-            self._open_dialogue(scope=scope, session_id=session_id)
-            if session_id is not None
-            else None
-        )
-        if current is None:
+    ) -> tuple[Dialogue, DialogueWindow | None]:
+        if session_id is None:
             messages = request.dialogue.messages
-            return DialogueRecord(
-                dialogue_id=new_id("dlg"),
-                scope=scope,
+            return _new_dialogue(request, session_id=None, messages=messages), None
+
+        self.store.put_session(
+            Session(
                 session_id=session_id,
-                messages=messages,
-                status="open",
-                started_at=_first_timestamp(messages, request.dialogue.occurred_at),
-                ended_at=_last_timestamp(messages, request.dialogue.occurred_at),
                 created_at=request.capture_time,
                 updated_at=request.capture_time,
-                token_count=_estimate_tokens(messages),
-                checksum=_dialogue_checksum(scope, session_id, messages),
-                metadata=dict(request.dialogue.metadata),
+                metadata=_session_metadata(request),
             )
+        )
+        current_window = self._open_window(session_id=session_id)
+        if current_window is None:
+            messages = request.dialogue.messages
+            dialogue = _new_dialogue(request, session_id=session_id, messages=messages)
+            window = DialogueWindow(
+                session_id=session_id,
+                dialogue_id=dialogue.dialogue_id,
+                status="open",
+                token_count=_estimate_tokens(messages),
+                message_count=len(messages),
+                created_at=request.capture_time,
+                updated_at=request.capture_time,
+                metadata={"source": "capture_session"},
+            )
+            return dialogue, window
+
+        current = self.store.get_dialogue(current_window.dialogue_id)
+        if current is None:
+            messages = request.dialogue.messages
+            dialogue = _new_dialogue(request, session_id=session_id, messages=messages)
+            window = replace(
+                current_window,
+                dialogue_id=dialogue.dialogue_id,
+                updated_at=request.capture_time,
+                token_count=_estimate_tokens(messages),
+                message_count=len(messages),
+            )
+            return dialogue, window
 
         messages = current.messages + request.dialogue.messages
-        return replace(
+        dialogue = replace(
             current,
             messages=messages,
-            status="open",
             ended_at=_last_timestamp(messages, request.dialogue.occurred_at),
             updated_at=request.capture_time,
-            token_count=_estimate_tokens(messages),
-            checksum=_dialogue_checksum(scope, session_id, messages),
+            checksum=_dialogue_checksum(messages),
             metadata={
                 **current.metadata,
                 **dict(request.dialogue.metadata),
             },
         )
+        window = replace(
+            current_window,
+            status="open",
+            updated_at=request.capture_time,
+            token_count=_estimate_tokens(messages),
+            message_count=len(messages),
+        )
+        return dialogue, window
 
-    def _open_dialogue(
+    def _open_window(
         self,
         *,
-        scope: MemoryScope,
         session_id: str,
-    ) -> DialogueRecord | None:
-        rows = self.store.query_dialogues(
-            DialogueSelector(
-                owner_id=scope.owner_id,
-                namespaces=(str(scope.namespace),),
+    ) -> DialogueWindow | None:
+        rows = self.store.query_dialogue_windows(
+            DialogueWindowSelector(
                 session_id=session_id,
                 statuses=("open",),
                 limit=1,
@@ -183,43 +242,49 @@ class CapturePipeline:
 
     def _extract_dialogue(
         self,
-        dialogue: DialogueRecord,
+        dialogue: Dialogue,
         *,
+        scope: MemoryScope,
+        session_id: str | None,
         extraction_time: str,
+        window: DialogueWindow | None = None,
     ) -> CaptureResult:
-        sealed = replace(
-            dialogue,
-            status="sealed",
-            updated_at=extraction_time,
-            token_count=_estimate_tokens(dialogue.messages),
-            checksum=_dialogue_checksum(
-                dialogue.scope,
-                dialogue.session_id,
-                dialogue.messages,
-            ),
-        )
-        self.store.put_dialogue(sealed)
+        self.store.put_dialogue(dialogue)
+        if window is not None:
+            self.store.put_dialogue_window(
+                replace(
+                    window,
+                    status="extracting",
+                    updated_at=extraction_time,
+                    token_count=_estimate_tokens(dialogue.messages),
+                    message_count=len(dialogue.messages),
+                )
+            )
         extraction = self.extractor.extract(
             ExtractionRequest(
-                scope=dialogue.scope,
-                dialogue=sealed,
+                scope=scope,
+                dialogue=dialogue,
                 extraction_time=extraction_time,
             )
         )
         _validate_extraction_units(
             extraction.units,
-            scope=dialogue.scope,
-            dialogue=sealed,
+            scope=scope,
+            dialogue=dialogue,
         )
         self.store.append_units(extraction.units)
         self.index.upsert(extraction.units)
-        extracted = replace(
-            sealed,
-            status="extracted",
-            updated_at=extraction_time,
-            extracted_at=extraction_time,
-        )
-        self.store.put_dialogue(extracted)
+        if window is not None:
+            self.store.put_dialogue_window(
+                replace(
+                    window,
+                    status="extracted",
+                    updated_at=extraction_time,
+                    extracted_at=extraction_time,
+                    token_count=_estimate_tokens(dialogue.messages),
+                    message_count=len(dialogue.messages),
+                )
+            )
         return CaptureResult(
             dialogue_id=dialogue.dialogue_id,
             accepted_message_count=len(dialogue.messages),
@@ -232,8 +297,8 @@ class CapturePipeline:
                 "extraction_deferred": False,
                 "extractor": self.extractor.name,
                 "inserted_unit_count": len(extraction.units),
-                "session_id": dialogue.session_id,
-                "dialogue_token_count": extracted.token_count,
+                "session_id": session_id,
+                "dialogue_token_count": _estimate_tokens(dialogue.messages),
                 "max_dialogue_tokens": self.max_dialogue_tokens,
                 **extraction.stats,
             },
@@ -242,8 +307,10 @@ class CapturePipeline:
     def _record_capture_log(
         self,
         scope: MemoryScope,
-        dialogue: DialogueRecord,
+        dialogue: Dialogue,
         result: CaptureResult,
+        *,
+        session_id: str | None,
     ) -> None:
         created_at = now_utc_iso()
         self.store.append_operation_log(
@@ -255,7 +322,7 @@ class CapturePipeline:
                 status="ok",
                 summary={
                     "dialogue_id": dialogue.dialogue_id,
-                    "session_id": dialogue.session_id,
+                    "session_id": session_id,
                     "message_count": len(dialogue.messages),
                     "unit_count": result.unit_count,
                     "skipped_count": len(result.skipped),
@@ -299,11 +366,8 @@ def _resolve_session_id(request: CaptureRequest) -> str | None:
     return None
 
 
-def _flush_selector(request: FlushRequest) -> DialogueSelector:
-    scope = _resolve_scope(request.scope) if request.scope else None
-    return DialogueSelector(
-        owner_id=scope.owner_id if scope else None,
-        namespaces=(scope.namespace,) if scope and scope.namespace else None,
+def _flush_selector(request: FlushRequest) -> DialogueWindowSelector:
+    return DialogueWindowSelector(
         session_id=request.session_id,
         statuses=("open", "sealed"),
         order="oldest_first",
@@ -311,18 +375,55 @@ def _flush_selector(request: FlushRequest) -> DialogueSelector:
     )
 
 
-def _dialogue_checksum(
-    scope: MemoryScope,
+def _new_dialogue(
+    request: CaptureRequest,
+    *,
     session_id: str | None,
-    messages: tuple[object, ...],
-) -> str:
+    messages: tuple[DialogueMessage, ...],
+) -> Dialogue:
+    return Dialogue(
+        dialogue_id=new_id("dlg"),
+        session_id=session_id,
+        messages=messages,
+        started_at=_first_timestamp(messages, request.dialogue.occurred_at),
+        ended_at=_last_timestamp(messages, request.dialogue.occurred_at),
+        created_at=request.capture_time,
+        updated_at=request.capture_time,
+        checksum=_dialogue_checksum(messages),
+        metadata=dict(request.dialogue.metadata),
+    )
+
+
+def _session_metadata(request: CaptureRequest) -> dict[str, object]:
+    return {
+        key: value
+        for key, value in request.dialogue.metadata.items()
+        if key not in {"session_id"}
+    }
+
+
+def _seal_window(
+    window: DialogueWindow,
+    *,
+    at: str,
+    reason: str,
+    dialogue: Dialogue,
+) -> DialogueWindow:
+    return replace(
+        window,
+        status="sealed",
+        updated_at=at,
+        sealed_at=at,
+        seal_reason=reason,
+        token_count=_estimate_tokens(dialogue.messages),
+        message_count=len(dialogue.messages),
+    )
+
+
+def _dialogue_checksum(messages: tuple[object, ...]) -> str:
     return stable_id(
         "dlgchk",
-        {
-            "scope": asdict(scope),
-            "session_id": session_id,
-            "messages": [asdict(message) for message in messages],
-        },
+        {"messages": [asdict(message) for message in messages]},
     )
 
 
@@ -350,7 +451,7 @@ def _validate_extraction_units(
     units: tuple[MemoryUnit, ...],
     *,
     scope: MemoryScope,
-    dialogue: DialogueRecord,
+    dialogue: Dialogue,
 ) -> None:
     for unit in units:
         if unit.scope != scope:

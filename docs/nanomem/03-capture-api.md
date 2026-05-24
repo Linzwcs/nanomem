@@ -1,6 +1,6 @@
 # Capture API
 
-Status: v1 freeze candidate
+Status: draft after session/dialogue model correction
 
 This document defines the current capture API contract.
 
@@ -29,6 +29,12 @@ CaptureRequest:
   capture_time: str
   session_id: str | None
 ```
+
+`scope` is default extraction routing for produced MemoryUnits. It is not a
+Dialogue field and must not be copied onto Session, Dialogue, or
+DialogueWindow. A future API may rename this field to `extraction_context`, but
+the semantic boundary is already fixed: raw dialogue stores what happened;
+MemoryUnits store who the extracted memory belongs to.
 
 ```python
 MemoryScope:
@@ -65,10 +71,11 @@ Capture has these first-version invariants:
   not `CaptureDialogue` or `CaptureRequest`.
 - `session_id` is optional. It is not a tag; it is the routing key for
   accumulating multiple capture payloads into one dialogue window.
+- `scope` is an extraction/routing input. It is not raw dialogue ownership.
 - message `role` should describe a visible dialogue function. Hidden messages,
   tool calls, tool results, and raw outputs are skipped by extraction and should
   not be sent as ordinary capture evidence.
-- Capture archives a `DialogueRecord` before extraction.
+- Capture archives a `Dialogue` before extraction.
 - Every accepted MemoryUnit has `scope`, `text`, `memory_type`, `timestamp`,
   `available_at`, lifecycle fields, and at least one `DialogueRef`.
 - Every accepted MemoryUnit has a resolved, validated, non-null namespace.
@@ -93,15 +100,17 @@ Rules:
 - flexible tags belong in `MemoryUnit.metadata`, not `namespace`.
 
 For multi-speaker capture, the host should provide stable `speaker_id` values.
-Extraction may use them for attribution, but each accepted MemoryUnit still
-lands in the request owner and one resolved namespace unless a future
-multi-owner capture API is introduced.
+Extraction may use them for attribution. The default first-version behavior is
+to place accepted MemoryUnits under the request scope, but that scope remains a
+MemoryUnit routing decision, not a Dialogue property. A future
+multi-owner extraction context can map speakers to scopes without changing raw
+dialogue storage.
 
 ## 5. CaptureDialogue
 
 `CaptureDialogue` is the dialogue payload supplied by the host agent for one
 capture call. It is normalized and archived as a control-plane
-`DialogueRecord` before extraction; it is not itself a stored memory object.
+`Dialogue` before extraction; it is not itself a stored memory object.
 
 It is not a session, conversation, turn, or transcript. Concurrent sessions and
 long-running sessions are represented by repeated capture calls with the same
@@ -142,9 +151,8 @@ content matters, it should appear in user-visible dialogue, such as a user
 message, assistant final answer, or visible summary. NanoMem captures from that
 dialogue-level evidence.
 
-Turn ids, run ids, log pointers, and window counters are optional host
-metadata. `session_id` is separate because capture uses it to locate the open
-DialogueRecord.
+Turn ids, run ids, and log pointers are optional host metadata. `session_id` is
+separate because capture uses it to locate the open DialogueWindow.
 
 For long-running or multi-day sessions, the host should call capture repeatedly
 with bounded new messages. It should not replay the entire session transcript on
@@ -169,7 +177,7 @@ replaying completed captures or perform their own request deduplication.
 
 Capture idempotency can be added later as a capture-boundary extension keyed by
 owner, namespace, and a host-provided request key. It must not affect
-MemoryUnit, DialogueRecord, read, ranking, or render semantics.
+MemoryUnit, Dialogue, read, ranking, or render semantics.
 
 ## 7. Extraction Style
 
@@ -194,13 +202,14 @@ Do not auto-commit code.
 
 ```text
 CaptureRequest
-  -> validate owner and namespace
+  -> validate default extraction scope
   -> resolve optional session_id
-  -> create or append DialogueRecord
+  -> find or create Session and DialogueWindow
+  -> create or append raw Dialogue
   -> normalize messages
   -> if no session_id, extract immediately
   -> if session_id and window remains below limit, defer extraction
-  -> if window is sealed, extract personal facts
+  -> if window is sealed, extract personal facts using extraction routing
   -> append MemoryUnits and update derived index
   -> record operation log
 ```
@@ -247,6 +256,8 @@ FlushRequest:
   flush_time: str | None
 ```
 
-Omitting `scope` flushes all open windows. Omitting `session_id` flushes every
-open session under the selected scope. Normal agent-facing read should not
-implicitly flush because read must stay a retrieval operation, not a write path.
+When pending windows exist, `flush` requires both `session_id` and `scope`.
+`session_id` selects the raw dialogue window, while `scope` provides extraction
+routing for produced MemoryUnits. `scope` is not stored on the window itself.
+Normal agent-facing read should not implicitly flush because read must stay a
+retrieval operation, not a write path.

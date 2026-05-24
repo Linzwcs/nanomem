@@ -1,6 +1,6 @@
 # Contract Freeze Review
 
-Status: v1 freeze candidate
+Status: draft after session/dialogue model correction
 
 This document records the current public contract shape after code and tests
 were reviewed. The goal is to freeze the small agent-facing API before adding
@@ -11,7 +11,8 @@ LLM extraction, persistent vector indexes, and richer manager operations.
 - Public capture describes visible dialogue evidence.
 - Public read describes what an agent needs before answering.
 - `MemoryUnit` is the durable retrieval object.
-- `DialogueRecord` is audit evidence and is not returned by normal read.
+- `Dialogue` is raw audit evidence and is not returned by normal read.
+- `DialogueWindow` is internal lifecycle control and carries no memory scope.
 - Indexes are derived and rebuildable from the authoritative store.
 - `metadata` is the host escape hatch; it must not replace core fields.
 
@@ -62,32 +63,48 @@ CaptureRequest(
 ```
 
 Capture has no `chunk_size`, idempotency key, extractor options, or index
-controls. `session_id` is only a routing key for dialogue buffering. Other
-algorithm choices are implementation/configuration concerns.
+controls. `session_id` is only a routing key for dialogue buffering.
+`scope` is default extraction routing for produced MemoryUnits; it is not
+stored on Session, Dialogue, or DialogueWindow. Other algorithm choices
+are implementation/configuration concerns.
 
 ```python
-DialogueRecord(
+Dialogue(
   dialogue_id: str,
-  scope: MemoryScope,
   session_id: str | None,
   messages: tuple[DialogueMessage, ...],
-  status: "open" | "sealed" | "extracted" | "failed",
   started_at: str,
   ended_at: str,
   created_at: str,
   updated_at: str,
-  token_count: int,
   checksum: str | None = None,
   metadata: dict = {},
-  extracted_at: str | None = None,
   retention_until: str | None = None,
   redacted_at: str | None = None,
 )
 ```
 
-Dialogue records are control-plane evidence. They carry scope/session for
-storage routing and filtering, but produced memory units remain the
-agent-facing facts.
+Dialogues are raw control-plane evidence. They carry session grouping
+only; produced memory units remain the first durable owner/namespace facts.
+
+```python
+DialogueWindow(
+  session_id: str,
+  dialogue_id: str,
+  status: "open" | "sealed" | "extracting" | "extracted" | "failed",
+  token_count: int,
+  message_count: int,
+  created_at: str,
+  updated_at: str,
+  sealed_at: str | None = None,
+  extracted_at: str | None = None,
+  seal_reason: str | None = None,
+  metadata: dict = {},
+)
+```
+
+Dialogue windows are control records for append/seal/extract/retry. They must
+not contain raw message content, `owner_id`, `namespace`, or `MemoryScope`.
 
 ```python
 DialogueRef(
@@ -96,7 +113,7 @@ DialogueRef(
 )
 ```
 
-`message_range` is a half-open range over `DialogueRecord.messages`. No char
+`message_range` is a half-open range over `Dialogue.messages`. No char
 ranges, file refs, image refs, or external resource refs are in v1.
 
 ```python

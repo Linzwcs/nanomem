@@ -21,7 +21,7 @@ should stay simple rather than performing complex text rewriting.
 ```python
 ExtractionRequest:
   scope: MemoryScope
-  dialogue: DialogueRecord
+  dialogue: Dialogue
   extraction_time: str | None
 ```
 
@@ -32,15 +32,15 @@ ExtractionResult:
   stats: dict
 ```
 
-`DialogueRecord` is already archived before extraction. Extractors read it as
+`Dialogue` is already archived before extraction. Extractors read it as
 evidence, but they must not expose raw dialogue through agent-facing read.
-The record represents one sealed dialogue window. It may come from one capture
-payload or from multiple captures sharing a `session_id`.
+The dialogue represents one sealed dialogue window. It may come from one
+capture payload or from multiple captures sharing a `session_id`.
 
 ## 3. Pipeline
 
 ```text
-DialogueRecord
+Dialogue
   -> prepare visible messages
   -> chunk = n over visible dialogue text
   -> annotate role and speaker_id
@@ -54,7 +54,7 @@ DialogueRecord
 ```
 
 `chunk = n` is an extractor-internal LLM window, not a capture parameter and
-not a storage unit. Capture controls DialogueRecord buffering with
+not a storage unit. Capture controls Dialogue buffering with
 `max_dialogue_tokens`; extraction may then split the sealed dialogue into role-
 aware chunks and keep original message indexes.
 
@@ -120,7 +120,7 @@ Every MemoryUnit needs `timestamp` and `available_at`.
 - If a fact comes from one message, use that message timestamp.
 - If a fact spans multiple messages, use the latest message timestamp in the
   `DialogueRef.message_range`.
-- If exact message time is unavailable, use `DialogueRecord.started_at`.
+- If exact message time is unavailable, use `Dialogue.started_at`.
 - `available_at` is the extraction time when the unit becomes searchable.
 
 All timestamps must be ISO 8601 with timezone.

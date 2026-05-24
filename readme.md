@@ -52,7 +52,7 @@ Non-goals:
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| Core contracts | Implemented | `CaptureRequest`, `FlushRequest`, `ReadRequest`, `MemoryUnit`, `DialogueRecord` |
+| Core contracts | In transition | target model: `Session`, `Dialogue`, `DialogueWindow`, `MemoryUnit` |
 | Local store | Implemented | SQLite fact store with migrations and operation logs |
 | Capture pipeline | Implemented | Heuristic extractor by default; LLM extractor optional |
 | Read pipeline | Implemented | retrieval, ranking, evidence rendering, token budget |
@@ -176,24 +176,27 @@ Open the local manager while the server is running:
 http://127.0.0.1:8765/manager
 ```
 
-The manager is a control-plane UI for inspecting memory units, dialogue records,
+The manager is a control-plane UI for inspecting memory units, dialogues,
 operation logs, retrieval preview, and index health. Do not expose manager or
 control endpoints as agent-facing tools.
 
 ## Core Model
 
-NanoMem separates four layers:
+NanoMem separates raw dialogue, window control, durable memory, and retrieval:
 
 ```text
-DialogueRecord  = archived user-visible dialogue evidence
+Session         = groups related capture streams
+Dialogue        = archived user-visible messages
+DialogueWindow  = buffering and extraction lifecycle
 MemoryUnit      = fine-grained durable personal fact
 IndexHit        = derived retrieval candidate
 PackedContext   = rendered evidence for an agent prompt
 ```
 
-Capture source is user-visible dialogue. Storage unit is `MemoryUnit`. Indexes
-are derived data and can be rebuilt. Rendered context is the final prompt input
-for an agent.
+Capture source is user-visible dialogue. `Dialogue` and `DialogueWindow`
+do not own memory scope. The first object with `owner_id` and `namespace` is
+the extracted `MemoryUnit`. Indexes are derived data and can be rebuilt.
+Rendered context is the final prompt input for an agent.
 
 Preferred memory style:
 
@@ -269,9 +272,11 @@ POST /v1/read
 ```
 
 Capture without `session_id` is a complete dialogue and extracts immediately.
-Capture with `session_id` appends to an open dialogue window; call `/v1/flush`
-when a session pauses, exits, or should become searchable before the token
-window fills.
+Capture with `session_id` appends raw messages to that session's open dialogue
+window; call `/v1/flush` when a session pauses, exits, or should become
+searchable before the token window fills. Because windows do not store memory
+scope, flushing a pending window requires both `session_id` and extraction
+`scope`.
 
 CLI equivalent:
 
@@ -425,7 +430,7 @@ Configure the local vector index:
 ```
 
 LanceDB stores retrieval fields and embeddings. SQLite remains the source of
-truth for `MemoryUnit` and `DialogueRecord`.
+truth for `MemoryUnit` and `Dialogue`.
 
 ## Agent Integrations
 

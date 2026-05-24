@@ -83,7 +83,7 @@ sequenceDiagram
 
   Agent->>Service: CaptureRequest(user-visible dialogue)
   Service->>Service: validate scope and dialogue
-  Service->>Service: archive DialogueRecord
+  Service->>Service: archive Dialogue
   Service->>Service: chunk = n, annotate speaker/role
   Service->>Extractor: extract personal facts
   Extractor-->>Service: MemoryUnits + skipped reasons

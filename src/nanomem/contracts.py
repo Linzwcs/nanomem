@@ -32,26 +32,45 @@ class CaptureDialogue:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
-DialogueStatus = Literal["open", "sealed", "extracted", "failed"]
+DialogueStatus = Literal["open", "sealed", "extracting", "extracted", "failed"]
 
 
 @dataclass(frozen=True)
-class DialogueRecord:
+class Session:
+    session_id: str
+    created_at: str
+    updated_at: str
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class Dialogue:
     dialogue_id: str
-    scope: MemoryScope
     session_id: str | None
     messages: tuple[DialogueMessage, ...]
-    status: DialogueStatus
     started_at: str
     ended_at: str
     created_at: str
     updated_at: str
-    token_count: int
     checksum: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
-    extracted_at: str | None = None
     retention_until: str | None = None
     redacted_at: str | None = None
+
+
+@dataclass(frozen=True)
+class DialogueWindow:
+    session_id: str
+    dialogue_id: str
+    status: DialogueStatus
+    token_count: int
+    message_count: int
+    created_at: str
+    updated_at: str
+    sealed_at: str | None = None
+    extracted_at: str | None = None
+    seal_reason: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -164,7 +183,7 @@ class FlushResult:
 @dataclass(frozen=True)
 class ExtractionRequest:
     scope: MemoryScope
-    dialogue: DialogueRecord
+    dialogue: Dialogue
     extraction_time: str | None = None
 
 
@@ -208,9 +227,7 @@ class MemoryUnitSelector:
 
 
 @dataclass(frozen=True)
-class DialogueSelector:
-    owner_id: str | None = None
-    namespaces: tuple[str, ...] | None = None
+class DialogueWindowSelector:
     session_id: str | None = None
     statuses: tuple[DialogueStatus, ...] = ()
     dialogue_ids: tuple[str, ...] = ()

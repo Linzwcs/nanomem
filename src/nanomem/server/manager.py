@@ -140,7 +140,7 @@ def _dialogue_payload(
 ) -> dict[str, Any]:
     dialogue = service.store.get_dialogue(dialogue_id)
     if dialogue is None:
-        raise KeyError(f"DialogueRecord not found: {dialogue_id}")
+        raise KeyError(f"Dialogue not found: {dialogue_id}")
     produced_units = tuple(
         unit for unit in service.store.query_units(MemoryUnitSelector(limit=None))
         if any(ref.dialogue_id == dialogue_id for ref in unit.dialogue_refs)
@@ -201,15 +201,10 @@ def _source_chunks_payload(
                 "ref": asdict(ref),
                 "dialogue": {
                     "dialogue_id": dialogue.dialogue_id,
-                    "scope": asdict(dialogue.scope),
-                    "session_id": dialogue.session_id,
-                    "status": dialogue.status,
                     "started_at": dialogue.started_at,
                     "ended_at": dialogue.ended_at,
                     "created_at": dialogue.created_at,
                     "updated_at": dialogue.updated_at,
-                    "extracted_at": dialogue.extracted_at,
-                    "token_count": dialogue.token_count,
                     "checksum": dialogue.checksum,
                     "metadata": dialogue.metadata,
                     "retention_until": dialogue.retention_until,

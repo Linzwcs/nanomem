@@ -4,7 +4,7 @@ from nanomem.contracts import (
     CaptureDialogue,
     CaptureRequest,
     DialogueMessage,
-    DialogueSelector,
+    DialogueWindowSelector,
     FlushRequest,
     MemoryScope,
     ReadRequest,
@@ -37,25 +37,23 @@ def test_session_capture_appends_open_dialogue_until_flush() -> None:
     assert second.unit_count == 0
     assert second.dialogue_id == first.dialogue_id
 
-    open_dialogues = service.store.query_dialogues(
-        DialogueSelector(
-            owner_id="user-1",
-            namespaces=("personal",),
+    open_windows = service.store.query_dialogue_windows(
+        DialogueWindowSelector(
             session_id="session-1",
             statuses=("open",),
         )
     )
-    assert len(open_dialogues) == 1
-    assert len(open_dialogues[0].messages) == 2
+    assert len(open_windows) == 1
+    buffered_dialogue = service.store.get_dialogue(open_windows[0].dialogue_id)
+    assert buffered_dialogue is not None
+    assert len(buffered_dialogue.messages) == 2
 
     flushed = service.flush(FlushRequest(scope=scope, session_id="session-1"))
 
     assert flushed.dialogue_count == 1
     assert flushed.unit_count == 2
-    assert service.store.query_dialogues(
-        DialogueSelector(
-            owner_id="user-1",
-            namespaces=("personal",),
+    assert service.store.query_dialogue_windows(
+        DialogueWindowSelector(
             session_id="session-1",
             statuses=("open",),
         )
@@ -88,10 +86,8 @@ def test_session_capture_seals_when_dialogue_token_limit_is_reached() -> None:
 
     assert result.unit_count == 1
     assert result.stats["dialogue_status"] == "extracted"
-    assert service.store.query_dialogues(
-        DialogueSelector(
-            owner_id="user-1",
-            namespaces=("personal",),
+    assert service.store.query_dialogue_windows(
+        DialogueWindowSelector(
             session_id="session-1",
             statuses=("open",),
         )

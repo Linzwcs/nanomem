@@ -205,7 +205,7 @@ maintenance:
     max_age_days: null
 ```
 
-MemoryUnit, DialogueRecord, and operation-log retention should remain separate
+MemoryUnit, Dialogue, and operation-log retention should remain separate
 policy paths.
 
 ## 8. Path Resolution

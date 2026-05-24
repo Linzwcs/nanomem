@@ -136,7 +136,7 @@ Expected behavior:
 - capture only durable, user-relevant claims that appear in user-visible
   dialogue;
 - keep host resource pointers, if needed, only as non-evidence audit hints in
-  `DialogueRecord.metadata`;
+  `Dialogue.metadata`;
 - do not put external resource refs in MemoryUnit evidence;
 - avoid requiring NanoMem core to fetch, parse, OCR, or transcribe resources.
 
@@ -223,7 +223,7 @@ A meeting transcript includes the user, another human, and an assistant.
 
 Expected behavior:
 
-- preserve `role` and `speaker_id` in the archived DialogueRecord;
+- preserve `role` and `speaker_id` in the archived Dialogue;
 - extract user-specific memories only when attribution is clear;
 - avoid treating another speaker's preference as the owner's preference;
 - allow third-party facts only when scoped and useful to the owner;

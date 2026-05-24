@@ -72,7 +72,7 @@ authoritative store and be safe to repeat.
 Keep object links explicit:
 
 ```text
-query -> ranked MemoryUnit -> DialogueRef -> DialogueRecord -> OperationLogEntry
+query -> ranked MemoryUnit -> DialogueRef -> Dialogue -> OperationLogEntry
 ```
 
 Each object should have a stable URL and copyable id. Do not pack every detail

@@ -6,9 +6,9 @@ This document defines NanoMem's durable storage boundary.
 
 ## 1. Purpose
 
-Storage owns durable personal MemoryUnits, archived DialogueRecords, operation
-logs, and schema state. It does not own ranking, rendering, embedding, or ANN
-search.
+Storage owns durable personal MemoryUnits, sessions, archived Dialogues,
+DialogueWindows, operation logs, and schema state. It does not own ranking,
+rendering, embedding, or ANN search.
 
 The store is the source of truth. Indexes are derived and rebuildable.
 
@@ -32,12 +32,14 @@ Future local vector indexes should default under the same `data_dir`.
 The first storage slice should persist:
 
 - `MemoryUnit`: durable personal fact;
-- `DialogueRecord`: control-plane dialogue evidence;
+- `Session`: raw session grouping;
+- `Dialogue`: raw control-plane dialogue evidence;
+- `DialogueWindow`: append/seal/extract lifecycle control;
 - operation log: capture/read/control-plane traces;
 - schema migration state.
 
-`DialogueRecord` and operation logs must not be exposed through normal
-agent-facing read tools.
+`Session`, `Dialogue`, `DialogueWindow`, and operation logs must
+not be exposed through normal agent-facing read tools.
 
 ## 4. Table Responsibilities
 
@@ -45,7 +47,9 @@ Recommended logical tables:
 
 ```text
 memory_units
-dialogue_records
+sessions
+dialogues
+dialogue_windows
 operation_logs
 schema_migrations
 ```
@@ -59,8 +63,13 @@ schema_migrations
 - `memory_type`;
 - retention/redaction state.
 
-`dialogue_records` must support lookup by `dialogue_id` for audit,
-re-extraction, delete, and redaction. It should not be part of retrieval.
+`dialogues` must support lookup by `dialogue_id` for audit,
+re-extraction, delete, and redaction. It should not be part of retrieval and
+must not carry `owner_id` or `namespace`.
+
+`dialogue_windows` must support finding the open window for a `session_id` and
+tracking status, token count, message count, seal time, extraction time, and
+retry state. It must not store message content or memory scope.
 
 ## 5. SQLite Default
 
@@ -81,8 +90,14 @@ class MemoryStore:
     def append_units(self, units: tuple[MemoryUnit, ...]) -> None: ...
     def get_units(self, unit_ids: tuple[str, ...]) -> tuple[MemoryUnit, ...]: ...
     def query_units(self, selector: UnitSelector) -> tuple[MemoryUnit, ...]: ...
-    def put_dialogue(self, record: DialogueRecord) -> None: ...
-    def get_dialogue(self, dialogue_id: str) -> DialogueRecord | None: ...
+    def put_session(self, session: Session) -> None: ...
+    def put_dialogue(self, dialogue: Dialogue) -> None: ...
+    def get_dialogue(self, dialogue_id: str) -> Dialogue | None: ...
+    def put_dialogue_window(self, window: DialogueWindow) -> None: ...
+    def query_dialogue_windows(
+        self,
+        selector: DialogueWindowSelector,
+    ) -> tuple[DialogueWindow, ...]: ...
     def append_operation_log(self, entry: OperationLogEntry) -> None: ...
 ```
 
@@ -91,10 +106,12 @@ the same ownership boundary.
 
 ## 7. Retention And Redaction
 
-MemoryUnits, DialogueRecords, and operation logs have separate retention paths.
+MemoryUnits, Dialogues, DialogueWindows, and operation logs have separate
+retention paths.
 
 - MemoryUnit retention affects retrieval and requires index updates.
-- DialogueRecord retention affects audit and re-extraction only.
+- Dialogue retention affects audit and re-extraction only.
+- DialogueWindow retention affects pending/retry control only.
 - Operation log retention affects observability only.
 
 Redaction should mark or remove affected records and then rebuild or update
@@ -107,7 +124,7 @@ message slots or replacing content in place rather than renumbering messages.
 Backups are physical operational copies, such as SQLite file backups.
 
 Exports are logical user-data outputs. They should include MemoryUnits and
-selected metadata. DialogueRecords should be exportable only through explicit
+selected metadata. Dialogues should be exportable only through explicit
 control-plane operations because they contain raw user-visible dialogue.
 
 ## 9. Migration Rules

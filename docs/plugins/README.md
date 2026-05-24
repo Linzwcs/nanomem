@@ -116,7 +116,7 @@ the host's actual event JSON. Keep this off during normal use because payloads
 may contain user prompts or transcript metadata.
 
 The plugin skeletons can start `nanomem-mcp` for agent-selected memory lookup.
-They should not expose capture, manager/control endpoints, raw DialogueRecord
+They should not expose capture, manager/control endpoints, raw Dialogue
 browsing, backup, export, retention, or reindex operations as model-selected
 tools.
 

@@ -113,7 +113,7 @@ Rendering should:
 - avoid imperative phrasing that turns memory into a direct command;
 - keep conflicts visible when relevant and budget allows;
 - prefer compact one-line facts over verbose explanations;
-- avoid raw DialogueRecord content;
+- avoid raw Dialogue content;
 - avoid raw metadata dumps;
 - maximize relevant fact count under the final token budget.
 

@@ -31,7 +31,7 @@ personal memory that does not naturally belong in the workspace:
 NanoMem uses four distinct layers:
 
 ```text
-DialogueRecord  = archived user-visible dialogue evidence
+Dialogue  = archived user-visible dialogue evidence
 MemoryUnit      = fine-grained durable personal fact
 IndexHit        = derived retrieval candidate
 PackedContext   = rendered evidence for the agent prompt
@@ -57,7 +57,7 @@ itself records that the user gave an instruction.
 ```text
 CaptureRequest
   -> validate scope and dialogue
-  -> archive DialogueRecord
+  -> archive Dialogue
   -> normalize user-visible dialogue
   -> chunk = n for extraction
   -> annotate speaker/role
@@ -194,7 +194,7 @@ NanoMem stores personal data. Operational support must include:
 
 Raw source files, raw multimodal assets, logs, and workspace artifacts should
 remain outside NanoMem. If auditability is needed, store a separate
-`DialogueRecord` and put host log pointers in metadata; do not expose raw
+`Dialogue` and put host log pointers in metadata; do not expose raw
 resources as normal memory evidence.
 
 ## 9. Roadmap

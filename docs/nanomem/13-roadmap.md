@@ -6,7 +6,7 @@ This roadmap starts from the current verified implementation rather than the
 original design-only plan. NanoMem already has an end-to-end local MVP:
 
 ```text
-agent/dialogue -> capture -> DialogueRecord -> extraction -> MemoryUnit
+agent/dialogue -> capture -> Dialogue -> extraction -> MemoryUnit
   -> SQLite store -> dense index -> read -> rank -> render -> agent context
 ```
 
@@ -30,7 +30,7 @@ Observed results:
 
 The product-flow regression verifies the local developer-preview path:
 
-- `capture` archives `DialogueRecord`s before extracting `MemoryUnit`s;
+- `capture` archives `Dialogue`s before extracting `MemoryUnit`s;
 - SQLite persists units, dialogues, and operation logs across service restart;
 - startup reindex rebuilds the derived dense index from SQLite;
 - `read` retrieves namespace-scoped facts and renders timestamped context under
@@ -49,7 +49,7 @@ Agent adapter E2E also passed:
 
 Implemented:
 
-- core contracts for `MemoryScope`, `CaptureDialogue`, `DialogueRecord`,
+- core contracts for `MemoryScope`, `CaptureDialogue`, `Dialogue`,
   `DialogueRef`, `MemoryUnit`, `CaptureRequest`, and `ReadRequest`;
 - SQLite authoritative store for units, dialogues, operation logs, schema
   state, backup/export, and retention primitives;
@@ -94,7 +94,7 @@ Goal: make the current MVP contracts stable enough for adapter and backend work.
 Work:
 
 - review every public dataclass field and serialization helper;
-- freeze `MemoryUnit`, `DialogueRecord`, `DialogueRef`, `CaptureRequest`, and
+- freeze `MemoryUnit`, `Dialogue`, `DialogueRef`, `CaptureRequest`, and
   `ReadRequest`;
 - document compatibility rules for `owner_id`, namespace lists, timestamps, and
   metadata;

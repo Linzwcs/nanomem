@@ -32,7 +32,9 @@ Core invariants:
 - `CaptureDialogue` is a bounded message payload, not a session;
 - `CaptureRequest.session_id` is optional; when present, it groups multiple
   capture payloads into one appendable dialogue window;
-- `DialogueRecord` is control-plane evidence, not agent-facing memory;
+- `Dialogue` is raw control-plane evidence, not agent-facing memory;
+- Session, Dialogue, and DialogueWindow do not carry memory owner or
+  namespace; MemoryUnit is the first durable owner/namespace object;
 - rendered MemoryUnits must include time;
 - NanoMem stores dialogue refs, not external resource refs, as first-version
   evidence.
@@ -43,9 +45,11 @@ The core contract objects are:
 
 ```text
 MemoryScope
+Session
 DialogueMessage
 CaptureDialogue
-DialogueRecord
+Dialogue
+DialogueWindow
 DialogueRef
 MemoryUnit
 FlushRequest / FlushResult
@@ -70,9 +74,9 @@ MemoryScope:
 
 Responsibility:
 
-- bind capture and read to a person or named speaker;
+- bind extracted MemoryUnits and reads to a person or named speaker;
 - keep memory spaces stable across sessions and projects;
-- give storage, retrieval, and retention a common scope key.
+- give storage, retrieval, and retention a common MemoryUnit key.
 
 Why it is separate:
 
@@ -83,6 +87,7 @@ Why it is separate:
 It must not:
 
 - encode temporary session, run, task, or repository ids;
+- be stored on Session, Dialogue, or DialogueWindow;
 - be invented by extractors;
 - be overridden by `metadata`.
 
@@ -136,7 +141,7 @@ Responsibility:
 
 - carry one bounded batch of user-visible dialogue into the capture pipeline;
 - provide the dialogue occurrence time and adapter audit metadata;
-- become a `DialogueRecord` before extraction.
+- become a `Dialogue` before extraction.
 
 Why it is separate:
 
@@ -151,28 +156,48 @@ It must not:
 - carry required host ids beyond core fields;
 - include hidden reasoning, tool streams, logs, or raw multimodal assets.
 
-### DialogueRecord And DialogueRef
+### Session, Dialogue, DialogueWindow, And DialogueRef
 
-`DialogueRecord` is archived control-plane evidence. `DialogueRef` links a
-MemoryUnit back to that evidence.
+`Session` groups related capture streams. `Dialogue` stores raw
+visible messages. `DialogueWindow` controls buffering and extraction lifecycle.
+`DialogueRef` links a MemoryUnit back to raw evidence.
 
 ```python
-DialogueRecord:
+Session:
+  session_id: str
+  created_at: str
+  updated_at: str
+  metadata: dict
+```
+
+```python
+Dialogue:
   dialogue_id: str
-  scope: MemoryScope
   session_id: str | None
   messages: tuple[DialogueMessage, ...]
-  status: "open" | "sealed" | "extracted" | "failed"
   started_at: str
   ended_at: str
   created_at: str
   updated_at: str
-  token_count: int
   checksum: str | None
   metadata: dict
-  extracted_at: str | None
   retention_until: str | None
   redacted_at: str | None
+```
+
+```python
+DialogueWindow:
+  session_id: str
+  dialogue_id: str
+  status: "open" | "sealed" | "extracting" | "extracted" | "failed"
+  token_count: int
+  message_count: int
+  created_at: str
+  updated_at: str
+  sealed_at: str | None
+  extracted_at: str | None
+  seal_reason: str | None
+  metadata: dict
 ```
 
 ```python
@@ -183,13 +208,16 @@ DialogueRef:
 
 Responsibility:
 
+- group concurrent host sessions without adding memory semantics;
 - support audit, debugging, deletion, redaction, and re-extraction;
+- control append/seal/extract/retry lifecycle separately from raw messages;
 - give accepted MemoryUnits evidence lineage;
 - keep raw dialogue retention separate from MemoryUnit retention.
 
 Why they are separate:
 
-- `DialogueRecord` is a durable control-plane object;
+- `Dialogue` is a durable control-plane object;
+- `DialogueWindow` is mutable lifecycle control for a dialogue;
 - `DialogueRef` is a compact evidence pointer stored on MemoryUnits;
 - normal read needs MemoryUnits and rendered evidence, not raw dialogue.
 
@@ -198,10 +226,13 @@ They must not:
 - be indexed as retrieval candidates;
 - be returned by agent-facing read;
 - be rendered into prompt context;
+- carry `owner_id`, `namespace`, or `MemoryScope`;
 - introduce external resource references as first-version evidence.
 
-`scope` and `session_id` are authoritative only for storage routing and
-control-plane filtering. The agent-facing memory fact remains `MemoryUnit`.
+`session_id` is authoritative only for grouping raw messages into the same
+session. Memory ownership and namespace are assigned when MemoryUnits are
+created. A capture request may provide routing context, but that context is not
+part of the raw dialogue contract.
 
 `DialogueRef.message_range` is a half-open message-index range `[start, end)`.
 It is not a token, byte, or character range.
@@ -263,7 +294,7 @@ class NanoMemService:
 Responsibility:
 
 - validate owner, namespace, time, and metadata shape;
-- archive or append `DialogueRecord` before extraction;
+- archive or append raw `Dialogue` before extraction;
 - flush sealed/open dialogue windows into MemoryUnits when requested;
 - orchestrate extraction, storage, indexing, ranking, and rendering;
 - write operation logs;
@@ -289,7 +320,7 @@ The service must not:
 - depend on HTTP, MCP, LanceDB, pgvector, or a concrete LLM provider;
 - let adapters bypass store/index/ranker/renderer boundaries for normal memory
   operations;
-- expose backup, export, retention, delete, reindex, or DialogueRecord inspect
+- expose backup, export, retention, delete, reindex, or Dialogue inspect
   as ordinary agent tools.
 
 ## 4. Store Interface
@@ -301,15 +332,20 @@ class MemoryStore:
     def append_units(self, units: tuple[MemoryUnit, ...]) -> None: ...
     def get_units(self, unit_ids: tuple[str, ...]) -> tuple[MemoryUnit, ...]: ...
     def query_units(self, selector: UnitSelector) -> tuple[MemoryUnit, ...]: ...
-    def put_dialogue(self, record: DialogueRecord) -> None: ...
-    def get_dialogue(self, dialogue_id: str) -> DialogueRecord | None: ...
-    def query_dialogues(self, selector: DialogueSelector) -> tuple[DialogueRecord, ...]: ...
+    def put_session(self, session: Session) -> None: ...
+    def put_dialogue(self, dialogue: Dialogue) -> None: ...
+    def get_dialogue(self, dialogue_id: str) -> Dialogue | None: ...
+    def put_dialogue_window(self, window: DialogueWindow) -> None: ...
+    def query_dialogue_windows(
+        self,
+        selector: DialogueWindowSelector,
+    ) -> tuple[DialogueWindow, ...]: ...
     def append_operation_log(self, entry: OperationLogEntry) -> None: ...
 ```
 
 Responsibility:
 
-- persist MemoryUnits, DialogueRecords, and operation logs;
+- persist MemoryUnits, sessions, raw Dialogues, windows, and operation logs;
 - enforce authoritative lookup and filtering over stored records;
 - preserve ids, timestamps, dialogue refs, metadata, and retention state.
 
@@ -330,7 +366,8 @@ The store must not:
 
 - perform ranking, rendering, embedding, or ANN search;
 - treat `metadata` as a schema for core semantics;
-- expose DialogueRecords through normal agent-facing reads;
+- expose Dialogues through normal agent-facing reads;
+- put MemoryUnit owner/namespace onto raw Dialogues or DialogueWindows;
 - make index data required for correctness.
 
 ## 5. Index Interface
@@ -370,7 +407,7 @@ The index must not:
 
 - return authoritative MemoryUnit text;
 - expose backend-specific types to service code;
-- index DialogueRecords or raw dialogue;
+- index Dialogues or raw dialogue;
 - decide final ranking, conflict handling, or rendered output.
 
 ## 6. Extraction Interface
@@ -452,7 +489,7 @@ They must not:
 
 - decide canonical truth or delete conflicting facts;
 - turn memories into direct instructions;
-- render raw DialogueRecord content;
+- render raw Dialogue content;
 - dump raw metadata;
 - omit time from any rendered MemoryUnit.
 
@@ -479,7 +516,7 @@ Why this boundary exists:
 Adapters must not:
 
 - access stores or indexes directly for normal memory operations;
-- expose DialogueRecords through agent-facing read;
+- expose Dialogues through agent-facing read;
 - expose backup, export, retention, delete, or reindex as ordinary agent tools;
 - reinterpret `metadata` as core semantics;
 - relax mandatory time requirements by hiding unknown time in metadata.
@@ -526,10 +563,10 @@ retention preview/apply
 delete/redact
 reindex
 integrity check
-inspect DialogueRecord
+inspect Dialogue
 ```
 
-These operations may read DialogueRecords and operation logs. They must not be
+These operations may read Dialogues and operation logs. They must not be
 available through normal agent-facing memory tools.
 
 The boundary is intentional: agent tools need compact capture/read behavior,

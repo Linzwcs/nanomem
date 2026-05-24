@@ -15,7 +15,7 @@ Given an owner with many namespaces, the operator filters by `owner_id`,
 ## Memory Evidence
 
 Given a MemoryUnit with a valid `DialogueRef`, the detail page resolves the
-referenced `DialogueRecord`, applies the half-open message range, and displays
+referenced `Dialogue`, applies the half-open message range, and displays
 source status `ok`.
 
 If the dialogue is missing, status is `missing_dialogue`. If the dialogue is
@@ -38,7 +38,7 @@ count, and records the operation.
 ## Retention Preview
 
 Given a retention selector, preview returns affected MemoryUnits,
-DialogueRecords, and OperationLogs with counts and samples. No data changes
+Dialogues, and OperationLogs with counts and samples. No data changes
 until apply is confirmed.
 
 ## Redaction
@@ -55,7 +55,7 @@ operation requires permission and reason, then writes an audit log.
 ## Export
 
 Given an export request, MemoryUnit-only export excludes raw dialogue. Raw
-DialogueRecord export requires explicit operator mode and writes a manifest with
+Dialogue export requires explicit operator mode and writes a manifest with
 schema version, counts, checksum, and timestamp.
 
 ## Permission Failure

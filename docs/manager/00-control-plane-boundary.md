@@ -31,7 +31,7 @@ The manager must not become:
 
 ```text
 MemoryUnit is the durable fact.
-DialogueRecord is audit evidence.
+Dialogue is audit evidence.
 Index is a derived retrieval cache.
 OperationLogEntry is the operational trail.
 ```

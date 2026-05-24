@@ -36,7 +36,7 @@ The console is for humans managing memory. It should not become:
 - an agent plugin surface;
 - an all-in-one memory editing tool for arbitrary files, logs, or assets.
 
-It may show `MemoryUnit`, `DialogueRecord`, and `OperationLogEntry` records, but
+It may show `MemoryUnit`, `Dialogue`, and `OperationLogEntry` records, but
 it must label their privacy level clearly. Normal agent reads should continue to
 use `NanoMem.read`.
 
@@ -131,7 +131,7 @@ Views:
 - checksum and lifecycle fields;
 - retention/redaction state.
 
-DialogueRecord must not be included in normal agent read results. The console
+Dialogue must not be included in normal agent read results. The console
 may inspect it only for audit, debugging, and privacy operations.
 
 ### Operation Logs
@@ -236,9 +236,9 @@ Exports should distinguish:
 
 - MemoryUnit-only export;
 - MemoryUnit + operation log export;
-- raw DialogueRecord export.
+- raw Dialogue export.
 
-Raw DialogueRecord export should be disabled by default.
+Raw Dialogue export should be disabled by default.
 
 ## 5. Current Local MVP
 
@@ -276,7 +276,7 @@ Implemented pages:
 - owner, namespace, memory type, date range, redaction, order, and limit
   filters for MemoryUnits;
 - full-page source evidence view resolved from `DialogueRef.message_range`;
-- DialogueRecord evidence lookup from unit refs;
+- Dialogue evidence lookup from unit refs;
 - operation log table;
 - retrieval preview lab;
 - index health and reindex action.
@@ -388,7 +388,7 @@ Explicitly defer:
 - Keep timestamps visible on every memory row.
 - Make owner and namespace filters persistent.
 - Use badges for memory type, namespace, redaction, and retention status.
-- Require explicit user action before showing raw DialogueRecord content.
+- Require explicit user action before showing raw Dialogue content.
 - Highlight skipped capture reasons.
 - Show when rendered context differs from ranked hits due to token budget.
 
@@ -398,7 +398,7 @@ Default behavior:
 
 - bind to localhost unless configured otherwise;
 - require auth before network exposure;
-- hide raw DialogueRecord content until explicitly opened;
+- hide raw Dialogue content until explicitly opened;
 - do not show secrets from config;
 - do not include raw personal content in browser console logs;
 - do not expose manager/control endpoints through MCP or agent adapters.
@@ -408,7 +408,7 @@ Default behavior:
 - Should manual MemoryUnit insertion exist as a manager feature, or should all
   new memories go through capture evidence?
 - Should the console support approving candidate extractions before storage?
-- Should retention apply delete DialogueRecords independently from MemoryUnits?
+- Should retention apply delete Dialogues independently from MemoryUnits?
 - Should Retrieval Lab support side-by-side backend comparison?
 
 ## 12. Implementation Plan

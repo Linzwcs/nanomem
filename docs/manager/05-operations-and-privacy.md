@@ -24,7 +24,7 @@ inspection. Keep the modes separate:
 
 - MemoryUnit-only export.
 - MemoryUnit + OperationLog export.
-- Raw DialogueRecord export.
+- Raw Dialogue export.
 
 Raw dialogue export should be disabled by default and require operator permission.
 Every export should include a manifest with schema version, counts, timestamp,
@@ -44,7 +44,7 @@ Redaction has separate meanings:
 
 - `MemoryUnit.redacted_at`: the fact is no longer eligible for normal reads or
   reindex.
-- `DialogueRecord.redacted_at`: raw source messages are no longer revealable,
+- `Dialogue.redacted_at`: raw source messages are no longer revealable,
   but metadata and refs may remain for audit.
 - `OperationLogEntry`: summaries should remain useful while raw payloads may be
   minimized, hashed, or removed.

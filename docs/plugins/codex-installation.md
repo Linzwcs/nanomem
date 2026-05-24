@@ -291,7 +291,7 @@ Expected evidence:
 - During a submitted prompt, Codex shows `Running ... UserPromptSubmit hooks`.
 - `.nanomem/hook-debug/` receives `codex-spool`, `codex-read`, and
   `codex-capture` JSON payloads.
-- The NanoMem database receives a `DialogueRecord`. If the hook payload has no
+- The NanoMem database receives a `Dialogue`. If the hook payload has no
   `session_id`, MemoryUnits are extracted immediately. If it has `session_id`,
   units become searchable after the window reaches the token limit or after
   `nanomem flush`. For local testing, `NANOMEM_FLUSH_AFTER_CAPTURE=1` flushes
@@ -322,7 +322,7 @@ Expected evidence:
 - The read payload includes `hook_event_name: "UserPromptSubmit"` and `prompt`.
 - The capture payload includes `hook_event_name: "Stop"` and
   `last_assistant_message`.
-- NanoMem contains a `DialogueRecord` with user and assistant messages. Durable
+- NanoMem contains a `Dialogue` with user and assistant messages. Durable
   facts appear as `MemoryUnit` rows immediately for one-shot capture, or after
   flushing for buffered session capture.
 
@@ -351,7 +351,7 @@ missing `.nanomem/config.json`; hook capture/read does not require MCP.
 If read returns no memory context, verify that NanoMem already has matching
 memory for the same `NANOMEM_OWNER_ID` and namespace.
 
-If capture succeeds but no assistant message appears in `DialogueRecord`, check
+If capture succeeds but no assistant message appears in `Dialogue`, check
 that `NANOMEM_CAPTURE_ASSISTANT` is not set to `0` and that the host payload
 contains `last_assistant_message`.
 

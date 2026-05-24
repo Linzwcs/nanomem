@@ -235,22 +235,31 @@ DialogueRef:
   dialogue_id: str
   message_range: tuple[int, int] | None
 
-DialogueRecord:
+Dialogue:
   dialogue_id: str
-  scope: MemoryScope
   session_id: str | None
   messages: tuple[DialogueMessage, ...]
-  status: "open" | "sealed" | "extracted" | "failed"
   started_at: str
   ended_at: str
   created_at: str
   updated_at: str
-  token_count: int
   checksum: str | None
   metadata: dict
-  extracted_at: str | None
   retention_until: str | None
   redacted_at: str | None
+
+DialogueWindow:
+  session_id: str
+  dialogue_id: str
+  status: "open" | "sealed" | "extracting" | "extracted" | "failed"
+  token_count: int
+  message_count: int
+  created_at: str
+  updated_at: str
+  sealed_at: str | None
+  extracted_at: str | None
+  seal_reason: str | None
+  metadata: dict
 
 MemoryUnit:
   unit_id: str
@@ -265,10 +274,11 @@ MemoryUnit:
   metadata: dict
 ```
 
-`DialogueRecord` is control-plane evidence and should not carry `owner_id` or
-`namespace`; one dialogue can produce MemoryUnits for multiple owners or
-namespaces. Host-specific ids such as conversation id, turn id, and log
-pointers belong in metadata, not in the core contract.
+`Dialogue` is raw control-plane evidence and should not carry
+`owner_id`, `namespace`, or lifecycle status. `DialogueWindow` owns
+append/seal/extract control. One dialogue can produce MemoryUnits for multiple
+owners or namespaces. Host-specific ids such as turn id and log pointers belong
+in metadata, not in the core contract.
 
 Agent-facing requests:
 
@@ -373,7 +383,8 @@ Pipeline:
 ```text
 CaptureRequest
   -> validate scope and dialogue
-  -> archive DialogueRecord
+  -> find or create Session and DialogueWindow
+  -> archive or append raw Dialogue
   -> normalize dialogue messages
   -> split long dialogues into chunks of size n
   -> annotate chunks by role and speaker_id
@@ -410,9 +421,11 @@ Disallowed capture behavior in the primary path:
 - ingesting project documents;
 - storing raw tool logs as memory.
 
-Capture should store a bounded `DialogueRecord` through a separate
-control-plane path before extraction. It must not be indexed, rendered, or
-exposed through normal agent-facing read tools.
+Capture should store a bounded `Dialogue` through a separate
+control-plane path before extraction. Window lifecycle belongs to
+`DialogueWindow`; owner and namespace belong to produced `MemoryUnit`s. Raw
+dialogue must not be indexed, rendered, or exposed through normal agent-facing
+read tools.
 
 ## 8. Read Pipeline
 

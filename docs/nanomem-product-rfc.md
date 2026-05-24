@@ -347,7 +347,7 @@ MemoryScope:
 `owner_id` identifies whose personal memory is being accessed. `namespace` is a
 stable user- or host-defined category such as `personal`, `work`, or
 `research`. Project, session, agent, and tool ids are metadata on MemoryUnits or
-control-plane DialogueRecords, not core scope dimensions.
+control-plane Dialogues, not core scope dimensions.
 
 ## 7. Read Semantics
 

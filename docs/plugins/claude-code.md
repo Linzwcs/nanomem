@@ -54,7 +54,7 @@ nanomem-claude-code/
 ```
 
 The plugin should expose only normal memory operations to Claude Code. Backup,
-export, retention, deletion, reindex, and DialogueRecord inspection remain CLI
+export, retention, deletion, reindex, and Dialogue inspection remain CLI
 or control-plane operations.
 
 ## Hook Data Flow

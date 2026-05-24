@@ -45,7 +45,7 @@ Read has these first-version invariants:
 - All request times use ISO 8601 with timezone.
 - `metadata` is caller-defined JSON and must not change core scope or time
   semantics.
-- Read searches MemoryUnits, not raw DialogueRecords.
+- Read searches MemoryUnits, not raw Dialogues.
 - The store is authoritative; indexes only return candidates.
 - `ReadResult.ranked_units` may contain full structured metadata and
   `dialogue_refs`.

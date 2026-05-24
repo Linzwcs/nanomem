@@ -26,7 +26,7 @@ stored, whether retrieval works, and which maintenance operations are needed.
 
 Core product and runtime memory contracts remain in `docs/nanomem/`:
 
-- `MemoryUnit`, `DialogueRecord`, `DialogueRef`, and `OperationLogEntry`
+- `MemoryUnit`, `Dialogue`, `DialogueRef`, and `OperationLogEntry`
   semantics belong to `docs/nanomem/02-memory-model.md`.
 - `/v1/capture` and `/v1/read` belong to `docs/nanomem/03-capture-api.md` and
   `docs/nanomem/04-read-api.md`.

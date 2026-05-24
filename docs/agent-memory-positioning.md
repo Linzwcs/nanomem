@@ -208,7 +208,7 @@ user-visible dialogue
 - first-version capture 不提供幂等去重，hook / wrapper 应避免重复提交已完成的 capture；
 - 对 read 使用 time range、scope、context budget，避免无界检索；
 - 默认只 capture 用户消息，assistant 只 capture 最终用户可见回复；
-- 对多模态、外部系统和 workspace 资源不存原文，也不把资源引用暴露为普通 memory evidence；需要审计时只在控制面 `DialogueRecord.metadata` 保留宿主日志线索；
+- 对多模态、外部系统和 workspace 资源不存原文，也不把资源引用暴露为普通 memory evidence；需要审计时只在控制面 `Dialogue.metadata` 保留宿主日志线索；
 - 对删除、导出、保留策略和审计按用户级个人数据处理。
 
 ## 7. 判断规则

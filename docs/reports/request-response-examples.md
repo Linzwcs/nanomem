@@ -561,7 +561,7 @@ HTTP 400 response:
 - `namespaces: null` means read all namespaces for the owner.
 - `recency_policy: null` lets the service use the configured default,
   currently `balanced`.
-- `DialogueRecord` rows are archived internally and referenced by
+- `Dialogue` rows are archived internally and referenced by
   `dialogue_refs`; they are not returned by normal `read`.
 - Manager retrieval preview returns the same read result shape, but it is a
   control-plane diagnostic endpoint rather than a normal agent API.

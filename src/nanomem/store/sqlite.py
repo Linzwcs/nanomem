@@ -9,30 +9,34 @@ from typing import Any
 
 from nanomem.contracts import (
     DialogueMessage,
-    DialogueRecord,
+    Dialogue,
     DialogueRef,
-    DialogueSelector,
+    DialogueWindow,
+    DialogueWindowSelector,
     MemoryScope,
     MemoryUnit,
     MemoryUnitSelector,
     OperationLogEntry,
     OperationLogSelector,
+    Session,
     TimeRange,
 )
 from nanomem.time import now_utc_iso
 
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 6
 MIGRATIONS: tuple[tuple[int, str], ...] = (
     (1, "legacy_initial_schema"),
     (2, "legacy_scope_indexes"),
     (3, "dialogue_centered_memory_store"),
     (4, "session_dialogue_windows"),
+    (5, "separate_dialogue_window_state"),
+    (6, "session_dialogue_window_simplification"),
 )
 
 
 class SQLiteMemoryUnitStore:
-    """SQLite-backed authoritative store for MemoryUnits and DialogueRecords."""
+    """SQLite-backed authoritative store for MemoryUnits and Dialogues."""
 
     def __init__(self, path: str | Path = ":memory:") -> None:
         self.path = str(path)
@@ -84,57 +88,94 @@ class SQLiteMemoryUnitStore:
             row = self._connection.execute(query, tuple(params)).fetchone()
         return int(row[0]) if row is not None else 0
 
-    def put_dialogue(self, record: DialogueRecord) -> None:
-        namespace = record.scope.namespace
-        if namespace is None:
-            raise ValueError("Stored DialogueRecord namespace must be resolved")
+    def put_session(self, session: Session) -> None:
         with self._lock:
             with self._connection:
                 self._connection.execute(
                     """
-                    INSERT OR REPLACE INTO dialogue_records (
-                      dialogue_id, owner_id, namespace, session_id, status,
-                      started_at, ended_at, created_at, updated_at, extracted_at,
-                      token_count, checksum, messages_json, metadata_json,
-                      retention_until, redacted_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO sessions (
+                      session_id, created_at, updated_at, metadata_json
+                    ) VALUES (?, ?, ?, ?)
+                    ON CONFLICT(session_id) DO UPDATE SET
+                      updated_at = excluded.updated_at,
+                      metadata_json = excluded.metadata_json
                     """,
                     (
-                        record.dialogue_id,
-                        record.scope.owner_id,
-                        namespace,
-                        record.session_id,
-                        record.status,
-                        record.started_at,
-                        record.ended_at,
-                        record.created_at,
-                        record.updated_at,
-                        record.extracted_at,
-                        record.token_count,
-                        record.checksum,
-                        _json([asdict(message) for message in record.messages]),
-                        _json(record.metadata),
-                        record.retention_until,
-                        record.redacted_at,
+                        session.session_id,
+                        session.created_at,
+                        session.updated_at,
+                        _json(session.metadata),
                     ),
                 )
 
-    def get_dialogue(self, dialogue_id: str) -> DialogueRecord | None:
+    def put_dialogue(self, dialogue: Dialogue) -> None:
+        with self._lock:
+            with self._connection:
+                self._connection.execute(
+                    """
+                    INSERT OR REPLACE INTO dialogues (
+                      dialogue_id, session_id, started_at, ended_at,
+                      created_at, updated_at, checksum, messages_json,
+                      metadata_json, retention_until, redacted_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        dialogue.dialogue_id,
+                        dialogue.session_id,
+                        dialogue.started_at,
+                        dialogue.ended_at,
+                        dialogue.created_at,
+                        dialogue.updated_at,
+                        dialogue.checksum,
+                        _json([asdict(message) for message in dialogue.messages]),
+                        _json(dialogue.metadata),
+                        dialogue.retention_until,
+                        dialogue.redacted_at,
+                    ),
+                )
+
+    def get_dialogue(self, dialogue_id: str) -> Dialogue | None:
         with self._lock:
             row = self._connection.execute(
-                "SELECT * FROM dialogue_records WHERE dialogue_id = ?",
+                "SELECT * FROM dialogues WHERE dialogue_id = ?",
                 (dialogue_id,),
             ).fetchone()
         return None if row is None else _row_to_dialogue(row)
 
-    def query_dialogues(
+    def put_dialogue_window(self, window: DialogueWindow) -> None:
+        with self._lock:
+            with self._connection:
+                self._connection.execute(
+                    """
+                    INSERT OR REPLACE INTO dialogue_windows (
+                      session_id, dialogue_id, status, token_count,
+                      message_count, created_at, updated_at, sealed_at,
+                      extracted_at, seal_reason, metadata_json
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        window.session_id,
+                        window.dialogue_id,
+                        window.status,
+                        window.token_count,
+                        window.message_count,
+                        window.created_at,
+                        window.updated_at,
+                        window.sealed_at,
+                        window.extracted_at,
+                        window.seal_reason,
+                        _json(window.metadata),
+                    ),
+                )
+
+    def query_dialogue_windows(
         self,
-        selector: DialogueSelector,
-    ) -> tuple[DialogueRecord, ...]:
-        query, params = _query_dialogues_sql(selector)
+        selector: DialogueWindowSelector,
+    ) -> tuple[DialogueWindow, ...]:
+        query, params = _query_dialogue_windows_sql(selector)
         with self._lock:
             rows = self._connection.execute(query, tuple(params)).fetchall()
-        return tuple(_row_to_dialogue(row) for row in rows)
+        return tuple(_row_to_dialogue_window(row) for row in rows)
 
     def append_operation_log(self, entry: OperationLogEntry) -> None:
         scope = entry.scope
@@ -237,7 +278,7 @@ class SQLiteMemoryUnitStore:
             )
             dialogue_count = _scalar(
                 self._connection,
-                "SELECT COUNT(*) FROM dialogue_records",
+                "SELECT COUNT(*) FROM dialogues",
             )
             operation_log_count = _scalar(
                 self._connection,
@@ -478,43 +519,60 @@ def _apply_schema(connection: sqlite3.Connection) -> None:
         )
     """)
     connection.execute("""
-        CREATE TABLE IF NOT EXISTS dialogue_records (
+        CREATE TABLE IF NOT EXISTS sessions (
+          session_id TEXT PRIMARY KEY,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          metadata_json TEXT NOT NULL
+        )
+    """)
+    connection.execute("""
+        CREATE INDEX IF NOT EXISTS sessions_updated_idx
+        ON sessions (updated_at)
+    """)
+    connection.execute("""
+        CREATE TABLE IF NOT EXISTS dialogues (
           dialogue_id TEXT PRIMARY KEY,
-          owner_id TEXT NOT NULL,
-          namespace TEXT NOT NULL,
           session_id TEXT,
-          status TEXT NOT NULL,
           started_at TEXT NOT NULL,
           ended_at TEXT NOT NULL,
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
-          extracted_at TEXT,
-          token_count INTEGER NOT NULL,
           checksum TEXT,
           messages_json TEXT NOT NULL,
           metadata_json TEXT NOT NULL,
           retention_until TEXT,
-          redacted_at TEXT
+          redacted_at TEXT,
+          FOREIGN KEY(session_id) REFERENCES sessions(session_id)
         )
     """)
-    _ensure_column(connection, "dialogue_records", "owner_id", "TEXT")
-    _ensure_column(connection, "dialogue_records", "namespace", "TEXT")
-    _ensure_column(connection, "dialogue_records", "session_id", "TEXT")
-    _ensure_column(connection, "dialogue_records", "status", "TEXT DEFAULT 'extracted'")
-    _ensure_column(connection, "dialogue_records", "started_at", "TEXT")
-    _ensure_column(connection, "dialogue_records", "ended_at", "TEXT")
-    _ensure_column(connection, "dialogue_records", "created_at", "TEXT")
-    _ensure_column(connection, "dialogue_records", "updated_at", "TEXT")
-    _ensure_column(connection, "dialogue_records", "extracted_at", "TEXT")
-    _ensure_column(connection, "dialogue_records", "token_count", "INTEGER DEFAULT 0")
     connection.execute("""
-        CREATE INDEX IF NOT EXISTS dialogue_records_time_idx
-        ON dialogue_records (started_at, ended_at, updated_at)
+        CREATE INDEX IF NOT EXISTS dialogues_time_idx
+        ON dialogues (session_id, started_at, ended_at, updated_at)
+    """)
+    _migrate_legacy_dialogues(connection)
+    _migrate_dialogue_windows_table(connection)
+    connection.execute("""
+        CREATE TABLE IF NOT EXISTS dialogue_windows (
+          session_id TEXT NOT NULL,
+          dialogue_id TEXT PRIMARY KEY,
+          status TEXT NOT NULL,
+          token_count INTEGER NOT NULL,
+          message_count INTEGER NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          sealed_at TEXT,
+          extracted_at TEXT,
+          seal_reason TEXT,
+          metadata_json TEXT NOT NULL,
+          FOREIGN KEY(session_id) REFERENCES sessions(session_id),
+          FOREIGN KEY(dialogue_id) REFERENCES dialogues(dialogue_id)
+        )
     """)
     connection.execute("""
-        CREATE INDEX IF NOT EXISTS dialogue_records_scope_session_idx
-        ON dialogue_records (
-          owner_id, namespace, session_id, status, updated_at
+        CREATE INDEX IF NOT EXISTS dialogue_windows_session_idx
+        ON dialogue_windows (
+          session_id, status, updated_at
         )
     """)
     connection.execute("""
@@ -566,10 +624,155 @@ def _ensure_column(
     column: str,
     definition: str,
 ) -> None:
-    rows = connection.execute(f"PRAGMA table_info({table})").fetchall()
-    if column in {str(row["name"]) for row in rows}:
+    if column in _table_columns(connection, table):
         return
     connection.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+
+
+def _migrate_legacy_dialogues(connection: sqlite3.Connection) -> None:
+    columns = _table_columns(connection, "dialogue_records")
+    if not columns:
+        return
+    session_expr = "session_id" if "session_id" in columns else "NULL"
+    started_expr = (
+        "started_at"
+        if "started_at" in columns
+        else "COALESCE(occurred_at, captured_at, '')"
+    )
+    ended_expr = (
+        "ended_at"
+        if "ended_at" in columns
+        else "COALESCE(occurred_at, captured_at, '')"
+    )
+    created_expr = (
+        "created_at"
+        if "created_at" in columns
+        else "COALESCE(captured_at, occurred_at, '')"
+    )
+    updated_expr = (
+        "updated_at"
+        if "updated_at" in columns
+        else "COALESCE(captured_at, occurred_at, '')"
+    )
+    checksum_expr = "checksum" if "checksum" in columns else "NULL"
+    metadata_expr = "metadata_json" if "metadata_json" in columns else "'{}'"
+    retention_expr = "retention_until" if "retention_until" in columns else "NULL"
+    redacted_expr = "redacted_at" if "redacted_at" in columns else "NULL"
+    connection.execute(
+        f"""
+        INSERT OR IGNORE INTO dialogues (
+          dialogue_id, session_id, started_at, ended_at, created_at, updated_at,
+          checksum, messages_json, metadata_json, retention_until, redacted_at
+        )
+        SELECT
+          dialogue_id,
+          {session_expr},
+          COALESCE({started_expr}, ''),
+          COALESCE({ended_expr}, {started_expr}, ''),
+          COALESCE({created_expr}, {started_expr}, ''),
+          COALESCE({updated_expr}, {created_expr}, {started_expr}, ''),
+          {checksum_expr},
+          messages_json,
+          {metadata_expr},
+          {retention_expr},
+          {redacted_expr}
+        FROM dialogue_records
+        WHERE dialogue_id IS NOT NULL
+          AND messages_json IS NOT NULL
+        """
+    )
+    if "session_id" in columns:
+        connection.execute(
+            f"""
+            INSERT OR IGNORE INTO sessions (
+              session_id, created_at, updated_at, metadata_json
+            )
+            SELECT DISTINCT
+              session_id,
+              COALESCE({created_expr}, {started_expr}, ''),
+              COALESCE({updated_expr}, {created_expr}, {started_expr}, ''),
+              '{{}}'
+            FROM dialogue_records
+            WHERE session_id IS NOT NULL
+            """
+        )
+
+
+def _migrate_dialogue_windows_table(connection: sqlite3.Connection) -> None:
+    columns = _table_columns(connection, "dialogue_windows")
+    if not columns:
+        return
+    required = {
+        "session_id",
+        "dialogue_id",
+        "status",
+        "token_count",
+        "message_count",
+        "created_at",
+        "updated_at",
+        "sealed_at",
+        "extracted_at",
+        "seal_reason",
+        "metadata_json",
+    }
+    if required.issubset(columns) and "owner_id" not in columns and "namespace" not in columns:
+        return
+    connection.execute("DROP TABLE IF EXISTS dialogue_windows_new")
+    connection.execute("""
+        CREATE TABLE dialogue_windows_new (
+          session_id TEXT NOT NULL,
+          dialogue_id TEXT PRIMARY KEY,
+          status TEXT NOT NULL,
+          token_count INTEGER NOT NULL,
+          message_count INTEGER NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          sealed_at TEXT,
+          extracted_at TEXT,
+          seal_reason TEXT,
+          metadata_json TEXT NOT NULL
+        )
+    """)
+    status_expr = "status" if "status" in columns else "'open'"
+    token_expr = "token_count" if "token_count" in columns else "0"
+    message_expr = "message_count" if "message_count" in columns else "0"
+    created_expr = "created_at" if "created_at" in columns else "''"
+    updated_expr = "updated_at" if "updated_at" in columns else created_expr
+    sealed_expr = "sealed_at" if "sealed_at" in columns else "NULL"
+    extracted_expr = "extracted_at" if "extracted_at" in columns else "NULL"
+    seal_reason_expr = "seal_reason" if "seal_reason" in columns else "NULL"
+    metadata_expr = "metadata_json" if "metadata_json" in columns else "'{}'"
+    connection.execute(
+        f"""
+        INSERT OR IGNORE INTO dialogue_windows_new (
+          session_id, dialogue_id, status, token_count, message_count,
+          created_at, updated_at, sealed_at, extracted_at, seal_reason,
+          metadata_json
+        )
+        SELECT
+          session_id,
+          dialogue_id,
+          {status_expr},
+          COALESCE({token_expr}, 0),
+          COALESCE({message_expr}, 0),
+          COALESCE({created_expr}, ''),
+          COALESCE({updated_expr}, {created_expr}, ''),
+          {sealed_expr},
+          {extracted_expr},
+          {seal_reason_expr},
+          {metadata_expr}
+        FROM dialogue_windows
+        WHERE session_id IS NOT NULL
+          AND dialogue_id IS NOT NULL
+        """
+    )
+    connection.execute("DROP TABLE dialogue_windows")
+    connection.execute("ALTER TABLE dialogue_windows_new RENAME TO dialogue_windows")
+
+
+def _table_columns(connection: sqlite3.Connection, table: str) -> set[str]:
+    rows = connection.execute(f"PRAGMA table_info({table})").fetchall()
+    return {str(row["name"]) for row in rows}
 
 
 def _schema_migration_records(
@@ -660,24 +863,15 @@ def _query_units_sql(
     return query, params
 
 
-def _query_dialogues_sql(selector: DialogueSelector) -> tuple[str, list[object]]:
+def _query_dialogue_windows_sql(
+    selector: DialogueWindowSelector,
+) -> tuple[str, list[object]]:
     if selector.offset < 0:
-        raise ValueError("DialogueSelector.offset must be non-negative")
+        raise ValueError("DialogueWindowSelector.offset must be non-negative")
     if selector.limit is not None and selector.limit < 0:
-        raise ValueError("DialogueSelector.limit must be non-negative")
+        raise ValueError("DialogueWindowSelector.limit must be non-negative")
     clauses: list[str] = []
     params: list[object] = []
-    if selector.owner_id is not None:
-        clauses.append("owner_id = ?")
-        params.append(selector.owner_id)
-    if selector.namespaces is not None:
-        if not selector.namespaces:
-            clauses.append("0")
-        else:
-            clauses.append(
-                "namespace IN (" + ", ".join("?" for _ in selector.namespaces) + ")"
-            )
-            params.extend(selector.namespaces)
     if selector.session_id is not None:
         clauses.append("session_id = ?")
         params.append(selector.session_id)
@@ -690,9 +884,17 @@ def _query_dialogues_sql(selector: DialogueSelector) -> tuple[str, list[object]]
         )
         params.extend(selector.dialogue_ids)
     if not selector.include_redacted:
-        clauses.append("redacted_at IS NULL")
+        clauses.append(
+            """
+            NOT EXISTS (
+              SELECT 1 FROM dialogues
+              WHERE dialogues.dialogue_id = dialogue_windows.dialogue_id
+                AND dialogues.redacted_at IS NOT NULL
+            )
+            """
+        )
 
-    query = "SELECT * FROM dialogue_records"
+    query = "SELECT * FROM dialogue_windows"
     if clauses:
         query += " WHERE " + " AND ".join(clauses)
     direction = "ASC" if selector.order == "oldest_first" else "DESC"
@@ -745,10 +947,8 @@ def _row_to_unit(row: sqlite3.Row) -> MemoryUnit:
     )
 
 
-def _row_to_dialogue(row: sqlite3.Row) -> DialogueRecord:
+def _row_to_dialogue(row: sqlite3.Row) -> Dialogue:
     metadata = _load_json(row["metadata_json"])
-    owner_id = _row_value(row, "owner_id") or metadata.get("owner_id") or ""
-    namespace = _row_value(row, "namespace") or metadata.get("namespace") or "personal"
     started_at = (
         _row_value(row, "started_at")
         or _row_value(row, "occurred_at")
@@ -770,22 +970,34 @@ def _row_to_dialogue(row: sqlite3.Row) -> DialogueRecord:
         or _row_value(row, "captured_at")
         or created_at
     )
-    return DialogueRecord(
+    return Dialogue(
         dialogue_id=row["dialogue_id"],
-        scope=MemoryScope(owner_id=str(owner_id), namespace=str(namespace)),
         session_id=_optional_str(_row_value(row, "session_id")),
         checksum=row["checksum"],
         messages=_messages_from_json(row["messages_json"]),
-        status=str(_row_value(row, "status") or "extracted"),  # type: ignore[arg-type]
         started_at=str(started_at),
         ended_at=str(ended_at),
         created_at=str(created_at),
         updated_at=str(updated_at),
-        extracted_at=_optional_str(_row_value(row, "extracted_at")),
-        token_count=int(_row_value(row, "token_count") or 0),
         metadata=metadata,
         retention_until=row["retention_until"],
         redacted_at=row["redacted_at"],
+    )
+
+
+def _row_to_dialogue_window(row: sqlite3.Row) -> DialogueWindow:
+    return DialogueWindow(
+        session_id=row["session_id"],
+        dialogue_id=row["dialogue_id"],
+        status=row["status"],
+        token_count=int(row["token_count"] or 0),
+        message_count=int(row["message_count"] or 0),
+        created_at=row["created_at"],
+        updated_at=row["updated_at"],
+        sealed_at=row["sealed_at"],
+        extracted_at=row["extracted_at"],
+        seal_reason=row["seal_reason"],
+        metadata=_load_json(row["metadata_json"]),
     )
 
 

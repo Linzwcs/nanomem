@@ -5,7 +5,7 @@ from typing import Any
 
 from nanomem.contracts import (
     DialogueMessage,
-    DialogueRecord,
+    Dialogue,
     ExtractionRequest,
     MemoryScope,
 )
@@ -193,17 +193,14 @@ def _extract(
     return extractor.extract(
         ExtractionRequest(
             scope=MemoryScope(owner_id="user-1", namespace="personal"),
-            dialogue=DialogueRecord(
+            dialogue=Dialogue(
                 dialogue_id="dlg-1",
-                scope=MemoryScope(owner_id="user-1", namespace="personal"),
-                session_id="session-1",
+                session_id=None,
                 messages=messages,
-                status="sealed",
                 started_at="2026-01-01T00:00:00+00:00",
                 ended_at="2026-01-01T00:00:40+00:00",
                 created_at="2026-01-01T00:00:00+00:00",
                 updated_at="2026-01-01T00:00:40+00:00",
-                token_count=48,
             ),
             extraction_time="2026-01-01T00:00:40+00:00",
         )

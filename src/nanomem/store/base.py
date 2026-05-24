@@ -3,12 +3,14 @@ from __future__ import annotations
 from typing import Protocol
 
 from nanomem.contracts import (
-    DialogueSelector,
-    DialogueRecord,
+    Dialogue,
+    DialogueWindow,
+    DialogueWindowSelector,
     MemoryUnit,
     MemoryUnitSelector,
     OperationLogEntry,
     OperationLogSelector,
+    Session,
 )
 
 
@@ -22,13 +24,22 @@ class MemoryStore(Protocol):
     def query_units(self, selector: MemoryUnitSelector) -> tuple[MemoryUnit, ...]:
         ...
 
-    def put_dialogue(self, record: DialogueRecord) -> None:
+    def put_session(self, session: Session) -> None:
         ...
 
-    def get_dialogue(self, dialogue_id: str) -> DialogueRecord | None:
+    def put_dialogue(self, dialogue: Dialogue) -> None:
         ...
 
-    def query_dialogues(self, selector: DialogueSelector) -> tuple[DialogueRecord, ...]:
+    def get_dialogue(self, dialogue_id: str) -> Dialogue | None:
+        ...
+
+    def put_dialogue_window(self, window: DialogueWindow) -> None:
+        ...
+
+    def query_dialogue_windows(
+        self,
+        selector: DialogueWindowSelector,
+    ) -> tuple[DialogueWindow, ...]:
         ...
 
     def append_operation_log(self, entry: OperationLogEntry) -> None:

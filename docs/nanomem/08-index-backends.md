@@ -126,7 +126,7 @@ database:
 Recommended future split:
 
 ```text
-PostgresMemoryStore = facts, dialogue records, logs
+PostgresMemoryStore = facts, dialogues, logs
 PgVectorMemoryUnitIndex = vector table or indexed column
 ```
 
