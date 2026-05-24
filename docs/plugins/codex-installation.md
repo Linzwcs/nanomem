@@ -294,7 +294,8 @@ Expected evidence:
 - The NanoMem database receives a `DialogueRecord`. If the hook payload has no
   `session_id`, MemoryUnits are extracted immediately. If it has `session_id`,
   units become searchable after the window reaches the token limit or after
-  `nanomem flush`.
+  `nanomem flush`. For local testing, `NANOMEM_FLUSH_AFTER_CAPTURE=1` flushes
+  the current session after each Stop capture.
 
 Local verification on 2026-05-24 produced one dialogue and two memory units.
 

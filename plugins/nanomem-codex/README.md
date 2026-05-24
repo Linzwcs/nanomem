@@ -73,6 +73,8 @@ When hooks execute, behavior is:
 - If Codex provides a session id, capture appends to a dialogue window and
   MemoryUnits become searchable after token-limit sealing or `nanomem flush`.
   Without a session id, the capture payload is extracted as a one-shot dialogue.
+  Set `NANOMEM_FLUSH_AFTER_CAPTURE=1` to flush the current session immediately
+  after each Stop capture.
 - When MCP is configured, it exposes `nanomem_read` only for agent-selected
   memory lookup. The Stop hook owns normal writes.
 

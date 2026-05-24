@@ -106,6 +106,8 @@ Codex `Stop` receives the final assistant message. The hook should:
 Because Codex supplies a session-like context, capture appends turns to a
 dialogue window. MemoryUnits become searchable when the window reaches the
 configured token limit or when `nanomem flush` / `/v1/flush` seals the session.
+Set `NANOMEM_FLUSH_AFTER_CAPTURE=1` only when every captured Codex turn should
+be immediately searchable.
 
 If only `last_assistant_message` is available, the hook stores the spooled user
 prompt plus that final reply. If no assistant reply is available, automatic
@@ -235,6 +237,12 @@ session:
 
 ```bash
 nanomem flush --config .nanomem/config.json --user-id "$NANOMEM_OWNER_ID" --session-id <session-id>
+```
+
+For always-immediate Codex capture during local testing:
+
+```bash
+export NANOMEM_FLUSH_AFTER_CAPTURE=1
 ```
 
 When MCP is configured for Codex, it exposes `nanomem_read` only. The Stop hook

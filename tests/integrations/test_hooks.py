@@ -18,7 +18,13 @@ from nanomem.contracts import (
     ReadRequest,
 )
 from nanomem.factory import service_from_config
-from nanomem.integrations.hooks import HookConfig, run_capture, run_read, run_spool
+from nanomem.integrations.hooks import (
+    HookConfig,
+    config_from_env,
+    run_capture,
+    run_read,
+    run_spool,
+)
 from nanomem.sdk import NanoMemClient
 from nanomem.server.app import NanoMemHTTPServer
 from nanomem.service.core import NanoMemService
@@ -73,6 +79,18 @@ def test_hook_read_injects_memory_context(tmp_path) -> None:
     assert payload["continue"] is True
     assert "concise Chinese answers" in payload["hookSpecificOutput"]["additionalContext"]
     assert tuple(tmp_path.glob("codex-*.json")) == ()
+
+
+def test_hook_config_parses_flush_after_capture() -> None:
+    config = config_from_env(
+        "codex",
+        {
+            "NANOMEM_OWNER_ID": "user-1",
+            "NANOMEM_FLUSH_AFTER_CAPTURE": "1",
+        },
+    )
+
+    assert config.flush_after_capture is True
 
 
 def test_hook_spool_records_prompt_without_reading_memory(tmp_path) -> None:

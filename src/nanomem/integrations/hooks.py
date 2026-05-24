@@ -12,7 +12,7 @@ from typing import Any, TextIO
 import uuid
 
 from nanomem.adapters.agent import AgentMemoryAdapter, AgentMessage
-from nanomem.contracts import MemoryScope
+from nanomem.contracts import FlushRequest, MemoryScope
 from nanomem.sdk import NanoMemClient, NanoMemClientError
 from nanomem.time import now_utc_iso
 
@@ -36,6 +36,7 @@ class HookConfig:
     timeout: float = 5.0
     capture_assistant: bool = True
     read_trigger: str = "submit"
+    flush_after_capture: bool = False
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -77,6 +78,11 @@ def config_from_env(host: str, env: dict[str, str] | None = None) -> HookConfig:
             default=True,
         ),
         read_trigger=values.get("NANOMEM_READ_TRIGGER", "submit").strip().lower(),
+        flush_after_capture=_bool_env(
+            values,
+            "NANOMEM_FLUSH_AFTER_CAPTURE",
+            default=False,
+        ),
     )
 
 
@@ -169,11 +175,27 @@ def run_capture(
         _write_json(stdout, _success_response())
         return 0
     try:
-        adapter = _adapter(config)
+        client = NanoMemClient(config.base_url, timeout=config.timeout)
+        adapter = AgentMemoryAdapter(
+            client,
+            MemoryScope(owner_id=config.owner_id, namespace=config.namespace),
+        )
+        metadata = _metadata(config, payload, operation="hook_capture")
         adapter.capture_messages(
             tuple(messages),
-            metadata=_metadata(config, payload, operation="hook_capture"),
+            metadata=metadata,
         )
+        session_id = metadata.get("session_id")
+        if config.flush_after_capture and session_id:
+            client.flush(
+                FlushRequest(
+                    scope=MemoryScope(
+                        owner_id=config.owner_id,
+                        namespace=config.namespace,
+                    ),
+                    session_id=str(session_id),
+                )
+            )
     except (NanoMemClientError, OSError, ValueError) as exc:
         _log(stderr, f"nanomem capture failed: {exc}")
         _write_json(stdout, _success_response())
