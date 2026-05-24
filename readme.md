@@ -320,8 +320,9 @@ Run the stdio MCP server:
 nanomem-mcp --config nanomem.json
 ```
 
-MCP should expose normal `capture` and `read` tools only. Control-plane actions
-such as backup, export, retention, and reindex should stay out of the MCP
+MCP exposes `nanomem_read` only. Writes go through hook capture, the SDK, or
+the HTTP API, not through model-selected MCP tools. Control-plane actions such
+as backup, export, retention, and reindex should also stay out of the MCP
 surface.
 
 ### CLI
@@ -436,8 +437,10 @@ plugins/nanomem-claude-code/
 Hook runner examples:
 
 ```bash
+nanomem-agent-hook spool --host codex
 nanomem-agent-hook read --host codex
 nanomem-agent-hook capture --host codex
+nanomem-agent-hook spool --host claude-code
 nanomem-agent-hook read --host claude-code
 nanomem-agent-hook capture --host claude-code
 ```

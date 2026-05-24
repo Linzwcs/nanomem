@@ -783,10 +783,10 @@ run against an in-process `NanoMemService` or a remote `NanoMemClient`.
 `OpenClawMemoryAdapter` and `NanoBotMemoryAdapter` are naming adapters over the
 same hook contract rather than framework dependencies.
 
-MCP integration is also an adapter, not a new product API. It exposes two tools:
+MCP integration is also an adapter, not a new product API. In hook-based agent
+installs it should be used primarily for reads:
 
 ```text
-nanomem_capture
 nanomem_read
 ```
 
@@ -796,8 +796,11 @@ MCP stdio startup:
 python -m nanomem.mcp --config configs/nanomem.example.yaml
 ```
 
-The MCP adapter must not expose store, index, retention, export, backup, or TUI
-operations as agent tools. Those remain admin/CLI responsibilities.
+The MCP server should not expose capture. Hook-based adapters route ordinary
+turn capture through the Stop hook, not through model-selected MCP calls, to
+avoid duplicate writes. The MCP adapter must not expose store, index, retention,
+export, backup, or TUI operations as agent tools. Those remain admin/CLI
+responsibilities.
 
 Adapters should not:
 

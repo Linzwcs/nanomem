@@ -40,7 +40,7 @@ flowchart LR
 ```mermaid
 flowchart TB
   HTTP[HTTP Server<br/>/v1/capture /v1/read]
-  MCP[MCP Server<br/>nanomem_capture / nanomem_read]
+  MCP[MCP Server<br/>nanomem_read only]
   SDK[SDK / Agent Adapter]
   Service[NanoMemService]
   Capture[CapturePipeline]

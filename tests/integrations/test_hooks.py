@@ -18,7 +18,7 @@ from nanomem.contracts import (
     ReadRequest,
 )
 from nanomem.factory import service_from_config
-from nanomem.integrations.hooks import HookConfig, run_capture, run_read
+from nanomem.integrations.hooks import HookConfig, run_capture, run_read, run_spool
 from nanomem.sdk import NanoMemClient
 from nanomem.server.app import NanoMemHTTPServer
 from nanomem.service.core import NanoMemService
@@ -72,20 +72,125 @@ def test_hook_read_injects_memory_context(tmp_path) -> None:
     assert code == 0
     assert payload["continue"] is True
     assert "concise Chinese answers" in payload["hookSpecificOutput"]["additionalContext"]
+    assert tuple(tmp_path.glob("codex-*.json")) == ()
+
+
+def test_hook_spool_records_prompt_without_reading_memory(tmp_path) -> None:
+    stdout = StringIO()
+    stderr = StringIO()
+    code = run_spool(
+        HookConfig(
+            host="codex",
+            base_url="http://127.0.0.1:1",
+            owner_id="user-1",
+            namespace="personal",
+            turn_dir=tmp_path,
+        ),
+        stdin=StringIO(
+            json.dumps(
+                {
+                    "session_id": "session-1",
+                    "turn_id": "turn-1",
+                    "prompt": "Please decide whether memory is needed.",
+                }
+            )
+        ),
+        stdout=stdout,
+        stderr=stderr,
+    )
+
+    payload = json.loads(stdout.getvalue())
+    assert code == 0
+    assert payload == {"continue": True, "suppressOutput": True}
+    assert stderr.getvalue() == ""
     assert len(tuple(tmp_path.glob("codex-*.json"))) == 1
 
 
-def test_hook_capture_uses_spooled_prompt(tmp_path) -> None:
+def test_hook_read_mcp_trigger_does_not_read_or_spool(tmp_path) -> None:
+    stdout = StringIO()
+    stderr = StringIO()
+    code = run_read(
+        HookConfig(
+            host="codex",
+            base_url="http://127.0.0.1:1",
+            owner_id="user-1",
+            namespace="personal",
+            turn_dir=tmp_path,
+            read_trigger="mcp",
+        ),
+        stdin=StringIO(
+            json.dumps(
+                {
+                    "session_id": "session-1",
+                    "turn_id": "turn-1",
+                    "prompt": "Please decide whether memory is needed.",
+                }
+            )
+        ),
+        stdout=stdout,
+        stderr=stderr,
+    )
+
+    payload = json.loads(stdout.getvalue())
+    assert code == 0
+    assert payload == {"continue": True, "suppressOutput": True}
+    assert stderr.getvalue() == ""
+    assert tuple(tmp_path.glob("codex-*.json")) == ()
+
+
+def test_hook_capture_skips_when_assistant_reply_is_missing(tmp_path) -> None:
     service = NanoMemService()
     with _server(service) as base_url:
         config = HookConfig(
-            host="claude-code",
+            host="codex",
             base_url=base_url,
             owner_id="user-1",
             namespace="personal",
             turn_dir=tmp_path,
         )
-        run_read(
+        run_spool(
+            config,
+            stdin=StringIO(
+                json.dumps(
+                    {
+                        "session_id": "session-1",
+                        "prompt": "I prefer fact-level memory units.",
+                    }
+                )
+            ),
+            stdout=StringIO(),
+            stderr=StringIO(),
+        )
+        stdout = StringIO()
+        stderr = StringIO()
+        code = run_capture(
+            config,
+            stdin=StringIO(json.dumps({"session_id": "session-1"})),
+            stdout=stdout,
+            stderr=stderr,
+        )
+
+    units = service.store.query_units(
+        MemoryUnitSelector(owner_id="user-1", namespaces=("personal",), limit=None)
+    )
+    assert code == 0
+    assert json.loads(stdout.getvalue())["suppressOutput"] is True
+    assert units == ()
+    assert "assistant response is missing" in stderr.getvalue()
+
+
+def test_hook_capture_can_opt_into_user_only_capture(tmp_path) -> None:
+    service = NanoMemService()
+    with _server(service) as base_url:
+        config = HookConfig(
+            host="codex",
+            base_url=base_url,
+            owner_id="user-1",
+            namespace="personal",
+            turn_dir=tmp_path,
+            capture_assistant=False,
+        )
+        run_spool(
             config,
             stdin=StringIO(
                 json.dumps(
@@ -124,7 +229,7 @@ def test_hook_capture_records_assistant_reply_when_available(tmp_path) -> None:
             namespace="personal",
             turn_dir=tmp_path,
         )
-        run_read(
+        run_spool(
             config,
             stdin=StringIO(
                 json.dumps(
@@ -163,6 +268,69 @@ def test_hook_capture_records_assistant_reply_when_available(tmp_path) -> None:
     assert [message.role for message in dialogue.messages] == ["user", "assistant"]
     assert dialogue.messages[1].content == "OK"
     assert dialogue.messages[1].speaker_id == "agent"
+
+
+def test_hook_capture_records_visible_user_assistant_message_list(tmp_path) -> None:
+    service = NanoMemService()
+    with _server(service) as base_url:
+        code = run_capture(
+            HookConfig(
+                host="codex",
+                base_url=base_url,
+                owner_id="user-1",
+                namespace="personal",
+                turn_dir=tmp_path,
+            ),
+            stdin=StringIO(
+                json.dumps(
+                    {
+                        "session_id": "session-1",
+                        "turn_id": "turn-1",
+                        "messages": [
+                            {
+                                "role": "user",
+                                "content": "I prefer concise Chinese answers.",
+                                "timestamp": "2026-01-01T00:00:00+00:00",
+                            },
+                            {
+                                "role": "assistant",
+                                "content": "I will inspect the project first.",
+                                "timestamp": "2026-01-01T00:00:01+00:00",
+                            },
+                            {
+                                "role": "tool",
+                                "content": "pytest output hidden from memory",
+                                "timestamp": "2026-01-01T00:00:02+00:00",
+                            },
+                            {
+                                "role": "assistant",
+                                "content": (
+                                    "I will keep your preference for concise "
+                                    "Chinese answers."
+                                ),
+                                "timestamp": "2026-01-01T00:00:03+00:00",
+                            },
+                        ],
+                    }
+                )
+            ),
+            stdout=StringIO(),
+            stderr=StringIO(),
+        )
+
+    logs = service.store.list_operation_logs(
+        OperationLogSelector(owner_id="user-1", operation_type="capture")
+    )
+    dialogue = service.store.get_dialogue(logs[0].summary["dialogue_id"])
+    assert code == 0
+    assert dialogue is not None
+    assert [message.role for message in dialogue.messages] == [
+        "user",
+        "assistant",
+        "assistant",
+    ]
+    assert dialogue.messages[1].content == "I will inspect the project first."
+    assert dialogue.messages[2].speaker_id == "agent"
 
 
 def test_hook_debug_dir_records_raw_hook_payload(tmp_path) -> None:
@@ -253,6 +421,12 @@ def test_codex_sidecar_hook_flow_persists_across_restart(tmp_path) -> None:
                 debug_dir=tmp_path / "debug",
             )
             read_stdout = StringIO()
+            spool_code = run_spool(
+                hook_config,
+                stdin=_stdin(read_payload),
+                stdout=StringIO(),
+                stderr=StringIO(),
+            )
             read_code = run_read(
                 hook_config,
                 stdin=_stdin(read_payload),
@@ -276,11 +450,25 @@ def test_codex_sidecar_hook_flow_persists_across_restart(tmp_path) -> None:
                 operation_type="capture",
             )
         )
-        captured_dialogue = service.store.get_dialogue(logs[0].summary["dialogue_id"])
+        dialogues = tuple(
+            service.store.get_dialogue(log.summary["dialogue_id"])
+            for log in logs
+        )
+        captured_dialogue = next(
+            (
+                dialogue
+                for dialogue in dialogues
+                if dialogue is not None
+                and [message.role for message in dialogue.messages]
+                == ["user", "assistant"]
+            ),
+            None,
+        )
     finally:
         service.store.close()  # type: ignore[attr-defined]
 
     assert read_code == 0
+    assert spool_code == 0
     assert capture_code == 0
     assert "hookSpecificOutput" in read_output
     assert "concise Chinese answers" in read_output["hookSpecificOutput"][

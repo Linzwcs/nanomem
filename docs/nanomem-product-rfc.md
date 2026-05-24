@@ -434,9 +434,10 @@ The preferred integration shape is a thin SDK plus lifecycle adapter. The SDK
 only exposes the normal memory operations, while adapters translate host-agent
 turn hooks into `CaptureRequest` and `ReadRequest`.
 
-MCP integration should follow the same boundary. It may expose `nanomem_read`
-and `nanomem_capture` tools for MCP-capable hosts, but it should not expose
-maintenance, database, or workspace-search tools to agents.
+MCP integration should follow the same boundary and expose `nanomem_read` only.
+Capture hooks, wrappers, SDK calls, or HTTP API calls persist visible dialogue;
+NanoMem should not expose capture, maintenance, database, or workspace-search
+tools to agents through MCP.
 
 The agent remains responsible for:
 

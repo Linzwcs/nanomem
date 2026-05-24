@@ -31,13 +31,18 @@ References:
 
 ## Recommended Integration
 
-Use Codex hooks for deterministic lifecycle work and MCP only as an optional
-agent-facing read/debug tool.
+Use Codex hooks for deterministic capture. For read, choose one of two
+strategies per deployment:
 
 ```text
-UserPromptSubmit hook:
+submit read:
+  run a separate spool hook at UserPromptSubmit
   call NanoMem.read directly
   emit personal-memory context for Codex
+
+mcp read:
+  run a separate spool hook at UserPromptSubmit
+  let the agent call MCP nanomem_read when memory may matter
 
 Stop hook:
   call NanoMem.capture directly
@@ -45,34 +50,56 @@ Stop hook:
 
 MCP server:
   expose nanomem_read for ad hoc lookup
-  expose nanomem_capture only for explicit "remember this" commands
+  do not expose capture or admin tools
 ```
 
-Capture should call NanoMem through the local SDK, in-process service, or HTTP
-API. It should not go through MCP because automatic storage should not be a
-model-selected tool call.
+The submit strategy is deterministic and useful when user preferences should be
+available before every answer. The MCP strategy avoids injecting memory into
+unrelated turns and lets the agent decide when long-term personal context is
+worth the extra lookup.
+
+`nanomem-agent-hook read` is read-only. Prompt spooling is a separate hook action
+used only to let the later Stop hook pair `last_assistant_message` with the
+submitted prompt.
+
+Capture should still call NanoMem through the local SDK, in-process service, or
+HTTP API in the automatic hook path. MCP is read-only by design, so storage is
+not a model-selected tool call.
 
 ## Hook Data Flow
 
-Codex `UserPromptSubmit` receives the user prompt. The hook should:
+Codex `UserPromptSubmit` receives the user prompt. In `submit` mode, the hook
+should:
 
 1. resolve `owner_id` and namespace from config;
-2. call `NanoMem.read` with the prompt as query;
-3. keep a small turn spool record containing the prompt, timestamp, and a
-   generated turn id;
+2. run `nanomem-agent-hook spool` to keep a small transient turn record
+   containing the prompt, timestamp, and generated turn id;
+3. run `nanomem-agent-hook read` to call `NanoMem.read` with the prompt as
+   query;
 4. return a compact memory block as additional prompt context.
+
+In `mcp` mode, the separate spool action still keeps the transient turn record,
+but `nanomem-agent-hook read` returns success without reading or writing. The
+model can then use MCP `nanomem_read` when the task seems affected by durable
+personal memory.
 
 Codex `Stop` receives the final assistant message. The hook should:
 
 1. load the matching turn spool record;
-2. build a bounded `CaptureDialogue` from the user prompt and final assistant
-   reply;
+2. build a bounded `CaptureDialogue` from visible user and assistant messages
+   when the host exposes them;
 3. call `NanoMem.capture` with the bounded dialogue;
 4. return success without adding user-visible text.
 
-Avoid parsing full transcripts for the normal path. Transcript files can be
-unstable across harness versions and may contain more material than NanoMem
-should capture.
+If only `last_assistant_message` is available, the hook stores the spooled user
+prompt plus that final reply. If no assistant reply is available, automatic
+capture should skip the turn instead of storing a partial user-only dialogue.
+User-only capture is an explicit opt-in mode for deployments that set
+`NANOMEM_CAPTURE_ASSISTANT=0`.
+
+Avoid parsing hidden reasoning, tool stdout, or raw transcript files for the
+normal path. Transcript files can be unstable across harness versions and may
+contain more material than NanoMem should capture.
 
 ## Suggested Local Layout
 
@@ -95,7 +122,11 @@ Example hook shape:
         "hooks": [
           {
             "type": "command",
-            "command": "python scripts/nanomem_codex_read.py"
+            "command": "nanomem-agent-hook spool --host codex"
+          },
+          {
+            "type": "command",
+            "command": "nanomem-agent-hook read --host codex"
           }
         ]
       }
@@ -141,6 +172,7 @@ remain user or project hooks plus direct SDK/HTTP capture.
 The repo-local skeleton uses the shared command:
 
 ```text
+nanomem-agent-hook spool --host codex
 nanomem-agent-hook read --host codex
 nanomem-agent-hook capture --host codex
 ```
@@ -151,6 +183,7 @@ The command talks to a running NanoMem server over HTTP. Configure it with:
 export NANOMEM_BASE_URL=http://127.0.0.1:8765
 export NANOMEM_OWNER_ID="$USER"
 export NANOMEM_NAMESPACE=personal
+export NANOMEM_READ_TRIGGER=submit  # submit or mcp
 ```
 
 If `NANOMEM_NAMESPACE` is unset or empty, the hook captures without a namespace
@@ -176,16 +209,20 @@ the same `NANOMEM_*` environment variables. By default the capture hook stores
 the final assistant reply when Codex provides it; set
 `NANOMEM_CAPTURE_ASSISTANT=0` to store only the user message.
 
+The Codex plugin exposes MCP for `nanomem_read` only. The Stop hook owns normal
+capture, so the same visible turn is not stored twice.
+
 ## What Codex Should Read And Capture
 
 | Situation | Path |
 | --- | --- |
 | User asks about current repo files | Codex reads workspace directly |
-| User asks something affected by personal preferences | Hook or MCP calls `nanomem_read` |
+| User asks something affected by personal preferences | Submit hook or MCP `nanomem_read` |
+| Memory is rarely relevant for this workspace | Set `NANOMEM_READ_TRIGGER=mcp` |
 | User gives a stable preference | Stop hook captures visible dialogue |
 | User corrects agent behavior | Stop hook captures visible dialogue |
 | Codex tool stdout, git diff, logs, files | Do not capture |
-| User explicitly says "remember this" | MCP `nanomem_capture` may be used |
+| User explicitly says "remember this" | Let the Stop hook capture the visible request |
 
 ## Failure Policy
 

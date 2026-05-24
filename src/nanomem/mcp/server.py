@@ -4,8 +4,8 @@ from dataclasses import asdict
 import json
 from typing import Any, TextIO
 
-from nanomem.contracts import CaptureRequest, ReadRequest
-from nanomem.serde import capture_request_from_json, read_request_from_json
+from nanomem.contracts import ReadRequest
+from nanomem.serde import read_request_from_json
 from nanomem.service.core import NanoMemService
 
 
@@ -14,7 +14,7 @@ DEFAULT_PROTOCOL_VERSION = "2025-03-26"
 
 
 class NanoMemMCPServer:
-    """Dependency-free MCP stdio server exposing NanoMem capture/read tools."""
+    """Dependency-free MCP stdio server exposing NanoMem read tools."""
 
     def __init__(
         self,
@@ -70,18 +70,11 @@ class NanoMemMCPServer:
         arguments = _mapping(payload.get("arguments"))
         if name == "nanomem_read":
             return _tool_result(self._read(arguments))
-        if name == "nanomem_capture":
-            return _tool_result(self._capture(arguments))
         raise ValueError(f"Unknown tool: {name}")
 
     def _read(self, arguments: dict[str, Any]) -> dict[str, Any]:
         request = read_request_from_json(arguments)
         result = self.service.read(request)
-        return asdict(result)
-
-    def _capture(self, arguments: dict[str, Any]) -> dict[str, Any]:
-        request = capture_request_from_json(arguments)
-        result = self.service.capture(request)
         return asdict(result)
 
 
@@ -153,25 +146,6 @@ def _tools() -> list[dict[str, Any]]:
                 "required": ["owner_id", "query", "query_time"],
             },
         },
-        {
-            "name": "nanomem_capture",
-            "description": (
-                "Capture user-visible dialogue into NanoMem long-term personal "
-                "memory. Do not send hidden reasoning, tool logs, code docs, "
-                "or workspace-local content."
-            ),
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "scope": _scope_schema(),
-                    "dialogue": _capture_dialogue_schema(),
-                    "capture_time": {
-                        "type": "string",
-                    },
-                },
-                "required": ["scope", "dialogue", "capture_time"],
-            },
-        },
     ]
 
 
@@ -188,32 +162,6 @@ def _tool_result(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _scope_schema() -> dict[str, Any]:
-    return {
-        "type": "object",
-        "properties": {
-            "owner_id": {"type": "string"},
-            "namespace": {"type": ["string", "null"]},
-        },
-        "required": ["owner_id"],
-    }
-
-
-def _capture_dialogue_schema() -> dict[str, Any]:
-    return {
-        "type": "object",
-        "properties": {
-            "messages": {
-                "type": "array",
-                "items": _dialogue_message_schema(),
-            },
-            "occurred_at": {"type": "string"},
-            "metadata": {"type": "object"},
-        },
-        "required": ["messages", "occurred_at"],
-    }
-
-
 def _time_range_schema() -> dict[str, Any]:
     return {
         "type": ["object", "null"],
@@ -221,23 +169,6 @@ def _time_range_schema() -> dict[str, Any]:
             "start": {"type": ["string", "null"]},
             "end": {"type": ["string", "null"]},
         },
-    }
-
-
-def _dialogue_message_schema() -> dict[str, Any]:
-    return {
-        "type": "object",
-        "properties": {
-            "role": {
-                "type": "string",
-                "description": "Usually user or assistant.",
-            },
-            "content": {"type": "string"},
-            "timestamp": {"type": "string"},
-            "speaker_id": {"type": ["string", "null"]},
-            "metadata": {"type": "object"},
-        },
-        "required": ["role", "content", "timestamp"],
     }
 
 

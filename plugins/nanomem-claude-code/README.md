@@ -19,10 +19,13 @@ export NANOMEM_NAMESPACE=personal
 
 ## Behavior
 
-- `UserPromptSubmit`: runs `nanomem-agent-hook read --host claude-code` and
-  injects relevant `PackedContext.text`.
+- `UserPromptSubmit`: runs `nanomem-agent-hook spool --host claude-code` first,
+  then `nanomem-agent-hook read --host claude-code`. `spool` writes only a
+  transient turn record for the later Stop hook. `read` is pure retrieval and
+  injects relevant `PackedContext.text` when automatic read is enabled.
 - `Stop`: runs `nanomem-agent-hook capture --host claude-code` and captures
   bounded user-visible dialogue.
-- MCP tools expose only `nanomem_read` and explicit `nanomem_capture`.
+- MCP exposes `nanomem_read` only for agent-selected memory lookup. The Stop
+  hook owns normal writes.
 
 Manager/control endpoints are intentionally not exposed.

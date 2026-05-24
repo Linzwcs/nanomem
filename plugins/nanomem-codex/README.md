@@ -36,15 +36,29 @@ Set environment variables in the Codex session or shell:
 export NANOMEM_BASE_URL=http://127.0.0.1:8765
 export NANOMEM_OWNER_ID="$USER"
 export NANOMEM_NAMESPACE=personal
+export NANOMEM_READ_TRIGGER=submit
 ```
+
+Use `NANOMEM_READ_TRIGGER=mcp` to disable automatic read injection. Prompt
+spooling still runs as a separate transient hook for later capture correlation.
+In that mode Codex can call MCP `nanomem_read` when long-term personal context
+seems relevant.
 
 ## Behavior
 
-- `UserPromptSubmit`: runs `nanomem-agent-hook read --host codex` and injects
-  relevant `PackedContext.text`.
+- `UserPromptSubmit`: runs `nanomem-agent-hook spool --host codex` first, then
+  `nanomem-agent-hook read --host codex`. `spool` writes only a transient turn
+  record for the later Stop hook. `read` is pure retrieval: it injects relevant
+  `PackedContext.text` when `NANOMEM_READ_TRIGGER=submit`, and returns no
+  context without reading or writing when `NANOMEM_READ_TRIGGER=mcp`.
 - `Stop`: runs `nanomem-agent-hook capture --host codex` and captures bounded
-  user-visible dialogue, including the final assistant reply when Codex provides
-  it. Set `NANOMEM_CAPTURE_ASSISTANT=0` to store only the user message.
-- MCP tools expose only `nanomem_read` and explicit `nanomem_capture`.
+  user-visible dialogue. If the host provides visible user/assistant messages
+  for the turn, NanoMem stores all of them and drops tool/system records. If
+  only `last_assistant_message` is available, NanoMem stores the user prompt and
+  that final reply. If the assistant reply is missing, automatic capture is
+  skipped by default. Set `NANOMEM_CAPTURE_ASSISTANT=0` only to explicitly store
+  user-only turns.
+- MCP exposes `nanomem_read` only for agent-selected memory lookup. The Stop
+  hook owns normal writes.
 
 Manager/control endpoints are intentionally not exposed.

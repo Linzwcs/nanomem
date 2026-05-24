@@ -22,6 +22,7 @@ Use a native Claude Code plugin as the primary integration.
 
 ```text
 UserPromptSubmit hook:
+  run a separate spool step for later capture correlation
   call NanoMem.read directly
   inject PackedContext.text as additional context
 
@@ -30,13 +31,12 @@ Stop hook:
   store bounded user-visible dialogue
 
 MCP server:
-  optional nanomem_read / explicit nanomem_capture tools
+  optional nanomem_read tool
 ```
 
 The important choice is that capture is done by the hook command, not by asking
-Claude to call an MCP tool. MCP remains useful for manual lookup or explicit
-"remember this" commands, but automatic storage should be deterministic and
-outside the model's tool-selection loop.
+Claude to call an MCP tool. MCP remains useful for manual lookup, but storage
+should be deterministic and outside the model's tool-selection loop.
 
 ## Plugin Layout
 
@@ -63,8 +63,9 @@ or control-plane operations.
 
 1. read the submitted prompt from hook input;
 2. resolve the NanoMem owner and namespace from plugin config;
-3. call `NanoMem.read` with a small post-render token budget;
-4. return a compact personal memory block as additional context.
+3. write a small transient spool record for the later Stop hook;
+4. call `NanoMem.read` with a small post-render token budget;
+5. return a compact personal memory block as additional context.
 
 `Stop` should:
 
@@ -88,7 +89,11 @@ store.
         "hooks": [
           {
             "type": "command",
-            "command": "nanomem-claude-read"
+            "command": "nanomem-agent-hook spool --host claude-code"
+          },
+          {
+            "type": "command",
+            "command": "nanomem-agent-hook read --host claude-code"
           }
         ]
       }
@@ -115,6 +120,7 @@ stderr or NanoMem operation logs.
 The repo-local skeleton uses the shared command:
 
 ```text
+nanomem-agent-hook spool --host claude-code
 nanomem-agent-hook read --host claude-code
 nanomem-agent-hook capture --host claude-code
 ```
@@ -136,14 +142,12 @@ The plugin may also provide an MCP server:
 
 ```text
 nanomem_read
-nanomem_capture
 ```
 
 Recommended policy:
 
 - `nanomem_read`: enabled for ad hoc user-memory lookup.
-- `nanomem_capture`: enabled only for explicit user requests such as "remember
-  this"; automatic capture stays in hooks.
+- no `nanomem_capture` tool.
 - no admin tools through MCP.
 
 ## What Claude Code Should Read And Capture

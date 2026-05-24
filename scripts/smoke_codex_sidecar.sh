@@ -188,6 +188,8 @@ if capture_output.get("continue") is not True:
     raise SystemExit("capture hook did not return a successful hook response")
 if not list(debug_dir.glob("*-codex-read-*.json")):
     raise SystemExit("missing read hook debug payload")
+if not list(debug_dir.glob("*-codex-spool-*.json")):
+    raise SystemExit("missing spool hook debug payload")
 if not list(debug_dir.glob("*-codex-capture-*.json")):
     raise SystemExit("missing capture hook debug payload")
 PY
@@ -259,6 +261,7 @@ main() {
 
   start_server "$BASE_URL"
   seed_memory "$BASE_URL"
+  run_hook spool "$FIXTURE_DIR/user_prompt_submit.json" "$SMOKE_DIR/hook-spool.json"
   run_hook read "$FIXTURE_DIR/user_prompt_submit.json" "$READ_OUTPUT"
   run_hook capture "$FIXTURE_DIR/stop.json" "$CAPTURE_OUTPUT"
   validate_hook_outputs

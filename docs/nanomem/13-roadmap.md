@@ -78,8 +78,8 @@ Known limits:
 NanoMem can be treated as a local alpha product when the product-flow regression
 passes. Developer preview should additionally require:
 
-- frozen HTTP/SDK/MCP contract examples for `capture`, `read`, and manager
-  retrieval preview;
+- frozen HTTP/SDK contract examples for `capture` and `read`, MCP examples for
+  `nanomem_read`, and manager retrieval preview examples;
 - one recommended local configuration using SQLite plus dense or LanceDB index;
 - explicit setup docs for sidecar usage without system-wide installation;
 - browser-verified Manager UI for memory list, source evidence, retrieval lab,

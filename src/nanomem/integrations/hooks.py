@@ -10,7 +10,7 @@ from pathlib import Path
 import sys
 from typing import Any, TextIO
 
-from nanomem.adapters.agent import AgentMemoryAdapter
+from nanomem.adapters.agent import AgentMemoryAdapter, AgentMessage
 from nanomem.contracts import MemoryScope
 from nanomem.sdk import NanoMemClient, NanoMemClientError
 from nanomem.time import now_utc_iso
@@ -34,14 +34,17 @@ class HookConfig:
     debug_dir: Path | None = None
     timeout: float = 5.0
     capture_assistant: bool = True
+    read_trigger: str = "submit"
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="nanomem-agent-hook")
-    parser.add_argument("action", choices=("read", "capture"))
+    parser.add_argument("action", choices=("spool", "read", "capture"))
     parser.add_argument("--host", required=True, help="Host harness name.")
     args = parser.parse_args(argv)
     config = config_from_env(args.host)
+    if args.action == "spool":
+        return run_spool(config)
     if args.action == "read":
         return run_read(config)
     return run_capture(config)
@@ -72,7 +75,24 @@ def config_from_env(host: str, env: dict[str, str] | None = None) -> HookConfig:
             "NANOMEM_CAPTURE_ASSISTANT",
             default=True,
         ),
+        read_trigger=values.get("NANOMEM_READ_TRIGGER", "submit").strip().lower(),
     )
+
+
+def run_spool(
+    config: HookConfig,
+    *,
+    stdin: TextIO = sys.stdin,
+    stdout: TextIO = sys.stdout,
+    stderr: TextIO = sys.stderr,
+) -> int:
+    payload = _read_payload(stdin, stderr)
+    _write_debug_payload(config, payload, action="spool", stderr=stderr)
+    prompt = _extract_user_prompt(payload)
+    if prompt:
+        _write_turn(config, payload, prompt)
+    _write_json(stdout, _success_response())
+    return 0
 
 
 def run_read(
@@ -89,7 +109,13 @@ def run_read(
         _write_json(stdout, _success_response())
         return 0
 
-    _write_turn(config, payload, prompt)
+    if config.read_trigger == "mcp":
+        _write_json(stdout, _success_response())
+        return 0
+    if config.read_trigger != "submit":
+        _log(stderr, f"unsupported NANOMEM_READ_TRIGGER={config.read_trigger}")
+        _write_json(stdout, _success_response())
+        return 0
     try:
         adapter = _adapter(config)
         context = adapter.before_turn(
@@ -123,17 +149,28 @@ def run_capture(
     _write_debug_payload(config, payload, action="capture", stderr=stderr)
     turn = _read_turn(config, payload)
     prompt = _extract_user_prompt(payload) or turn.get("prompt")
-    if not prompt:
+    messages = _extract_capture_messages(
+        config,
+        payload=payload,
+        turn=turn,
+        prompt=prompt if isinstance(prompt, str) else None,
+    )
+    if not messages:
+        if config.capture_assistant and prompt:
+            _log(stderr, "nanomem capture skipped: assistant response is missing")
         _write_json(stdout, _success_response())
         return 0
 
-    assistant_message = _extract_assistant_message(payload)
+    if config.capture_assistant and not any(
+        message.role == "assistant" for message in messages
+    ):
+        _log(stderr, "nanomem capture skipped: assistant response is missing")
+        _write_json(stdout, _success_response())
+        return 0
     try:
         adapter = _adapter(config)
-        adapter.after_turn(
-            prompt,
-            assistant_message=assistant_message,
-            capture_assistant=config.capture_assistant,
+        adapter.capture_messages(
+            tuple(messages),
             metadata=_metadata(config, payload, operation="hook_capture"),
         )
     except (NanoMemClientError, OSError, ValueError) as exc:
@@ -200,6 +237,104 @@ def _extract_assistant_message(payload: dict[str, Any]) -> str | None:
     )
 
 
+def _extract_capture_messages(
+    config: HookConfig,
+    *,
+    payload: dict[str, Any],
+    turn: dict[str, Any],
+    prompt: str | None,
+) -> list[AgentMessage]:
+    explicit = _extract_explicit_messages(config, payload)
+    if explicit:
+        if prompt and not any(message.role == "user" for message in explicit):
+            explicit.insert(
+                0,
+                AgentMessage(
+                    role="user",
+                    content=prompt,
+                    speaker_id=config.owner_id,
+                ),
+            )
+        if not config.capture_assistant:
+            return [message for message in explicit if message.role == "user"]
+        return explicit
+
+    if not prompt:
+        return []
+    assistant_message = _extract_assistant_message(payload)
+    if config.capture_assistant and assistant_message is not None:
+        return [
+            AgentMessage(
+                role="user",
+                content=prompt,
+                speaker_id=config.owner_id,
+            ),
+            AgentMessage(
+                role="assistant",
+                content=assistant_message,
+                speaker_id="agent",
+                metadata={
+                    "message_kind": "reply",
+                    "is_final": True,
+                },
+            ),
+        ]
+    if not config.capture_assistant:
+        return [
+            AgentMessage(
+                role="user",
+                content=prompt,
+                speaker_id=config.owner_id,
+            )
+        ]
+    return []
+
+
+def _extract_explicit_messages(
+    config: HookConfig,
+    payload: dict[str, Any],
+) -> list[AgentMessage]:
+    raw = _first_list(
+        payload,
+        (
+            ("messages",),
+            ("transcript",),
+            ("conversation",),
+            ("dialogue", "messages"),
+            ("input", "messages"),
+            ("hook_input", "messages"),
+            ("hookInput", "messages"),
+            ("output", "messages"),
+        ),
+    )
+    if raw is None:
+        return []
+    messages: list[AgentMessage] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        role = _visible_role(item)
+        if role is None:
+            continue
+        content = _message_content(item)
+        if content is None:
+            continue
+        messages.append(
+            AgentMessage(
+                role=role,
+                content=content,
+                timestamp=_optional_text(
+                    item.get("timestamp")
+                    or item.get("created_at")
+                    or item.get("createdAt")
+                ),
+                speaker_id=_speaker_id(config, item, role),
+                metadata=_message_metadata(item, role),
+            )
+        )
+    return messages
+
+
 def _first_text(
     payload: dict[str, Any],
     paths: tuple[tuple[str, ...], ...],
@@ -213,6 +348,79 @@ def _first_text(
             value = value[key]
         if isinstance(value, str) and value.strip():
             return value.strip()
+    return None
+
+
+def _first_list(
+    payload: dict[str, Any],
+    paths: tuple[tuple[str, ...], ...],
+) -> list[Any] | None:
+    for path in paths:
+        value: Any = payload
+        for key in path:
+            if not isinstance(value, dict) or key not in value:
+                value = None
+                break
+            value = value[key]
+        if isinstance(value, list):
+            return value
+    return None
+
+
+def _visible_role(item: dict[str, Any]) -> str | None:
+    role = _optional_text(item.get("role") or item.get("speaker"))
+    if role is None:
+        return None
+    role = role.lower()
+    if role in {"user", "assistant"}:
+        return role
+    return None
+
+
+def _message_content(item: dict[str, Any]) -> str | None:
+    value = (
+        item.get("content")
+        or item.get("text")
+        or item.get("message")
+        or item.get("output")
+    )
+    text = _text_from_value(value)
+    return text if text and text.strip() else None
+
+
+def _text_from_value(value: Any) -> str | None:
+    if isinstance(value, str):
+        return value.strip()
+    if isinstance(value, list):
+        parts = [
+            part
+            for item in value
+            if (part := _text_from_value(item))
+        ]
+        return "\n".join(parts).strip() if parts else None
+    if isinstance(value, dict):
+        return _text_from_value(value.get("text") or value.get("content"))
+    return None
+
+
+def _speaker_id(config: HookConfig, item: dict[str, Any], role: str) -> str:
+    value = _optional_text(item.get("speaker_id") or item.get("speakerId"))
+    if value is not None:
+        return value
+    return config.owner_id if role == "user" else "agent"
+
+
+def _message_metadata(item: dict[str, Any], role: str) -> dict[str, Any]:
+    metadata = item.get("metadata")
+    data = dict(metadata) if isinstance(metadata, dict) else {}
+    if role == "assistant":
+        data.setdefault("message_kind", "reply")
+    return data
+
+
+def _optional_text(value: Any) -> str | None:
+    if isinstance(value, str) and value.strip():
+        return value.strip()
     return None
 
 

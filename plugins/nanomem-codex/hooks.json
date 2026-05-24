@@ -5,6 +5,11 @@
         "hooks": [
           {
             "type": "command",
+            "command": "nanomem-agent-hook spool --host codex",
+            "timeout": 5
+          },
+          {
+            "type": "command",
             "command": "nanomem-agent-hook read --host codex",
             "timeout": 5
           }

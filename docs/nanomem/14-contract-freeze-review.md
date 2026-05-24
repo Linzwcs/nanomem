@@ -189,7 +189,7 @@ Frozen agent-facing surfaces:
 - HTTP `POST /v1/capture`;
 - HTTP `POST /v1/read`;
 - Python SDK `NanoMemClient.capture` and `NanoMemClient.read`;
-- MCP tools `nanomem_capture` and `nanomem_read`.
+- MCP tool `nanomem_read`.
 
 Control-plane surfaces that mirror read contracts but remain manager-specific:
 
@@ -229,7 +229,7 @@ Contract tests now cover:
 - public JSON serializers returning arrays, not Python tuples;
 - HTTP `400` contract errors for malformed requests;
 - SDK error wrapping for HTTP contract failures;
-- MCP tool schemas for `nanomem_capture` and `nanomem_read`;
+- MCP tool schema for `nanomem_read` and rejection of capture tool calls;
 - MCP tool calls returning structured public results;
 - Manager retrieval preview preserving read tuning fields;
 - request/response example JSON blocks parsing successfully;

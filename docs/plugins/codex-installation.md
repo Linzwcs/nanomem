@@ -53,6 +53,10 @@ Plugin-bundled hooks are behind Codex's `plugin_hooks` feature. On the verified
 local CLI, `plugins` and `hooks` are enabled by default, while `plugin_hooks` is
 available but disabled by default.
 
+The bundled MCP server exposes `nanomem_read` only. In hook-based Codex use,
+normal turn storage belongs to the Stop hook, avoiding model-selected duplicate
+capture of the same visible dialogue.
+
 ## Opt-In Installation Steps
 
 Install NanoMem so the hook command is on `PATH`:
@@ -74,7 +78,14 @@ Export runtime configuration for Codex sessions:
 export NANOMEM_BASE_URL=http://127.0.0.1:8765
 export NANOMEM_OWNER_ID="$USER"
 export NANOMEM_NAMESPACE=personal
+export NANOMEM_READ_TRIGGER=submit
 ```
+
+`NANOMEM_READ_TRIGGER=submit` reads memory at `UserPromptSubmit` and injects a
+memory block automatically. Set `NANOMEM_READ_TRIGGER=mcp` when you want the hook
+to skip automatic read injection and let Codex decide whether to call MCP
+`nanomem_read`. Prompt spooling is a separate hook action used only for later
+capture correlation.
 
 Register the repository as a local marketplace:
 
@@ -102,15 +113,21 @@ Open `/hooks` and trust both NanoMem hooks. Codex records trusted hook hashes in
 
 ## Runtime Flow
 
-`UserPromptSubmit` runs before Codex sends the turn to the model:
+`UserPromptSubmit` runs before Codex sends the turn to the model. In submit
+mode:
 
 ```text
 Codex prompt JSON
+  -> nanomem-agent-hook spool --host codex
+  -> write a small transient turn spool record
   -> nanomem-agent-hook read --host codex
-  -> write a small turn spool record
   -> POST /v1/read
   -> return hookSpecificOutput.additionalContext
 ```
+
+In MCP mode, `nanomem-agent-hook spool` still writes the transient turn record,
+but `nanomem-agent-hook read` returns success without reading or writing. The
+agent can then call MCP `nanomem_read` only when memory seems relevant.
 
 The injected context is wrapped in
 `<nanomem_personal_memory>...</nanomem_personal_memory>` so the model sees it as
@@ -122,13 +139,16 @@ evidence, not as hidden state.
 Codex stop JSON
   -> nanomem-agent-hook capture --host codex
   -> load the spooled user prompt
-  -> read last_assistant_message when available
+  -> use visible user/assistant messages when available
+  -> otherwise read last_assistant_message when available
   -> POST /v1/capture
 ```
 
-The hook deliberately avoids parsing the full transcript. Transcript files are
-useful for audit and debugging, but normal capture should use bounded,
-user-visible dialogue only.
+The hook deliberately avoids parsing hidden reasoning, tool stdout, or raw
+transcript files for the normal path. If the host provides a bounded visible
+message list for the turn, NanoMem captures all user and assistant messages in
+that list and drops tool/system records. If the host only provides
+`last_assistant_message`, NanoMem stores the user prompt plus that final reply.
 
 ## Why These Fixes Were Needed
 
@@ -146,11 +166,14 @@ An installed hook can still be enabled but untrusted; in that state it appears
 in `/hooks` but does not reliably execute until the user trusts its current
 hash.
 
-Assistant capture now defaults to enabled. Codex `Stop` provides
-`last_assistant_message`, and NanoMem's dialogue archive should represent the
-visible exchange: user prompt plus final assistant reply. This improves audit
-and future extraction without storing hidden reasoning or tool output. Set
-`NANOMEM_CAPTURE_ASSISTANT=0` if a deployment wants user-only capture.
+Assistant capture now defaults to enabled. NanoMem's dialogue archive should
+represent the visible exchange: the user prompt plus all visible assistant
+messages the host exposes for the turn. This improves audit and future
+extraction without storing hidden reasoning or tool output. If assistant capture
+is enabled and the host payload does not include any assistant response, the
+hook skips automatic capture instead of storing a partial user-only dialogue.
+Set `NANOMEM_CAPTURE_ASSISTANT=0` only if a deployment explicitly wants
+user-only capture.
 
 The read-hook test query was made explicit because that test should verify hook
 transport and context injection, not broad semantic generalization from a local
@@ -168,8 +191,8 @@ bash scripts/smoke_codex_sidecar.sh
 ```
 
 This script does not require the Codex CLI. It validates NanoMem's side of the
-integration: `UserPromptSubmit -> read`, `Stop -> capture`, SQLite persistence,
-startup reindex, and rendered read context.
+integration: `UserPromptSubmit -> spool/read`, `Stop -> capture`, SQLite
+persistence, startup reindex, and rendered read context.
 
 ## Codex Plugin Smoke Test
 
@@ -201,7 +224,8 @@ codex exec --enable plugin_hooks --json \
 
 Expected evidence:
 
-- `.nanomem/hook-debug/` contains one `codex-read-*.json` and one
+- `.nanomem/hook-debug/` contains one `codex-spool-*.json`, one
+  `codex-read-*.json`, and one
   `codex-capture-*.json`.
 - The read payload includes `hook_event_name: "UserPromptSubmit"` and `prompt`.
 - The capture payload includes `hook_event_name: "Stop"` and
