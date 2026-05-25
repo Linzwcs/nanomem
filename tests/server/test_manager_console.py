@@ -275,6 +275,14 @@ def test_manager_api_exposes_session_stream_and_dialogue_windows() -> None:
     assert flushed["session"]["produced_unit_count"] == 2
     assert flushed["messages"][0]["produced_unit_ids"]
     assert flushed["windows"][0]["produced_unit_count"] == 2
+    produced_unit_id = flushed["produced_units"][0]["unit_id"]
+    produced_unit = _json(
+        handle_manager_get(service, f"/manager/api/memory-units/{produced_unit_id}")
+    )
+    source = produced_unit["source_chunks"][0]
+    assert source["dialogue"]["session_id"] == "session-a"
+    assert source["dialogue"]["dialogue_id"] == first.dialogue_id
+    assert source["range_label"] == "Full dialogue"
 
     third = service.capture(
         CaptureRequest(

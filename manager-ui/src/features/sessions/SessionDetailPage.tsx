@@ -6,7 +6,13 @@ import type { DialogueWindow, SessionStreamMessage } from "../../api/types";
 import { Badge, ErrorState, LoadingState } from "../../components/Status";
 import { formatNumber, formatTime, jsonPreview } from "../../lib/format";
 
-export function SessionDetailPage({ sessionId }: { sessionId: string }) {
+export function SessionDetailPage({
+  dialogueId,
+  sessionId,
+}: {
+  dialogueId: string | null;
+  sessionId: string;
+}) {
   const detail = useQuery({
     queryKey: ["session", sessionId],
     queryFn: () => getSession(sessionId),
@@ -17,6 +23,10 @@ export function SessionDetailPage({ sessionId }: { sessionId: string }) {
   if (!detail.data) return null;
 
   const { session, messages, windows, produced_units: producedUnits } = detail.data;
+  const targetWindow = dialogueId
+    ? windows.find((window) => window.dialogue_id === dialogueId)
+    : null;
+  const targetFound = dialogueId ? Boolean(targetWindow) : false;
 
   return (
     <section className="page-stack">
@@ -45,9 +55,22 @@ export function SessionDetailPage({ sessionId }: { sessionId: string }) {
           <span className="filter-chip static-chip">
             Units: {formatNumber(session.produced_unit_count)}
           </span>
+          {dialogueId ? (
+            <span className="filter-chip static-chip">
+              Source dialogue: {targetFound ? dialogueId : "not found"}
+            </span>
+          ) : null}
         </div>
         <span className="result-count">Updated {formatTime(session.updated_at)}</span>
       </div>
+
+      {dialogueId ? (
+        <div className={targetFound ? "notice" : "notice notice-warn"}>
+          {targetFound
+            ? "Source dialogue is highlighted in the message stream."
+            : "The requested source dialogue was not found in this session."}
+        </div>
+      ) : null}
 
       <div className="metric-grid">
         <Metric label="Messages" value={messages.length} />
@@ -69,7 +92,11 @@ export function SessionDetailPage({ sessionId }: { sessionId: string }) {
           </thead>
           <tbody>
             {windows.map((window) => (
-              <WindowRow key={window.dialogue_id} window={window} />
+              <WindowRow
+                highlighted={window.dialogue_id === dialogueId}
+                key={window.dialogue_id}
+                window={window}
+              />
             ))}
           </tbody>
         </table>
@@ -82,7 +109,11 @@ export function SessionDetailPage({ sessionId }: { sessionId: string }) {
         </div>
         <ol className="dialogue-log stream-log">
           {messages.map((message) => (
-            <StreamMessage key={`${message.dialogue_id}-${message.local_index}`} message={message} />
+            <StreamMessage
+              highlightedDialogueId={dialogueId}
+              key={`${message.dialogue_id}-${message.local_index}`}
+              message={message}
+            />
           ))}
         </ol>
       </section>
@@ -143,9 +174,15 @@ export function SessionDetailPage({ sessionId }: { sessionId: string }) {
   );
 }
 
-function WindowRow({ window }: { window: DialogueWindow }) {
+function WindowRow({
+  highlighted,
+  window,
+}: {
+  highlighted: boolean;
+  window: DialogueWindow;
+}) {
   return (
-    <tr>
+    <tr className={highlighted ? "dialogue-row-highlighted" : ""}>
       <td>
         <div className="scope-cell">
           <a
@@ -169,10 +206,18 @@ function WindowRow({ window }: { window: DialogueWindow }) {
   );
 }
 
-function StreamMessage({ message }: { message: SessionStreamMessage }) {
+function StreamMessage({
+  highlightedDialogueId,
+  message,
+}: {
+  highlightedDialogueId: string | null;
+  message: SessionStreamMessage;
+}) {
+  const dialogueHighlighted = message.dialogue_id === highlightedDialogueId;
   return (
     <li
       className={[
+        dialogueHighlighted ? "dialogue-chunk-highlighted" : "",
         message.produced_unit_ids.length ? "message-in-range" : "",
         `message-role-${message.role}`,
       ].join(" ")}

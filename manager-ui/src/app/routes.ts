@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 export type Route =
   | { name: "overview" }
   | { name: "sessions" }
-  | { name: "session-detail"; sessionId: string }
+  | { name: "session-detail"; sessionId: string; dialogueId: string | null }
   | { name: "dialogue-windows" }
   | { name: "memory-units" }
   | { name: "memory-unit-detail"; unitId: string }
@@ -21,11 +21,13 @@ export function useHashRoute(): Route {
   }, []);
 
   const path = hash.replace(/^#\/?/, "");
-  const routePath = path.split("?")[0];
+  const [routePath, queryString = ""] = path.split("?");
+  const query = new URLSearchParams(queryString);
   if (routePath.startsWith("sessions/")) {
     return {
       name: "session-detail",
       sessionId: decodeURIComponent(routePath.replace("sessions/", "")),
+      dialogueId: query.get("dialogue_id"),
     };
   }
   if (routePath.startsWith("memory-units/")) {

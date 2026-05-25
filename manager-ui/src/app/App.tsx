@@ -17,7 +17,7 @@ export function App() {
       {route.name === "overview" && <OverviewPage />}
       {route.name === "sessions" && <SessionsPage />}
       {route.name === "session-detail" && (
-        <SessionDetailPage sessionId={route.sessionId} />
+        <SessionDetailPage dialogueId={route.dialogueId} sessionId={route.sessionId} />
       )}
       {route.name === "dialogue-windows" && <DialogueWindowsPage />}
       {route.name === "memory-units" && <MemoryUnitsPage />}

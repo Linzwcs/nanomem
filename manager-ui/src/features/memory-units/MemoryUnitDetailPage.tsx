@@ -115,7 +115,10 @@ export function MemoryUnitDetailPage({ unitId }: { unitId: string }) {
                   {chunk.dialogue?.session_id ? (
                     <a
                       className="mono-link"
-                      href={`#/sessions/${encodeURIComponent(chunk.dialogue.session_id)}`}
+                      href={sourceDialogueHref(
+                        chunk.dialogue.session_id,
+                        chunk.dialogue.dialogue_id,
+                      )}
                     >
                       {chunk.dialogue.session_id}
                     </a>
@@ -151,6 +154,11 @@ export function MemoryUnitDetailPage({ unitId }: { unitId: string }) {
       </section>
     </section>
   );
+}
+
+function sourceDialogueHref(sessionId: string, dialogueId: string) {
+  const query = new URLSearchParams({ dialogue_id: dialogueId });
+  return `#/sessions/${encodeURIComponent(sessionId)}?${query.toString()}`;
 }
 
 function RecordRow({ label, value }: { label: string; value: string }) {

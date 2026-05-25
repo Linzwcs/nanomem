@@ -303,6 +303,12 @@ a:hover {
   padding: 10px 12px;
 }
 
+.notice-warn {
+  background: var(--amber-soft);
+  border-color: #f1d7aa;
+  color: var(--amber);
+}
+
 .overview-grid,
 .detail-grid,
 .retrieval-grid {
@@ -1002,6 +1008,12 @@ button:disabled {
   background: #f7f7f8;
 }
 
+.data-table tbody tr.dialogue-row-highlighted,
+.data-table tbody tr.dialogue-row-highlighted:hover {
+  background: #f7f7f8;
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
 .data-table tr:last-child td {
   border-bottom: 0;
 }
@@ -1495,6 +1507,15 @@ button:disabled {
 .dialogue-log li.message-in-range {
   background: #f7f7f8;
   box-shadow: inset 3px 0 0 #18181b;
+}
+
+.dialogue-log li.dialogue-chunk-highlighted {
+  background: #f7f7f8;
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.dialogue-log li.dialogue-chunk-highlighted + li.dialogue-chunk-highlighted {
+  border-top-color: #d4d4d8;
 }
 
 .stream-log {
