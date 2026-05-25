@@ -7,6 +7,7 @@ from nanomem.contracts import (
     CaptureDialogue,
     CaptureRequest,
     DialogueMessage,
+    FlushRequest,
     MemoryScope,
     MemoryUnitSelector,
     ReadRequest,
@@ -37,6 +38,14 @@ def main() -> None:
     service = NanoMemService(store=SQLiteMemoryUnitStore(path))
     for request in capture_requests():
         service.capture(request)
+        if request.session_id is not None:
+            service.flush(
+                FlushRequest(
+                    scope=request.scope,
+                    session_id=request.session_id,
+                    flush_time=request.capture_time,
+                )
+            )
 
     service.reindex()
     for request in read_requests():
@@ -50,8 +59,11 @@ def main() -> None:
             + ", ".join(missing_refs)
         )
 
+    stats = service.store.stats()
     print(f"database={path}")
     print(f"unit_count={len(units)}")
+    print(f"session_count={stats['session_count']}")
+    print(f"dialogue_window_count={stats['dialogue_window_count']}")
     print(f"dialogue_count={len({ref.dialogue_id for unit in units for ref in unit.dialogue_refs})}")
     print("missing_dialogue_refs=0")
     print("ready_for_manager=true")
@@ -64,6 +76,7 @@ def capture_requests() -> tuple[CaptureRequest, ...]:
             occurred_at="2026-05-01T09:00:00+00:00",
             capture_time="2026-05-01T09:00:05+00:00",
             scenario="preference",
+            session_id="demo-design-session",
             messages=(
                 message(
                     "user",
@@ -96,6 +109,7 @@ def capture_requests() -> tuple[CaptureRequest, ...]:
             occurred_at="2026-05-02T09:00:00+00:00",
             capture_time="2026-05-02T09:00:05+00:00",
             scenario="namespace_design_preference",
+            session_id="demo-design-session",
             messages=(
                 message(
                     "user",
@@ -128,6 +142,7 @@ def capture_requests() -> tuple[CaptureRequest, ...]:
             occurred_at="2026-05-03T09:00:00+00:00",
             capture_time="2026-05-03T09:00:05+00:00",
             scenario="workspace_skip_and_tool_log",
+            session_id="demo-design-session",
             messages=(
                 message(
                     "user",
@@ -166,6 +181,7 @@ def capture_requests() -> tuple[CaptureRequest, ...]:
             occurred_at="2026-05-04T09:00:00+00:00",
             capture_time="2026-05-04T09:00:05+00:00",
             scenario="correction",
+            session_id="demo-design-session",
             messages=(
                 message(
                     "assistant",
@@ -193,6 +209,7 @@ def capture_requests() -> tuple[CaptureRequest, ...]:
             occurred_at="2026-05-05T09:00:00+00:00",
             capture_time="2026-05-05T09:00:05+00:00",
             scenario="curated_memory",
+            session_id="demo-design-session",
             messages=(
                 message(
                     "user",
@@ -226,6 +243,7 @@ def capture_requests() -> tuple[CaptureRequest, ...]:
             occurred_at="2026-05-06T09:00:00+00:00",
             capture_time="2026-05-06T09:00:05+00:00",
             scenario="user_event",
+            session_id="demo-review-session",
             messages=(
                 message(
                     "assistant",
@@ -253,6 +271,7 @@ def capture_requests() -> tuple[CaptureRequest, ...]:
             occurred_at="2026-05-07T09:00:00+00:00",
             capture_time="2026-05-07T09:00:05+00:00",
             scenario="agent_behavior",
+            session_id="demo-review-session",
             messages=(
                 message(
                     "user",
@@ -285,6 +304,7 @@ def capture(
     capture_time: str,
     scenario: str,
     messages: tuple[DialogueMessage, ...],
+    session_id: str,
 ) -> CaptureRequest:
     return CaptureRequest(
         scope=MemoryScope(owner_id="user-sim", namespace=namespace),
@@ -294,6 +314,7 @@ def capture(
             metadata={"scenario": scenario},
         ),
         capture_time=capture_time,
+        session_id=session_id,
     )
 
 

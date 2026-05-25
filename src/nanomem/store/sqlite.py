@@ -108,6 +108,14 @@ class SQLiteMemoryUnitStore:
                     ),
                 )
 
+    def get_session(self, session_id: str) -> Session | None:
+        with self._lock:
+            row = self._connection.execute(
+                "SELECT * FROM sessions WHERE session_id = ?",
+                (session_id,),
+            ).fetchone()
+        return None if row is None else _row_to_session(row)
+
     def put_dialogue(self, dialogue: Dialogue) -> None:
         with self._lock:
             with self._connection:
@@ -176,6 +184,79 @@ class SQLiteMemoryUnitStore:
         with self._lock:
             rows = self._connection.execute(query, tuple(params)).fetchall()
         return tuple(_row_to_dialogue_window(row) for row in rows)
+
+    def list_sessions(
+        self,
+        *,
+        limit: int | None = 50,
+        offset: int = 0,
+        order: str = "newest_first",
+    ) -> tuple[Session, ...]:
+        if offset < 0:
+            raise ValueError("offset must be non-negative")
+        if limit is not None and limit < 0:
+            raise ValueError("limit must be non-negative")
+        direction = "ASC" if order == "oldest_first" else "DESC"
+        query = f"SELECT * FROM sessions ORDER BY updated_at {direction}, session_id ASC"
+        params: list[object] = []
+        if limit is not None:
+            query += " LIMIT ?"
+            params.append(limit)
+        elif offset:
+            query += " LIMIT -1"
+        if offset:
+            query += " OFFSET ?"
+            params.append(offset)
+        with self._lock:
+            rows = self._connection.execute(query, tuple(params)).fetchall()
+        return tuple(_row_to_session(row) for row in rows)
+
+    def count_sessions(self) -> int:
+        with self._lock:
+            row = self._connection.execute("SELECT COUNT(*) FROM sessions").fetchone()
+        return int(row[0]) if row is not None else 0
+
+    def list_dialogues(
+        self,
+        *,
+        session_id: str | None = None,
+        dialogue_ids: tuple[str, ...] = (),
+        limit: int | None = None,
+        offset: int = 0,
+        order: str = "oldest_first",
+    ) -> tuple[Dialogue, ...]:
+        if offset < 0:
+            raise ValueError("offset must be non-negative")
+        if limit is not None and limit < 0:
+            raise ValueError("limit must be non-negative")
+        clauses: list[str] = []
+        params: list[object] = []
+        if session_id is not None:
+            clauses.append("session_id = ?")
+            params.append(session_id)
+        if dialogue_ids:
+            clauses.append(
+                "dialogue_id IN (" + ", ".join("?" for _ in dialogue_ids) + ")"
+            )
+            params.extend(dialogue_ids)
+        query = "SELECT * FROM dialogues"
+        if clauses:
+            query += " WHERE " + " AND ".join(clauses)
+        direction = "ASC" if order == "oldest_first" else "DESC"
+        query += (
+            f" ORDER BY started_at {direction}, created_at {direction}, dialogue_id ASC"
+        )
+        if limit is not None:
+            query += " LIMIT ?"
+            params.append(limit)
+        elif offset:
+            query += " LIMIT -1"
+        if offset:
+            query += " OFFSET ?"
+            params.append(offset)
+        with self._lock:
+            rows = self._connection.execute(query, tuple(params)).fetchall()
+        return tuple(_row_to_dialogue(row) for row in rows)
 
     def append_operation_log(self, entry: OperationLogEntry) -> None:
         scope = entry.scope
@@ -280,6 +361,18 @@ class SQLiteMemoryUnitStore:
                 self._connection,
                 "SELECT COUNT(*) FROM dialogues",
             )
+            session_count = _scalar(
+                self._connection,
+                "SELECT COUNT(*) FROM sessions",
+            )
+            dialogue_window_count = _scalar(
+                self._connection,
+                "SELECT COUNT(*) FROM dialogue_windows",
+            )
+            open_dialogue_window_count = _scalar(
+                self._connection,
+                "SELECT COUNT(*) FROM dialogue_windows WHERE status = 'open'",
+            )
             operation_log_count = _scalar(
                 self._connection,
                 "SELECT COUNT(*) FROM operation_logs",
@@ -321,7 +414,10 @@ class SQLiteMemoryUnitStore:
             "active_unit_count": active_unit_count,
             "owner_count": owner_count,
             "namespace_count": namespace_count,
+            "session_count": session_count,
             "dialogue_count": dialogue_count,
+            "dialogue_window_count": dialogue_window_count,
+            "open_dialogue_window_count": open_dialogue_window_count,
             "operation_log_count": operation_log_count,
             "latest_operation_at": (
                 latest_operation["latest_at"] if latest_operation else None
@@ -943,6 +1039,15 @@ def _row_to_unit(row: sqlite3.Row) -> MemoryUnit:
         dialogue_refs=_dialogue_refs_from_json(row["dialogue_refs_json"]),
         retention_until=row["retention_until"],
         redacted_at=row["redacted_at"],
+        metadata=_load_json(row["metadata_json"]),
+    )
+
+
+def _row_to_session(row: sqlite3.Row) -> Session:
+    return Session(
+        session_id=row["session_id"],
+        created_at=row["created_at"],
+        updated_at=row["updated_at"],
         metadata=_load_json(row["metadata_json"]),
     )
 

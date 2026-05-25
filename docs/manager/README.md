@@ -21,6 +21,7 @@ stored, whether retrieval works, and which maintenance operations are needed.
 - `06-optimization-roadmap.md`: scaling, UX, and phased implementation.
 - `07-behavior-cases.md`: concrete manager acceptance cases.
 - `08-react-frontend-architecture.md`: proposed React/Vite frontend boundary.
+- `09-design-system.md`: visual system, interaction standards, and design QA.
 
 ## Relationship To Core Specs
 

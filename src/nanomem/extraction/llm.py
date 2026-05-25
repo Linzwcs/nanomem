@@ -50,7 +50,7 @@ Return JSON only:
   "units": [
     {
       "text": "...",
-      "message_range": [0, 1],
+      "message_range": null,
       "memory_type": "preference|correction|habit|background|relationship|user_event|agent_interaction_event|uncertain"
     }
   ],
@@ -65,8 +65,9 @@ Rules:
 - Only the visible extractable messages are provided; do not infer hidden/tool content.
 - Do not extract project docs, code facts, logs, current task state, or raw tool output.
 - Do not resolve conflicts or synthesize a canonical profile.
-- Every unit must include a valid half-open message_range over the provided original indexes.
-- A message_range must cover only contiguous provided messages; do not span omitted indexes.
+- message_range is optional evidence attribution. Use null by default.
+- If a unit has precise evidence, message_range may be a valid half-open range over the provided original indexes.
+- A non-null message_range must cover only contiguous provided messages; do not span omitted indexes.
 """.strip()
 
 
@@ -294,21 +295,20 @@ class LLMMemoryUnitExtractor:
                     strict=self.strict_schema,
                 )
                 continue
-            message_range = _message_range(
-                item.get("message_range"),
-                message_count=len(request.dialogue.messages),
-                strict=self.strict_schema,
-            )
-            if message_range is None:
-                skipped.append(
-                    CaptureSkip(
-                        message_range=None,
-                        reason="invalid_message_range",
-                        detail="unit message_range is required",
-                    )
+            raw_message_range = item.get("message_range")
+            message_range = (
+                None
+                if raw_message_range is None
+                else _message_range(
+                    raw_message_range,
+                    message_count=len(request.dialogue.messages),
+                    strict=self.strict_schema,
                 )
-                continue
-            if not _is_extractable_range(request, message_range):
+            )
+            if message_range is not None and not _is_extractable_range(
+                request,
+                message_range,
+            ):
                 _handle_invalid(
                     skipped,
                     message_range=message_range,
@@ -317,7 +317,10 @@ class LLMMemoryUnitExtractor:
                     strict=self.strict_schema,
                 )
                 continue
-            if not _range_within_indexes(message_range, allowed_indexes):
+            if message_range is not None and not _range_within_indexes(
+                message_range,
+                allowed_indexes,
+            ):
                 _handle_invalid(
                     skipped,
                     message_range=message_range,
@@ -406,8 +409,15 @@ class LLMMemoryUnitExtractor:
 
 def _timestamp_for_range(
     request: ExtractionRequest,
-    message_range: tuple[int, int],
+    message_range: tuple[int, int] | None,
 ) -> str:
+    if message_range is None:
+        return (
+            request.dialogue.ended_at
+            or request.dialogue.updated_at
+            or request.extraction_time
+            or request.dialogue.started_at
+        )
     start, end = message_range
     messages = request.dialogue.messages[start:end]
     if not messages:

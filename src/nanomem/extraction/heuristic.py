@@ -105,7 +105,7 @@ class HeuristicMemoryUnitExtractor:
                 continue
             dialogue_ref = DialogueRef(
                 dialogue_id=request.dialogue.dialogue_id,
-                message_range=(index, index + 1),
+                message_range=None,
             )
             unit_id = stable_id(
                 "unit",

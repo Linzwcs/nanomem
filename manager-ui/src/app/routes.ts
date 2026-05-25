@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 
 export type Route =
   | { name: "overview" }
+  | { name: "sessions" }
+  | { name: "session-detail"; sessionId: string }
+  | { name: "dialogue-windows" }
   | { name: "memory-units" }
   | { name: "memory-unit-detail"; unitId: string }
   | { name: "retrieval-preview" }
@@ -19,12 +22,20 @@ export function useHashRoute(): Route {
 
   const path = hash.replace(/^#\/?/, "");
   const routePath = path.split("?")[0];
+  if (routePath.startsWith("sessions/")) {
+    return {
+      name: "session-detail",
+      sessionId: decodeURIComponent(routePath.replace("sessions/", "")),
+    };
+  }
   if (routePath.startsWith("memory-units/")) {
     return {
       name: "memory-unit-detail",
       unitId: decodeURIComponent(routePath.replace("memory-units/", "")),
     };
   }
+  if (routePath === "sessions") return { name: "sessions" };
+  if (routePath === "dialogue-windows") return { name: "dialogue-windows" };
   if (routePath === "memory-units") return { name: "memory-units" };
   if (routePath === "retrieval-preview") return { name: "retrieval-preview" };
   if (routePath === "operations") return { name: "operations" };

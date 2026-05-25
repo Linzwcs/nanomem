@@ -47,10 +47,29 @@ export function MemoryUnitDetailPage({ unitId }: { unitId: string }) {
 
       <div className="detail-grid">
         <section className="panel fact-panel">
+          <div className="fact-card-header">
+            <div>
+              <p className="eyebrow">Processed Fact</p>
+              <h2>{unit.memory_type}</h2>
+            </div>
+            <Badge tone={unit.redacted_at ? "warn" : "good"}>
+              {unit.redacted_at ? "redacted" : "active"}
+            </Badge>
+          </div>
           <p className="fact-text">{unit.text}</p>
-          <div className="fact-badges">
-            <Badge>{unit.memory_type}</Badge>
-            <Badge tone="muted">{unit.scope.namespace ?? "default"}</Badge>
+          <div className="fact-meta-grid">
+            <span>
+              <strong>Owner</strong>
+              {unit.scope.owner_id}
+            </span>
+            <span>
+              <strong>Namespace</strong>
+              {unit.scope.namespace ?? "default"}
+            </span>
+            <span>
+              <strong>Source</strong>
+              {sourceChunks.length} {sourceChunks.length === 1 ? "dialogue" : "dialogues"}
+            </span>
           </div>
         </section>
 
@@ -81,11 +100,27 @@ export function MemoryUnitDetailPage({ unitId }: { unitId: string }) {
           {sourceChunks.map((chunk, index) => (
             <article className="source-block" key={`${chunk.range_label}-${index}`}>
               <div className="source-header">
-                <Badge tone={chunk.status === "ok" ? "good" : "warn"}>
-                  {chunk.status}
-                </Badge>
-                <span>{chunk.range_label}</span>
-                <span>{chunk.dialogue?.dialogue_id ?? "missing dialogue"}</span>
+                <div className="source-title">
+                  <Badge tone={chunk.status === "ok" ? "good" : "warn"}>
+                    {chunk.status}
+                  </Badge>
+                  <span className="mono-text">
+                    {chunk.dialogue?.dialogue_id ?? "missing dialogue"}
+                  </span>
+                </div>
+                <div className="source-actions">
+                  <Badge tone={chunk.ref.message_range ? "neutral" : "muted"}>
+                    {chunk.range_label}
+                  </Badge>
+                  {chunk.dialogue?.session_id ? (
+                    <a
+                      className="mono-link"
+                      href={`#/sessions/${encodeURIComponent(chunk.dialogue.session_id)}`}
+                    >
+                      {chunk.dialogue.session_id}
+                    </a>
+                  ) : null}
+                </div>
               </div>
               <ol className="dialogue-log">
                 {(chunk.dialogue_messages ?? chunk.messages).map((message) => (

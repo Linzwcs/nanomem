@@ -68,9 +68,9 @@ PYTHONPATH=src python scripts/build_complete_test_db.py --force
 
 All stored units are now produced through `CapturePipeline`, including the
 curated/manual namespace case. This means every `MemoryUnit.dialogue_refs` entry
-points to an existing `Dialogue` and a valid half-open message range.
-Each fixture dialogue is multi-turn, so the admin manager can show the exact
-extracted message range inside the surrounding original conversation log.
+points to an existing `Dialogue`. `message_range` defaults to `None`, so the
+admin manager treats the whole source dialogue as evidence unless a future
+extractor provides a precise range.
 
 The script verifies this invariant before exiting:
 
@@ -117,9 +117,8 @@ Top owner/namespace counts:
 - `user-sim / agent`: 1 unit
 
 Dialogue evidence links were also verified: all units point back to existing
-`Dialogue` rows with valid `message_range` values. The seven
-`Dialogue` rows contain realistic multi-turn user, assistant, and tool
-messages rather than single-message events.
+`Dialogue` rows. The seven `Dialogue` rows contain realistic multi-turn user,
+assistant, and tool messages rather than single-message events.
 
 ## 6. Issue Found And Fixed
 

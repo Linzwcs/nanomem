@@ -9,10 +9,14 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 from nanomem.control.service import NanoMemControlService
 from nanomem.contracts import (
+    Dialogue,
+    DialogueWindow,
+    DialogueWindowSelector,
     MemoryUnit,
     MemoryUnitSelector,
     OperationLogEntry,
     OperationLogSelector,
+    Session,
     TimeRange,
 )
 from nanomem.ids import new_id
@@ -46,6 +50,13 @@ def handle_manager_get(
     query = parse_qs(parsed.query, keep_blank_values=False)
     if normalized_path == "/manager/api/stats":
         return _json_response(_stats_payload(service))
+    if normalized_path == "/manager/api/sessions":
+        return _json_response(_sessions_payload(service, query))
+    if normalized_path.startswith("/manager/api/sessions/"):
+        session_id = unquote(normalized_path.removeprefix("/manager/api/sessions/"))
+        return _json_response(_session_payload(service, session_id))
+    if normalized_path == "/manager/api/dialogue-windows":
+        return _json_response(_dialogue_windows_payload(service, query))
     if normalized_path == "/manager/api/memory-units":
         return _json_response(_memory_units_payload(service, query))
     if normalized_path.startswith("/manager/api/memory-units/"):
@@ -120,6 +131,110 @@ def _memory_units_payload(
     }
 
 
+def _sessions_payload(
+    service: NanoMemService,
+    query: dict[str, list[str]],
+) -> dict[str, Any]:
+    limit = _limit(query, default=50)
+    offset = _offset(query)
+    order = _order(query)
+    if not hasattr(service.store, "list_sessions"):
+        return {
+            "count": 0,
+            "total_count": 0,
+            "offset": offset,
+            "limit": limit,
+            "has_more": False,
+            "sessions": [],
+        }
+    sessions = service.store.list_sessions(  # type: ignore[attr-defined]
+        limit=limit,
+        offset=offset,
+        order=order,
+    )
+    total_count = (
+        service.store.count_sessions()  # type: ignore[attr-defined]
+        if hasattr(service.store, "count_sessions")
+        else len(sessions)
+    )
+    return {
+        "count": len(sessions),
+        "total_count": total_count,
+        "offset": offset,
+        "limit": limit,
+        "has_more": offset + len(sessions) < total_count,
+        "sessions": [_session_summary_payload(service, session) for session in sessions],
+    }
+
+
+def _session_payload(
+    service: NanoMemService,
+    session_id: str,
+) -> dict[str, Any]:
+    session = (
+        service.store.get_session(session_id)  # type: ignore[attr-defined]
+        if hasattr(service.store, "get_session")
+        else None
+    )
+    if session is None:
+        raise KeyError(f"Session not found: {session_id}")
+    dialogues = _session_dialogues(service, session_id)
+    windows = service.store.query_dialogue_windows(
+        DialogueWindowSelector(
+            session_id=session_id,
+            limit=None,
+            order="oldest_first",
+        )
+    )
+    units = _units_for_dialogues(service, tuple(dialogue.dialogue_id for dialogue in dialogues))
+    return {
+        "session": _session_summary_payload(service, session),
+        "dialogues": [_dialogue_summary_payload(dialogue) for dialogue in dialogues],
+        "windows": [
+            _window_payload(service, window, units=units)
+            for window in windows
+        ],
+        "messages": _session_message_stream_payload(dialogues, windows, units),
+        "produced_units": [asdict(unit) for unit in units],
+        "operation_logs": [
+            asdict(log)
+            for log in service.store.list_operation_logs(
+                OperationLogSelector(limit=30)
+            )
+            if log.summary.get("session_id") == session_id
+            or log.payload.get("session_id") == session_id
+        ],
+    }
+
+
+def _dialogue_windows_payload(
+    service: NanoMemService,
+    query: dict[str, list[str]],
+) -> dict[str, Any]:
+    selector = DialogueWindowSelector(
+        session_id=_single(query, "session_id"),
+        statuses=tuple(_many(query, "status")),
+        limit=_limit(query, default=50),
+        offset=_offset(query),
+        order=_order(query),
+    )
+    windows = service.store.query_dialogue_windows(selector)
+    all_windows = service.store.query_dialogue_windows(
+        replace(selector, limit=None, offset=0)
+    )
+    dialogue_ids = tuple(window.dialogue_id for window in windows)
+    units = _units_for_dialogues(service, dialogue_ids)
+    return {
+        "selector": asdict(selector),
+        "count": len(windows),
+        "total_count": len(all_windows),
+        "offset": selector.offset,
+        "limit": selector.limit,
+        "has_more": selector.offset + len(windows) < len(all_windows),
+        "windows": [_window_payload(service, window, units=units) for window in windows],
+    }
+
+
 def _memory_unit_payload(
     service: NanoMemService,
     unit_id: str,
@@ -179,11 +294,12 @@ def _source_chunks_payload(
             len(dialogue.messages),
             ref.message_range,
         )
+        has_message_range = ref.message_range is not None
         indices = range(resolved_range[0], resolved_range[1])
         messages = [
             {
                 "index": index,
-                "in_ref_range": True,
+                "in_ref_range": has_message_range,
                 **asdict(dialogue.messages[index]),
             }
             for index in indices
@@ -191,7 +307,10 @@ def _source_chunks_payload(
         dialogue_messages = [
             {
                 "index": index,
-                "in_ref_range": resolved_range[0] <= index < resolved_range[1],
+                "in_ref_range": (
+                    has_message_range
+                    and resolved_range[0] <= index < resolved_range[1]
+                ),
                 **asdict(message),
             }
             for index, message in enumerate(dialogue.messages)
@@ -201,6 +320,7 @@ def _source_chunks_payload(
                 "ref": asdict(ref),
                 "dialogue": {
                     "dialogue_id": dialogue.dialogue_id,
+                    "session_id": dialogue.session_id,
                     "started_at": dialogue.started_at,
                     "ended_at": dialogue.ended_at,
                     "created_at": dialogue.created_at,
@@ -230,6 +350,155 @@ def _source_chunks_payload(
     return chunks
 
 
+def _session_summary_payload(
+    service: NanoMemService,
+    session: Session,
+) -> dict[str, Any]:
+    dialogues = _session_dialogues(service, session.session_id)
+    windows = service.store.query_dialogue_windows(
+        DialogueWindowSelector(session_id=session.session_id, limit=None)
+    )
+    units = _units_for_dialogues(
+        service,
+        tuple(dialogue.dialogue_id for dialogue in dialogues),
+    )
+    return {
+        **asdict(session),
+        "dialogue_count": len(dialogues),
+        "window_count": len(windows),
+        "window_counts": _window_counts(windows),
+        "message_count": sum(len(dialogue.messages) for dialogue in dialogues),
+        "produced_unit_count": len(units),
+        "latest_message_at": _latest_message_at(dialogues),
+    }
+
+
+def _session_dialogues(
+    service: NanoMemService,
+    session_id: str,
+) -> tuple[Dialogue, ...]:
+    if hasattr(service.store, "list_dialogues"):
+        return service.store.list_dialogues(  # type: ignore[attr-defined]
+            session_id=session_id,
+            limit=None,
+            order="oldest_first",
+        )
+    return ()
+
+
+def _dialogue_summary_payload(dialogue: Dialogue) -> dict[str, Any]:
+    return {
+        "dialogue_id": dialogue.dialogue_id,
+        "session_id": dialogue.session_id,
+        "started_at": dialogue.started_at,
+        "ended_at": dialogue.ended_at,
+        "created_at": dialogue.created_at,
+        "updated_at": dialogue.updated_at,
+        "message_count": len(dialogue.messages),
+        "checksum": dialogue.checksum,
+        "metadata": dialogue.metadata,
+        "retention_until": dialogue.retention_until,
+        "redacted_at": dialogue.redacted_at,
+    }
+
+
+def _window_payload(
+    service: NanoMemService,
+    window: DialogueWindow,
+    *,
+    units: tuple[MemoryUnit, ...] | None = None,
+) -> dict[str, Any]:
+    dialogue = service.store.get_dialogue(window.dialogue_id)
+    related_units = tuple(
+        unit
+        for unit in (units if units is not None else _units_for_dialogues(service, (window.dialogue_id,)))
+        if any(ref.dialogue_id == window.dialogue_id for ref in unit.dialogue_refs)
+    )
+    return {
+        **asdict(window),
+        "dialogue": None if dialogue is None else _dialogue_summary_payload(dialogue),
+        "produced_unit_count": len(related_units),
+        "produced_unit_ids": [unit.unit_id for unit in related_units],
+    }
+
+
+def _session_message_stream_payload(
+    dialogues: tuple[Dialogue, ...],
+    windows: tuple[DialogueWindow, ...],
+    units: tuple[MemoryUnit, ...],
+) -> list[dict[str, Any]]:
+    window_by_dialogue = {window.dialogue_id: window for window in windows}
+    stream: list[dict[str, Any]] = []
+    index = 0
+    for dialogue in dialogues:
+        window = window_by_dialogue.get(dialogue.dialogue_id)
+        for local_index, message in enumerate(dialogue.messages):
+            produced_unit_ids = [
+                unit.unit_id
+                for unit in units
+                if _unit_references_message(unit, dialogue.dialogue_id, local_index)
+            ]
+            stream.append(
+                {
+                    "index": index,
+                    "dialogue_id": dialogue.dialogue_id,
+                    "local_index": local_index,
+                    "window_status": window.status if window else None,
+                    "window_seal_reason": window.seal_reason if window else None,
+                    "produced_unit_ids": produced_unit_ids,
+                    **asdict(message),
+                }
+            )
+            index += 1
+    return stream
+
+
+def _units_for_dialogues(
+    service: NanoMemService,
+    dialogue_ids: tuple[str, ...],
+) -> tuple[MemoryUnit, ...]:
+    if not dialogue_ids:
+        return ()
+    dialogue_id_set = set(dialogue_ids)
+    return tuple(
+        unit
+        for unit in service.store.query_units(MemoryUnitSelector(limit=None))
+        if any(ref.dialogue_id in dialogue_id_set for ref in unit.dialogue_refs)
+    )
+
+
+def _unit_references_message(
+    unit: MemoryUnit,
+    dialogue_id: str,
+    local_index: int,
+) -> bool:
+    for ref in unit.dialogue_refs:
+        if ref.dialogue_id != dialogue_id:
+            continue
+        if ref.message_range is None:
+            return True
+        start, end = ref.message_range
+        if start <= local_index < end:
+            return True
+    return False
+
+
+def _window_counts(windows: tuple[DialogueWindow, ...]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for window in windows:
+        counts[window.status] = counts.get(window.status, 0) + 1
+    return counts
+
+
+def _latest_message_at(dialogues: tuple[Dialogue, ...]) -> str | None:
+    latest: str | None = None
+    for dialogue in dialogues:
+        for message in dialogue.messages:
+            if latest is None or message.timestamp > latest:
+                latest = message.timestamp
+    return latest
+
+
 def _resolved_message_range(
     message_count: int,
     message_range: tuple[int, int] | None,
@@ -244,7 +513,7 @@ def _resolved_message_range(
 
 def _range_label(message_range: tuple[int, int] | None) -> str:
     if message_range is None:
-        return "whole dialogue"
+        return "Full dialogue"
     return f"messages [{message_range[0]}, {message_range[1]})"
 
 

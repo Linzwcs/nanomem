@@ -28,11 +28,11 @@ def test_extraction_eval_report_matches_expected_units_and_skips() -> None:
                     )
                 ),
                 expected_units=(
-                    ExpectedMemoryUnit(
-                        memory_type="preference",
-                        message_range=(0, 1),
-                        text_contains=("i prefer concise chinese answers",),
-                    ),
+                        ExpectedMemoryUnit(
+                            memory_type="preference",
+                            message_range=None,
+                            text_contains=("i prefer concise chinese answers",),
+                        ),
                 ),
                 expected_skips=(
                     ExpectedSkip(

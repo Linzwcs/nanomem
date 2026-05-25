@@ -12,8 +12,9 @@ durable memory, retrieval candidates, and rendered context.
 
 ```text
 Session         -> groups related capture streams
-Dialogue        -> archived user-visible messages
-DialogueWindow  -> buffering and extraction lifecycle
+Message stream  -> ordered user-visible messages inside a session
+Dialogue        -> archived extraction chunk over the message stream
+DialogueWindow  -> buffering and extraction lifecycle for one chunk
 MemoryUnit      -> durable personal fact
 IndexHit        -> derived retrieval candidate
 RankedUnit      -> ordered evidence
@@ -42,9 +43,10 @@ These rules are part of the first-version contract:
 - Session and Dialogue do not carry memory ownership. `owner_id` and
   `namespace` belong to MemoryUnit and extraction routing, not raw dialogue.
 - Capture archives a `Dialogue` before extraction. Without `session_id`,
-  the request is treated as one complete dialogue and may be extracted
-  immediately. With `session_id`, capture appends to the session's open
-  DialogueWindow until it is sealed by token limit or explicit flush.
+  the request is treated as one complete extraction chunk and may be extracted
+  immediately. With `session_id`, capture appends messages to the session's
+  ordered message stream and to the active DialogueWindow until it is sealed by
+  token limit or explicit flush.
 - DialogueWindow is internal control state. It must not carry `owner_id`,
   `namespace`, extracted fact text, or message content.
 - `DialogueRef.message_range` is a message-index range, not a token, byte, or
@@ -154,8 +156,10 @@ DialogueRef:
   message_range: tuple[int, int] | None
 ```
 
-`message_range` is a half-open range `[start, end)` over the archived message
-list. `None` means the whole dialogue. First-version refs should avoid
+`message_range` is optional extractor-provided evidence attribution. When
+present, it is a half-open range `[start, end)` over the archived message list.
+`None` means the whole dialogue and should be the first-version default.
+First-version refs should avoid
 `turn_id`, `message_index`, `role`, `char_range`, and arbitrary ref metadata;
 those values are either derivable from the archived dialogue or too dependent
 on the host agent harness.
@@ -173,10 +177,10 @@ External resources such as files, PDFs, images, browser pages, CRM records, and
 tool results are not first-class NanoMem evidence. The agent or tool should
 consume them, and only user-visible dialogue should be archived for reference.
 
-## 6. Session, Dialogue, And DialogueWindow
+## 6. Session, Message Stream, Dialogue, And DialogueWindow
 
 `Session` groups related capture payloads. It exists so multiple concurrent
-agent sessions do not append messages into the same dialogue by accident.
+agent sessions do not append messages into the same stream by accident.
 
 ```python
 Session:
@@ -186,10 +190,15 @@ Session:
   metadata: dict
 ```
 
-`Dialogue` is raw control-plane evidence. It stores one user-visible
-message list so operators can audit, debug, delete, or re-extract memories.
-Its only grouping owner is `session_id`; it does not carry `owner_id`,
-`namespace`, `scope`, extraction status, or token counters.
+The human-facing raw view of a session is its ordered message stream. The stream
+is what the manager should display: messages in chronological order with role,
+speaker id, timestamp, and content.
+
+`Dialogue` is an archived extraction chunk over that stream. It stores the
+message list used for one extraction attempt so operators can audit, debug,
+delete, or re-extract produced memories. It is not the main user-facing
+"conversation" object. Its only grouping owner is `session_id`; it does not
+carry `owner_id`, `namespace`, `scope`, extraction status, or token counters.
 
 ```python
 DialogueMessage:
@@ -221,9 +230,9 @@ Dialogue:
 ```
 
 `DialogueWindow` is internal buffering state for one session and one active
-Dialogue. It controls when messages are appended, when a dialogue is
-sealed, and whether extraction succeeded. It does not store message content and
-does not decide memory ownership.
+extraction chunk. It controls when captured messages are still buffered, when
+the current chunk is sealed, and whether extraction succeeded. It does not
+store message content and does not decide memory ownership.
 
 ```python
 DialogueWindow:
@@ -260,8 +269,11 @@ Dialogues:
 - are not exposed through agent-facing MCP tools;
 - have retention separate from MemoryUnits.
 
-First local storage can keep Sessions, Dialogues, DialogueWindows,
-and MemoryUnits in SQLite, but in separate tables and separate access paths.
+First local storage can keep Sessions, Dialogues, DialogueWindows, and
+MemoryUnits in SQLite, but in separate tables and separate access paths. The
+manager may reconstruct a session message stream by ordering the session's
+Dialogue chunks and messages; later storage can make messages first-class if
+that becomes necessary for efficient inspection.
 
 ## 7. Dialogue Capture Source
 

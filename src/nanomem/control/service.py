@@ -29,7 +29,10 @@ class DatabaseStats:
     active_unit_count: int
     owner_count: int
     namespace_count: int
+    session_count: int
     dialogue_count: int
+    dialogue_window_count: int
+    open_dialogue_window_count: int
     operation_log_count: int
     applied_schema_migration_count: int = 0
     pending_schema_migration_count: int = 0
@@ -169,7 +172,12 @@ class NanoMemControlService:
             active_unit_count=active_unit_count,
             owner_count=int(payload["owner_count"]),
             namespace_count=int(payload["namespace_count"]),
+            session_count=int(payload.get("session_count", 0)),
             dialogue_count=int(payload["dialogue_count"]),
+            dialogue_window_count=int(payload.get("dialogue_window_count", 0)),
+            open_dialogue_window_count=int(
+                payload.get("open_dialogue_window_count", 0)
+            ),
             operation_log_count=int(payload["operation_log_count"]),
             applied_schema_migration_count=int(
                 payload["applied_schema_migration_count"],

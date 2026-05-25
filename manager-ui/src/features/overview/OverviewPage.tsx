@@ -43,8 +43,15 @@ export function OverviewPage() {
       <div className="metric-grid">
         <Metric label="Memory units" value={payload?.unit_count} />
         <Metric label="Active units" value={payload?.active_unit_count} />
+        <Metric label="Sessions" value={payload?.session_count} />
+        <Metric label="Open windows" value={payload?.open_dialogue_window_count} />
+      </div>
+
+      <div className="metric-grid">
         <Metric label="Dialogues" value={payload?.dialogue_count} />
+        <Metric label="Dialogue windows" value={payload?.dialogue_window_count} />
         <Metric label="Index documents" value={payload?.index_document_count} />
+        <Metric label="Operations" value={payload?.operation_log_count} />
       </div>
 
       <div className="overview-grid">

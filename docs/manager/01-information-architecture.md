@@ -2,13 +2,15 @@
 
 Status: draft
 
-The manager should be organized around stable NanoMem objects and the
-links between them.
+The manager should be organized around the user-visible memory flow and the
+links between stored objects. Dialogue chunks are implementation evidence for
+extraction; the human-facing raw view is the ordered session message stream.
 
 ```text
 Overview
+Sessions
+Dialogue Windows
 Memory Units
-Dialogue Evidence
 Operation Logs
 Retrieval Lab
 Index Health
@@ -27,6 +29,34 @@ Shows store and index health:
 - index lag: `store unit_count - index_document_count`;
 - oldest and newest memory timestamps;
 - top owner/namespace pairs.
+
+## Sessions
+
+The main debugging entry point for agent integrations. A session page should
+show one chronological message stream and overlay extraction windows on top of
+that stream.
+
+Rows or sections should show:
+
+- session id and latest capture time;
+- open, sealed, extracted, and failed window counts;
+- total message count;
+- produced memory count;
+- latest operation.
+
+The session detail page should not split the user's view by Dialogue ids first.
+It should show messages in order, then mark which DialogueWindow/chunk processed
+which message range.
+
+## Dialogue Windows
+
+The operational view of extraction buffering. This page answers why a capture
+did or did not produce MemoryUnits.
+
+Rows should show session id, dialogue id, status, message count, token count,
+seal reason, updated time, and produced unit count. Detail should link back to
+the session stream, highlight the covered message range, and list produced
+MemoryUnits.
 
 ## Memory Units
 
@@ -47,9 +77,9 @@ dialogue ref count.
 
 ## Dialogue Evidence
 
-This is an audit surface, not a chat UI. It shows source dialogue metadata,
-selected message ranges, and produced memory units. Raw message content should
-be explicitly gated in hosted deployments.
+This is an audit surface, not a chat UI and not the primary session view. It
+shows extraction chunk metadata, selected message ranges, and produced memory
+units. Raw message content should be explicitly gated in hosted deployments.
 
 ## Operation Logs
 
@@ -73,6 +103,13 @@ Keep object links explicit:
 
 ```text
 query -> ranked MemoryUnit -> DialogueRef -> Dialogue -> OperationLogEntry
+```
+
+For manager UX, prefer:
+
+```text
+Session message stream -> DialogueWindow overlay -> produced MemoryUnit
+MemoryUnit -> DialogueRef -> source Dialogue -> optional highlighted messages
 ```
 
 Each object should have a stable URL and copyable id. Do not pack every detail

@@ -117,10 +117,12 @@ a non-null namespace.
 Every MemoryUnit needs `timestamp` and `available_at`.
 
 - `timestamp` is the evidence time for the fact.
-- If a fact comes from one message, use that message timestamp.
-- If a fact spans multiple messages, use the latest message timestamp in the
-  `DialogueRef.message_range`.
-- If exact message time is unavailable, use `Dialogue.started_at`.
+- If the extractor has a clear evidence message internally, it may use that
+  message timestamp even when `DialogueRef.message_range` stays `None`.
+- If a future extractor provides a precise `DialogueRef.message_range`, it may
+  use the latest message timestamp in that range.
+- If exact evidence time is unavailable, use `Dialogue.ended_at` or
+  `Dialogue.started_at` as the dialogue-level fallback.
 - `available_at` is the extraction time when the unit becomes searchable.
 
 All timestamps must be ISO 8601 with timezone.
@@ -150,9 +152,13 @@ deterministic:
 - send only extractable visible messages to the model;
 - keep original dialogue message indexes in the prompt payload;
 - call the model per internal extraction chunk;
-- require every accepted unit to return a valid `message_range`;
-- reject ranges that cross hidden, tool, empty, or otherwise skipped messages;
-- reject ranges outside the current chunk;
+- default accepted units to `message_range = None`, meaning the whole source
+  dialogue is evidence;
+- allow an extractor to return a precise `message_range` later as optional
+  evidence attribution;
+- reject non-null ranges that cross hidden, tool, empty, or otherwise skipped
+  messages;
+- reject non-null ranges outside the current chunk;
 - classify `memory_type` using the first-version allowed set;
 - use fallback extraction when provider calls or strict schema validation fail.
 

@@ -1,9 +1,12 @@
 import type {
+  DialogueWindowsResponse,
   MemoryUnitDetailResponse,
   MemoryUnitsResponse,
   OperationLogsResponse,
   ReindexResponse,
   RetrievalPreviewResponse,
+  SessionDetailResponse,
+  SessionsResponse,
   StatsResponse,
 } from "./types";
 
@@ -16,6 +19,22 @@ export async function getStats() {
 export async function getMemoryUnits(params: Record<string, QueryValue>) {
   return apiGet<MemoryUnitsResponse>(
     `/manager/api/memory-units${queryString(params)}`,
+  );
+}
+
+export async function getSessions(params: Record<string, QueryValue>) {
+  return apiGet<SessionsResponse>(`/manager/api/sessions${queryString(params)}`);
+}
+
+export async function getSession(sessionId: string) {
+  return apiGet<SessionDetailResponse>(
+    `/manager/api/sessions/${encodeURIComponent(sessionId)}`,
+  );
+}
+
+export async function getDialogueWindows(params: Record<string, QueryValue>) {
+  return apiGet<DialogueWindowsResponse>(
+    `/manager/api/dialogue-windows${queryString(params)}`,
   );
 }
 

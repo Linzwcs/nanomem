@@ -26,6 +26,86 @@ export type MemoryUnit = {
   metadata: Record<string, unknown>;
 };
 
+export type SessionSummary = {
+  session_id: string;
+  created_at: string;
+  updated_at: string;
+  metadata: Record<string, unknown>;
+  dialogue_count: number;
+  window_count: number;
+  window_counts: Record<string, number>;
+  message_count: number;
+  produced_unit_count: number;
+  latest_message_at: string | null;
+};
+
+export type DialogueSummary = {
+  dialogue_id: string;
+  session_id: string | null;
+  started_at: string;
+  ended_at: string;
+  created_at: string;
+  updated_at: string;
+  message_count: number;
+  checksum: string | null;
+  metadata: Record<string, unknown>;
+  retention_until: string | null;
+  redacted_at: string | null;
+};
+
+export type DialogueWindow = {
+  session_id: string;
+  dialogue_id: string;
+  status: string;
+  token_count: number;
+  message_count: number;
+  created_at: string;
+  updated_at: string;
+  sealed_at: string | null;
+  extracted_at: string | null;
+  seal_reason: string | null;
+  metadata: Record<string, unknown>;
+  dialogue: DialogueSummary | null;
+  produced_unit_count: number;
+  produced_unit_ids: string[];
+};
+
+export type SessionStreamMessage = DialogueMessage & {
+  index: number;
+  dialogue_id: string;
+  local_index: number;
+  window_status: string | null;
+  window_seal_reason: string | null;
+  produced_unit_ids: string[];
+};
+
+export type SessionsResponse = {
+  count: number;
+  total_count: number;
+  offset: number;
+  limit: number | null;
+  has_more: boolean;
+  sessions: SessionSummary[];
+};
+
+export type SessionDetailResponse = {
+  session: SessionSummary;
+  dialogues: DialogueSummary[];
+  windows: DialogueWindow[];
+  messages: SessionStreamMessage[];
+  produced_units: MemoryUnit[];
+  operation_logs: OperationLog[];
+};
+
+export type DialogueWindowsResponse = {
+  count: number;
+  total_count: number;
+  offset: number;
+  limit: number | null;
+  has_more: boolean;
+  windows: DialogueWindow[];
+};
+
 export type MemoryUnitsResponse = {
   count: number;
   total_count: number;
@@ -46,6 +126,7 @@ export type DialogueMessage = {
 };
 
 export type SourceChunk = {
+  ref: DialogueRef;
   status: string;
   range_label: string;
   resolved_range: [number, number] | null;
@@ -56,8 +137,11 @@ export type SourceChunk = {
   dialogue_messages?: DialogueMessage[];
   dialogue: {
     dialogue_id: string;
-    occurred_at: string;
-    captured_at: string;
+    session_id: string | null;
+    started_at: string;
+    ended_at: string;
+    created_at: string;
+    updated_at: string;
     checksum: string | null;
     metadata: Record<string, unknown>;
   } | null;
@@ -78,7 +162,10 @@ export type StatsResponse = {
   active_unit_count: number;
   owner_count: number;
   namespace_count: number;
+  session_count: number;
   dialogue_count: number;
+  dialogue_window_count: number;
+  open_dialogue_window_count: number;
   operation_log_count: number;
   latest_operation_at: string | null;
   oldest_timestamp: string | null;

@@ -6,6 +6,7 @@ from nanomem.contracts import (
     CaptureDialogue,
     CaptureRequest,
     DialogueMessage,
+    FlushRequest,
     MemoryScope,
 )
 from nanomem.server.manager import handle_manager_get, handle_manager_post
@@ -97,16 +98,13 @@ def test_manager_api_lists_stats_units_dialogue_and_logs() -> None:
 
     unit = _json(handle_manager_get(service, f"/manager/api/memory-units/{unit_id}"))
     assert unit["unit"]["text"] == "I prefer concise Chinese answers."
-    assert unit["source_chunks"][0]["ref"]["message_range"] == [1, 2]
+    assert unit["source_chunks"][0]["ref"]["message_range"] is None
     assert unit["source_chunks"][0]["status"] == "ok"
-    assert unit["source_chunks"][0]["range_label"] == "messages [1, 2)"
-    assert unit["source_chunks"][0]["resolved_message_count"] == 1
-    assert unit["source_chunks"][0]["messages"][0]["content"] == (
-        "I prefer concise Chinese answers."
-    )
+    assert unit["source_chunks"][0]["range_label"] == "Full dialogue"
+    assert unit["source_chunks"][0]["resolved_message_count"] == 2
     assert len(unit["source_chunks"][0]["dialogue_messages"]) == 2
     assert unit["source_chunks"][0]["dialogue_messages"][0]["in_ref_range"] is False
-    assert unit["source_chunks"][0]["dialogue_messages"][1]["in_ref_range"] is True
+    assert unit["source_chunks"][0]["dialogue_messages"][1]["in_ref_range"] is False
 
     dialogue = _json(handle_manager_get(service, f"/manager/api/dialogues/{dialogue_id}"))
     assert dialogue["dialogue"]["dialogue_id"] == dialogue_id
@@ -201,6 +199,128 @@ def test_manager_api_paginates_memory_units_and_reports_totals() -> None:
     assert second_page["total_count"] == 3
     assert second_page["offset"] == 2
     assert second_page["has_more"] is False
+
+
+def test_manager_api_exposes_session_stream_and_dialogue_windows() -> None:
+    service = NanoMemService(max_dialogue_tokens=512)
+    scope = MemoryScope(owner_id="user-1", namespace="personal")
+
+    first = service.capture(
+        CaptureRequest(
+            scope=scope,
+            session_id="session-a",
+            dialogue=CaptureDialogue(
+                occurred_at="2026-01-01T00:00:00+00:00",
+                messages=(
+                    DialogueMessage(
+                        role="user",
+                        content="I prefer compact answers.",
+                        timestamp="2026-01-01T00:00:00+00:00",
+                    ),
+                ),
+            ),
+            capture_time="2026-01-01T00:00:01+00:00",
+        )
+    )
+    second = service.capture(
+        CaptureRequest(
+            scope=scope,
+            session_id="session-a",
+            dialogue=CaptureDialogue(
+                occurred_at="2026-01-01T00:01:00+00:00",
+                messages=(
+                    DialogueMessage(
+                        role="assistant",
+                        content="I will keep replies compact.",
+                        timestamp="2026-01-01T00:01:00+00:00",
+                    ),
+                ),
+            ),
+            capture_time="2026-01-01T00:01:01+00:00",
+        )
+    )
+
+    assert first.dialogue_id == second.dialogue_id
+
+    sessions = _json(handle_manager_get(service, "/manager/api/sessions"))
+    assert sessions["count"] == 1
+    assert sessions["sessions"][0]["session_id"] == "session-a"
+    assert sessions["sessions"][0]["message_count"] == 2
+    assert sessions["sessions"][0]["window_counts"] == {"open": 1}
+    assert sessions["sessions"][0]["produced_unit_count"] == 0
+
+    detail = _json(handle_manager_get(service, "/manager/api/sessions/session-a"))
+    assert len(detail["messages"]) == 2
+    assert detail["messages"][0]["index"] == 0
+    assert detail["messages"][0]["dialogue_id"] == first.dialogue_id
+    assert detail["messages"][0]["window_status"] == "open"
+    assert detail["messages"][1]["role"] == "assistant"
+    assert detail["windows"][0]["status"] == "open"
+    assert detail["windows"][0]["dialogue"]["message_count"] == 2
+
+    windows = _json(
+        handle_manager_get(
+            service,
+            "/manager/api/dialogue-windows?session_id=session-a&status=open",
+        )
+    )
+    assert windows["count"] == 1
+    assert windows["windows"][0]["message_count"] == 2
+    assert windows["windows"][0]["produced_unit_count"] == 0
+
+    service.flush(FlushRequest(scope=scope, session_id="session-a"))
+
+    flushed = _json(handle_manager_get(service, "/manager/api/sessions/session-a"))
+    assert flushed["session"]["window_counts"] == {"extracted": 1}
+    assert flushed["session"]["produced_unit_count"] == 2
+    assert flushed["messages"][0]["produced_unit_ids"]
+    assert flushed["windows"][0]["produced_unit_count"] == 2
+
+    third = service.capture(
+        CaptureRequest(
+            scope=scope,
+            session_id="session-a",
+            dialogue=CaptureDialogue(
+                occurred_at="2026-01-01T00:02:00+00:00",
+                messages=(
+                    DialogueMessage(
+                        role="user",
+                        content="I usually want examples in Python.",
+                        timestamp="2026-01-01T00:02:00+00:00",
+                    ),
+                    DialogueMessage(
+                        role="assistant",
+                        content="I will include Python examples when useful.",
+                        timestamp="2026-01-01T00:02:10+00:00",
+                    ),
+                ),
+            ),
+            capture_time="2026-01-01T00:02:11+00:00",
+        )
+    )
+
+    mixed = _json(handle_manager_get(service, "/manager/api/sessions/session-a"))
+    dialogue_ids = [dialogue["dialogue_id"] for dialogue in mixed["dialogues"]]
+    message_dialogue_ids = [message["dialogue_id"] for message in mixed["messages"]]
+
+    assert third.dialogue_id != first.dialogue_id
+    assert mixed["session"]["dialogue_count"] == 2
+    assert mixed["session"]["message_count"] == 4
+    assert mixed["session"]["window_counts"] == {"extracted": 1, "open": 1}
+    assert dialogue_ids == [first.dialogue_id, third.dialogue_id]
+    assert message_dialogue_ids == [
+        first.dialogue_id,
+        first.dialogue_id,
+        third.dialogue_id,
+        third.dialogue_id,
+    ]
+    assert [message["local_index"] for message in mixed["messages"]] == [0, 1, 0, 1]
+    assert [message["content"] for message in mixed["messages"]] == [
+        "I prefer compact answers.",
+        "I will keep replies compact.",
+        "I usually want examples in Python.",
+        "I will include Python examples when useful.",
+    ]
 
 
 def test_manager_api_retrieval_preview_and_reindex() -> None:

@@ -234,8 +234,10 @@ session. Memory ownership and namespace are assigned when MemoryUnits are
 created. A capture request may provide routing context, but that context is not
 part of the raw dialogue contract.
 
-`DialogueRef.message_range` is a half-open message-index range `[start, end)`.
-It is not a token, byte, or character range.
+`DialogueRef.message_range` is optional. The default is `None`, meaning the
+whole source dialogue is evidence. If an extractor later provides precise
+attribution, the range is a half-open message-index range `[start, end)`. It is
+not a token, byte, or character range.
 
 ### MemoryUnit
 

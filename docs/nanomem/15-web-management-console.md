@@ -317,15 +317,17 @@ storage or ranking logic.
 
 `GET /manager/api/memory-units/{unit_id}` may return a derived `source_chunks`
 field for the console. Each chunk resolves a `DialogueRef` into the referenced
-dialogue metadata and the exact half-open message range used during extraction.
-This keeps the browser simple while preserving `MemoryUnit` as the canonical
-stored fact.
+dialogue metadata. The default source is the whole dialogue; when a future
+extractor provides a non-null `message_range`, the manager uses it only as a
+highlight inside that dialogue. This keeps the browser simple while preserving
+`MemoryUnit` as the canonical stored fact.
 
 Each source chunk should include:
 
 - `status`: `ok`, `missing_dialogue`, `redacted_dialogue`, `empty_range`, or
   `out_of_range_clamped`;
-- `range_label`: human-readable original `DialogueRef.message_range`;
+- `range_label`: `Full dialogue` or a human-readable original
+  `DialogueRef.message_range`;
 - `resolved_range`: actual message range after bounds resolution;
 - `message_count` and `resolved_message_count`;
 - `raw_dialogue_available` and `requires_explicit_reveal` for privacy-aware UI.

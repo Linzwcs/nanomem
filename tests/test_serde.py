@@ -256,11 +256,11 @@ def test_capture_result_json_contract_round_trip() -> None:
         "owner_id": "user-1",
         "namespace": "personal",
     }
-    assert payload["units"][0]["dialogue_refs"][0]["message_range"] == [0, 1]
+    assert payload["units"][0]["dialogue_refs"][0]["message_range"] is None
 
     parsed = capture_result_from_json(payload)
     assert parsed.dialogue_id == result.dialogue_id
-    assert parsed.units[0].dialogue_refs[0].message_range == (0, 1)
+    assert parsed.units[0].dialogue_refs[0].message_range is None
 
 
 def test_read_result_json_contract_round_trip() -> None:
@@ -306,9 +306,10 @@ def test_read_result_json_contract_round_trip() -> None:
     assert payload["context"]["unit_count"] == 1
     assert payload["context"]["token_count"] > 0
     assert "2026-01-05T00:00:00+00:00" in payload["context"]["text"]
-    assert payload["ranked_units"][0]["unit"]["dialogue_refs"][0][
-        "message_range"
-    ] == [0, 1]
+    assert (
+        payload["ranked_units"][0]["unit"]["dialogue_refs"][0]["message_range"]
+        is None
+    )
     assert payload["stats"]["returned_unit_count"] == 1
     assert payload["stats"]["index_backend"] == "dense_cosine_v1"
 

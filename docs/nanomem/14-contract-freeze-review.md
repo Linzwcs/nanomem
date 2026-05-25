@@ -113,8 +113,10 @@ DialogueRef(
 )
 ```
 
-`message_range` is a half-open range over `Dialogue.messages`. No char
-ranges, file refs, image refs, or external resource refs are in v1.
+`message_range` defaults to `None`, meaning the whole source dialogue is
+evidence. A future extractor may provide a half-open range over
+`Dialogue.messages` as optional highlight metadata. No char ranges, file refs,
+image refs, or external resource refs are in v1.
 
 ```python
 MemoryUnit(
@@ -199,7 +201,8 @@ Public serializers emit canonical JSON-compatible objects:
 - tuples are serialized as JSON arrays;
 - `scope.user_id` is never emitted, only `scope.owner_id`;
 - legacy `events` are never emitted, only `dialogue.messages`;
-- `DialogueRef.message_range` is emitted as a two-item array;
+- `DialogueRef.message_range` is emitted as `null` by default or as a two-item
+  array when an extractor provides precise attribution;
 - `namespaces=None` is emitted as JSON `null` and means all namespaces for the
   owner;
 - explicit namespace filters are emitted as ordered arrays;
@@ -264,7 +267,7 @@ Contract tests now cover:
 - legacy event payload compatibility;
 - `namespaces=None` meaning all namespaces;
 - explicit namespace lists preserving order;
-- `DialogueRef.message_range` parsing as a two-item half-open range;
+- `DialogueRef.message_range` parsing as `null` or a two-item half-open range;
 - invalid `message_range` rejection;
 - metadata fields requiring JSON objects;
 - service-level rejection of missing message timestamps;

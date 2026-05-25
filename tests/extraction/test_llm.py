@@ -97,6 +97,31 @@ def test_llm_extractor_parses_units_with_dialogue_ref_and_metadata() -> None:
     assert unit.metadata["source_speaker_id"] == "user-1"
 
 
+def test_llm_extractor_defaults_missing_message_range_to_whole_dialogue() -> None:
+    client = FakeCompletionClient(
+        {
+            "units": [
+                {
+                    "text": "The user said they prefer concise Chinese answers.",
+                    "memory_type": "preference",
+                }
+            ],
+            "skipped": [],
+        }
+    )
+    extractor = LLMMemoryUnitExtractor(
+        model="test-model",
+        completion_client=client,
+    )
+
+    result = extractor.extract(_request())
+
+    unit = result.units[0]
+    assert unit.dialogue_refs[0].dialogue_id == "dlg-1"
+    assert unit.dialogue_refs[0].message_range is None
+    assert unit.timestamp == "2026-01-01T00:00:30+00:00"
+
+
 def test_llm_extractor_sends_only_extractable_visible_messages() -> None:
     client = FakeCompletionClient({"units": [], "skipped": []})
     extractor = LLMMemoryUnitExtractor(

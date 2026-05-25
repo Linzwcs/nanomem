@@ -27,6 +27,9 @@ class MemoryStore(Protocol):
     def put_session(self, session: Session) -> None:
         ...
 
+    def get_session(self, session_id: str) -> Session | None:
+        ...
+
     def put_dialogue(self, dialogue: Dialogue) -> None:
         ...
 
