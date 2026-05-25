@@ -1,8 +1,8 @@
 # Memory Flow Simulation Report
 
-Status: draft
+Status: active validation report
 
-Date: 2026-05-19
+Date: 2026-05-25
 
 This report records an end-to-end local simulation of NanoMem's current memory
 unit lifecycle: capture, extraction, SQLite persistence, dense index rebuild,
@@ -120,7 +120,46 @@ Dialogue evidence links were also verified: all units point back to existing
 `Dialogue` rows. The seven `Dialogue` rows contain realistic multi-turn user,
 assistant, and tool messages rather than single-message events.
 
-## 6. Issue Found And Fixed
+## 6. Session Window Product Regression
+
+The product regression suite now includes the buffered session model:
+
+```text
+PYTHONPATH=src python -m pytest tests/product/test_local_memory_flow.py -q
+```
+
+The added scenario uses two interleaved sessions:
+
+- `session-alpha` receives two captures that append into one open dialogue
+  window, then an explicit flush extracts three MemoryUnits.
+- `session-alpha` later receives another capture, creating a second dialogue
+  window, and a second flush extracts one more MemoryUnit.
+- `session-beta` remains open and produces no MemoryUnits until flushed.
+
+The test verifies the current product contract:
+
+- capture buffers visible messages instead of extracting every turn
+  immediately;
+- explicit flush extracts only the requested session and leaves unrelated open
+  sessions untouched;
+- service restart rebuilds the derived dense index from SQLite;
+- read uses `dense_cosine_v1`, returns flushed facts, and excludes facts from
+  still-open windows;
+- Manager stats expose `session_count=2`, `dialogue_window_count=3`,
+  `open_dialogue_window_count=1`, and `unit_count=4`;
+- Manager session detail exposes the chronological message stream, window
+  status, and produced units;
+- MemoryUnit detail resolves source evidence back to the whole source dialogue
+  when `DialogueRef.message_range` is `None`.
+
+This confirms the intended local product flow:
+
+```text
+agent turn -> session buffer -> dialogue window -> flush/extract
+  -> MemoryUnit -> dense index -> read/render -> Manager source audit
+```
+
+## 7. Issue Found And Fixed
 
 During repeated read simulation, the old operation log id generation collided
 when the same query was executed more than once within the same second.
@@ -134,7 +173,7 @@ Fix applied:
 This keeps stable ids for durable domain records such as `MemoryUnit` and
 `Dialogue`, while making operation logs append-only and collision-safe.
 
-## 7. Observations
+## 8. Observations
 
 - The current core pipeline is functional for capture -> extract -> store ->
   dense index -> read -> render.
@@ -148,11 +187,11 @@ This keeps stable ids for durable domain records such as `MemoryUnit` and
   This is correct under strict budget enforcement, but the renderer should later
   expose clearer diagnostics for "hits found but nothing fit".
 
-## 8. Recommended Next Steps
+## 9. Recommended Next Steps
 
-1. Add tests for render budget behavior, especially small budgets and
-   "maximize fact count under budget".
-2. Add tests for workspace skip, tool-role skip, correction ranking, and
-   DialogueRef integrity as permanent regression cases.
+1. Improve render budget behavior, especially "maximize fact count under
+   budget" for short useful facts.
+2. Expand extractor quality tests with real LLM-backed fixtures after provider
+   configuration is settled.
 3. Decide whether direct manual unit insertion should be a first-class admin API
    or remain a low-level store operation with required Dialogue evidence.

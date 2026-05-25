@@ -12,7 +12,7 @@ agent/dialogue -> capture -> Dialogue -> extraction -> MemoryUnit
 
 ## Verified Baseline
 
-Validation date: 2026-05-23.
+Validation date: 2026-05-25.
 
 Commands run:
 
@@ -24,8 +24,8 @@ python -m pytest tests/product/test_local_memory_flow.py
 Observed results:
 
 ```text
-62 passed, 5 skipped
-1 product-flow regression passed
+95 passed, 11 skipped
+2 product-flow regressions passed
 ```
 
 The product-flow regression verifies the local developer-preview path:
@@ -38,6 +38,9 @@ The product-flow regression verifies the local developer-preview path:
 - time range filters exclude ineligible memory evidence;
 - Manager APIs expose stats, memory list/detail, source dialogue evidence,
   retrieval preview, reindex, and operation logs.
+- session-window capture buffers multiple messages before extraction, supports
+  multiple sessions, flushes only the selected session, and exposes window
+  status/source dialogue evidence in Manager.
 
 Agent adapter E2E also passed:
 
