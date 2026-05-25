@@ -1405,7 +1405,8 @@ button:disabled {
 .fact-panel {
   background: #ffffff;
   display: grid;
-  gap: 16px;
+  gap: 12px;
+  padding: 14px;
 }
 
 .fact-card-header {
@@ -1421,19 +1422,19 @@ button:disabled {
 
 .fact-text {
   color: var(--ink);
-  border-left: 3px solid var(--accent);
-  font-size: 18px;
-  line-height: 1.58;
+  border-left: 2px solid var(--accent);
+  font-size: 16.5px;
+  line-height: 1.5;
   margin: 0;
-  padding: 4px 0 4px 14px;
+  padding: 2px 0 2px 12px;
 }
 
 .fact-meta-grid {
   border-top: 1px solid var(--line);
   display: grid;
-  gap: 10px;
+  gap: 8px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  padding-top: 14px;
+  padding-top: 10px;
 }
 
 .fact-meta-grid span {
@@ -1467,9 +1468,41 @@ button:disabled {
   align-items: center;
   background: #f4f4f5;
   color: var(--muted);
+  display: block;
   font-size: 13px;
   justify-content: space-between;
   padding: 10px 12px;
+}
+
+.source-dialogue-meta {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns:
+    minmax(86px, 0.5fr) minmax(140px, 1fr) minmax(220px, 1.45fr)
+    minmax(112px, 0.7fr);
+  min-width: 0;
+}
+
+.source-meta-item {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.source-meta-item strong {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 560;
+  text-transform: uppercase;
+}
+
+.source-meta-item a,
+.source-meta-item span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .source-title,
@@ -1708,6 +1741,7 @@ button:disabled {
 
   .metric-grid,
   .fact-meta-grid,
+  .source-dialogue-meta,
   .filter-panel,
   .form-grid,
   .preview-form {

@@ -20,6 +20,10 @@ export function useHashRoute(): Route {
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
 
+  return parseHashRoute(hash);
+}
+
+export function parseHashRoute(hash: string): Route {
   const path = hash.replace(/^#\/?/, "");
   const [routePath, queryString = ""] = path.split("?");
   const query = new URLSearchParams(queryString);

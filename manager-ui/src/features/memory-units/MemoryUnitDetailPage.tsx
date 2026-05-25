@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 
 import { getMemoryUnit } from "../../api/client";
+import type { SourceChunk } from "../../api/types";
 import { Badge, ErrorState, LoadingState } from "../../components/Status";
 import { formatTime, jsonPreview } from "../../lib/format";
 
@@ -100,30 +101,7 @@ export function MemoryUnitDetailPage({ unitId }: { unitId: string }) {
           {sourceChunks.map((chunk, index) => (
             <article className="source-block" key={`${chunk.range_label}-${index}`}>
               <div className="source-header">
-                <div className="source-title">
-                  <Badge tone={chunk.status === "ok" ? "good" : "warn"}>
-                    {chunk.status}
-                  </Badge>
-                  <span className="mono-text">
-                    {chunk.dialogue?.dialogue_id ?? "missing dialogue"}
-                  </span>
-                </div>
-                <div className="source-actions">
-                  <Badge tone={chunk.ref.message_range ? "neutral" : "muted"}>
-                    {chunk.range_label}
-                  </Badge>
-                  {chunk.dialogue?.session_id ? (
-                    <a
-                      className="mono-link"
-                      href={sourceDialogueHref(
-                        chunk.dialogue.session_id,
-                        chunk.dialogue.dialogue_id,
-                      )}
-                    >
-                      {chunk.dialogue.session_id}
-                    </a>
-                  ) : null}
-                </div>
+                <SourceDialogueHeader chunk={chunk} />
               </div>
               <ol className="dialogue-log">
                 {(chunk.dialogue_messages ?? chunk.messages).map((message) => (
@@ -153,6 +131,42 @@ export function MemoryUnitDetailPage({ unitId }: { unitId: string }) {
         <pre className="json-block">{jsonPreview(unit.metadata)}</pre>
       </section>
     </section>
+  );
+}
+
+function SourceDialogueHeader({ chunk }: { chunk: SourceChunk }) {
+  const dialogueId = chunk.dialogue?.dialogue_id ?? "missing dialogue";
+  const sessionId = chunk.dialogue?.session_id;
+  return (
+    <div className="source-dialogue-meta">
+      <div className="source-meta-item">
+        <strong>Status</strong>
+        <Badge tone={chunk.status === "ok" ? "good" : "warn"}>{chunk.status}</Badge>
+      </div>
+      <div className="source-meta-item">
+        <strong>Session</strong>
+        {sessionId && chunk.dialogue ? (
+          <a
+            className="mono-link"
+            href={sourceDialogueHref(sessionId, chunk.dialogue.dialogue_id)}
+          >
+            {sessionId}
+          </a>
+        ) : (
+          <span>none</span>
+        )}
+      </div>
+      <div className="source-meta-item source-meta-dialogue">
+        <strong>Dialogue</strong>
+        <span className="mono-text">{dialogueId}</span>
+      </div>
+      <div className="source-meta-item">
+        <strong>Evidence</strong>
+        <Badge tone={chunk.ref.message_range ? "neutral" : "muted"}>
+          {chunk.range_label}
+        </Badge>
+      </div>
+    </div>
   );
 }
 
