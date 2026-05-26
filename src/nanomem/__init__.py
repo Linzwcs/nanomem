@@ -81,6 +81,8 @@ from nanomem.factory import (
 from nanomem.index.dense import DenseMemoryUnitIndex
 from nanomem.index.hybrid import HybridMemoryUnitIndex
 from nanomem.index.lexical import LexicalMemoryUnitIndex
+from nanomem.ranking.base import Ranker
+from nanomem.render.base import Renderer
 from nanomem.sdk import AsyncNanoMemClient, NanoMemClient, NanoMemClientError
 from nanomem.maintenance import (
     MaintenancePlan,
@@ -146,9 +148,11 @@ __all__ = [
     "PackedContext",
     "MemoryUnit",
     "RankedMemoryUnit",
+    "Ranker",
     "ReadRequest",
     "ReadResult",
     "ReindexResult",
+    "Renderer",
     "RenderError",
     "RetentionApplyResult",
     "RetentionConfig",

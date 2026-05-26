@@ -5,8 +5,10 @@ from nanomem.extraction.heuristic import HeuristicMemoryUnitExtractor
 from nanomem.index.base import MemoryUnitIndex
 from nanomem.index.dense import DenseMemoryUnitIndex
 from nanomem.index.rebuild import rebuild_index
-from nanomem.render.context import EvidenceContextRenderer
+from nanomem.ranking.base import Ranker
 from nanomem.ranking.ranker import MemoryUnitRanker
+from nanomem.render.base import Renderer
+from nanomem.render.context import EvidenceContextRenderer
 from nanomem.service.capture import CapturePipeline
 from nanomem.service.read import ReadPipeline
 from nanomem.store.base import MemoryStore
@@ -34,14 +36,16 @@ class NanoMemService:
         default_max_units: int = 10,
         max_dialogue_tokens: int = 512,
     ) -> None:
-        self.store = store or SQLiteMemoryUnitStore()
-        self.index = index or DenseMemoryUnitIndex()
-        self.extractor = extractor or HeuristicMemoryUnitExtractor()
+        self.store: MemoryStore = store or SQLiteMemoryUnitStore()
+        self.index: MemoryUnitIndex = index or DenseMemoryUnitIndex()
+        self.extractor: MemoryUnitExtractor = (
+            extractor or HeuristicMemoryUnitExtractor()
+        )
         self.default_recency_policy = default_recency_policy
         self.default_max_units = default_max_units
         self.max_dialogue_tokens = max_dialogue_tokens
-        self.renderer = EvidenceContextRenderer()
-        self.ranker = MemoryUnitRanker()
+        self.renderer: Renderer = EvidenceContextRenderer()
+        self.ranker: Ranker = MemoryUnitRanker()
         self._capture_pipeline = CapturePipeline(
             store=self.store,
             index=self.index,
