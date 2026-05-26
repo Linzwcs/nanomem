@@ -40,6 +40,34 @@ def service_from_config_file(path: str) -> NanoMemService:
     return service_from_config(load_config(path))
 
 
+def nanomem_service_with_defaults(
+    *,
+    default_recency_policy: str = "balanced",
+    default_max_units: int = 10,
+    max_dialogue_tokens: int = 512,
+) -> NanoMemService:
+    """Construct a NanoMemService with the dependency-light local defaults.
+
+    This is the explicit, public surface for the same construction
+    NanoMemService() does today via internal None-fallback. Prefer this
+    helper in tests and quickstarts; in v0.3+ NanoMemService.__init__
+    will require explicit dependencies and the None-fallback will be
+    removed.
+
+    Defaults: SQLite (in-memory if no config-driven path),
+    DenseMemoryUnitIndex with hashing embeddings,
+    HeuristicMemoryUnitExtractor.
+    """
+    return NanoMemService(
+        store=SQLiteMemoryUnitStore(),
+        index=DenseMemoryUnitIndex(),
+        extractor=HeuristicMemoryUnitExtractor(),
+        default_recency_policy=default_recency_policy,
+        default_max_units=default_max_units,
+        max_dialogue_tokens=max_dialogue_tokens,
+    )
+
+
 def control_from_config(config: NanoMemConfig) -> NanoMemControlService:
     return NanoMemControlService(
         store=store_from_config(config),  # type: ignore[arg-type]
@@ -153,3 +181,20 @@ def extractor_from_config(config: NanoMemConfig) -> MemoryUnitExtractor:
             max_chars_per_chunk=extraction.max_chars_per_chunk,
         )
     raise ConfigError(f"Unsupported extraction backend: {extraction.backend}")
+
+
+__all__ = [
+    "admin_from_config",
+    "admin_from_config_file",
+    "control_from_config",
+    "control_from_config_file",
+    "embedding_from_config",
+    "extractor_from_config",
+    "index_from_config",
+    "maintenance_from_config",
+    "maintenance_from_config_file",
+    "nanomem_service_with_defaults",
+    "service_from_config",
+    "service_from_config_file",
+    "store_from_config",
+]

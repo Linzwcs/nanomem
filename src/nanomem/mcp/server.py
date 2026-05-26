@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import asdict
 import json
 from typing import Any, TextIO
 
 from nanomem.contracts import ReadRequest
-from nanomem.serde import read_request_from_json
+from nanomem.serde import read_request_from_json, read_result_to_json
 from nanomem.service.core import NanoMemService
 
 
@@ -75,7 +74,7 @@ class NanoMemMCPServer:
     def _read(self, arguments: dict[str, Any]) -> dict[str, Any]:
         request = read_request_from_json(arguments)
         result = self.service.read(request)
-        return asdict(result)
+        return read_result_to_json(result)
 
 
 def run_stdio(

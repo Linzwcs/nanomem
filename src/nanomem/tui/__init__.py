@@ -1,3 +1,10 @@
+"""Terminal UI for the nanomem control plane.
+
+Status: experimental. The dashboard is wired into the CLI via
+``nanomem dashboard`` and is intended for **operators** inspecting
+local state, not for agent-facing tools. Public API may shift.
+"""
+
 from __future__ import annotations
 
 from nanomem.tui.dashboard import (
