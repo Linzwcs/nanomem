@@ -73,7 +73,8 @@ rendering, LLM extraction with cache, etc.).
 ### Deprecated
 
 - Importing from `nanomem.embeddings.*` — emits `DeprecationWarning`.
-  Use `nanomem.index.embeddings.*` instead.
+  Use `nanomem.index.embeddings.*` instead. **The shim will be removed
+  in v0.3.0** (see `nanomem.embeddings.__deprecated_removal__`).
 - Calling `NanoMemService()` with no arguments to get default
   dependencies. The pattern still works, but v0.3 will require explicit
   injection of `store`, `index`, `extractor`, etc. Use
