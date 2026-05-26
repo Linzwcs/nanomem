@@ -113,7 +113,7 @@ def _default_facade(service: NanoMemService) -> ControlFacade:
     # routes with only a NanoMemService. Build a fresh ControlFacade
     # against the service's store/index. New code should pass a facade
     # explicitly via handle_manager_get(service, path, facade=...).
-    from nanomem.ops.control.service import NanoMemControlService
+    from nanomem.service.control.service import NanoMemControlService
 
     return ControlFacade(
         NanoMemControlService(

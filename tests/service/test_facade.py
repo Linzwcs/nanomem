@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from nanomem.ops.control.service import NanoMemControlService
+from nanomem.service.control.service import NanoMemControlService
 from nanomem.pipeline.retrieval.indexes.dense import DenseMemoryUnitIndex
 from nanomem.service.facade import ControlFacade
 from nanomem.pipeline.storage.sqlite import SQLiteMemoryUnitStore

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import time
 from typing import Callable, TextIO
 
-from nanomem.ops.control import (
+from nanomem.service.control import (
     DatabaseStats,
     NanoMemControlService,
     RetentionPolicy,

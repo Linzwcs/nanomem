@@ -6,7 +6,7 @@ from nanomem.core.config import (
     MaintenanceConfig,
     RetentionConfig,
 )
-from nanomem.ops.control.service import NanoMemControlService
+from nanomem.service.control.service import NanoMemControlService
 from nanomem.pipeline.retrieval.indexes.dense import DenseMemoryUnitIndex
 from nanomem.ops.maintenance.service import NanoMemMaintenanceService
 from nanomem.pipeline.storage.sqlite import SQLiteMemoryUnitStore

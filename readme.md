@@ -514,35 +514,69 @@ validated separately. Plugin docs:
 
 ## Project Layout
 
+`src/nanomem/` is organized as **6 horizontal layers**, each only
+importing from layers below it. The structure mirrors the experimental
+axes in the companion paper. A `tools/check_layering.py` script and a
+`tests/test_layering.py` regression gate enforce the rule.
+
 ```text
 src/nanomem/
-  contracts.py        core data contracts (frozen dataclasses)
-  config.py           JSON / simple YAML config loading
-  factory.py          config-driven construction
-  service/            capture/read orchestration (sync + async)
-  store/              SQLite persistence
-  index/              lexical, dense, hybrid, LanceDB adapters
-  embeddings/         hashing and OpenAI-compatible embeddings
-  extraction/         heuristic and LLM extractors → atomic fact units
-  ranking/            relevance and recency ranking
-  render/             token-budget-aware evidence rendering
-  server/             HTTP API and manager routes
-  mcp/                stdio MCP server (read-only)
-  sdk/                Python sync/async HTTP clients
-  cli/                command-line administration
-  control/            stats, backup, export, retention, reindex
-  maintenance/        configured maintenance workflows
-  adapters/           host integration adapters
-  manager/            bundled manager assets
-manager-ui/           React/Vite manager source (builds into manager/assets/)
-docs/                 product, architecture, manager, and plugin docs
-tests/                pytest regression tests (mirrors package layout)
+  core/                  foundations (stdlib only)
+    contracts/           frozen dataclasses for the public surface
+    errors.py            NanoMemError hierarchy
+    ids.py, time.py      ID + timestamp helpers
+    serde.py             dict ↔ contract conversion
+    policies/            scope / namespace matching
+    config.py            config schema + loaders
+
+  pipeline/              paper-axis-aligned capabilities
+    representation/      heuristic + LLM extraction → atomic fact units
+    storage/             SQLite fact store
+    retrieval/
+      indexes/           lexical, dense, hybrid, LanceDB
+      embeddings/        hashing (default), openai_compatible
+      ranking/           relevance + recency (relevance_recency.py)
+    utilization/         budget-aware evidence rendering
+                         (evidence_context.py)
+
+  service/               pipeline orchestration
+    core.py / async_core.py
+    capture.py / read.py
+    facade.py            ControlFacade for the manager UI
+    factory.py           config-driven construction
+    control/             control-plane operations
+
+  transports/            wire formats for agent harnesses
+    http/                stdlib server (v1 data plane + manager UI)
+    mcp/                 stdio MCP server (read-only)
+    sdk/                 sync + async HTTP clients
+
+  ops/                   operator-facing tools
+    maintenance/         composed control workflows
+    cli/                 `nanomem` command-line
+    tui/                 terminal dashboard
+    manager_assets/      bundled HTML/CSS/JS for the manager UI
+
+  hosts/                 external-harness integration
+    adapters/            AgentMemoryAdapter + per-host adapters
+    plugins/             hook runner, Codex install helper
+
+manager-ui/              React/Vite manager source (builds into
+                         src/nanomem/ops/manager_assets/assets/)
+tools/                   maintenance scripts (check_layering.py)
+docs/                    product, architecture, manager, plugin docs
+tests/                   pytest regression tests
 ```
 
-Architecture rule of thumb:
+Layering rule (machine-enforced):
 
 ```text
-server -> service -> store/index/extraction/ranking/render -> contracts
+hosts/      may import service, transports, ops, pipeline, core
+ops/        may import service, pipeline, core
+transports/ may import service, pipeline, core
+service/    may import pipeline, core
+pipeline/   may import core
+core/       only stdlib
 ```
 
 The service layer owns orchestration. Stores, indexes, extractors, rankers,

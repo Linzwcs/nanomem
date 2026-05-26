@@ -10,7 +10,7 @@ from nanomem.core.contracts import (
     MemoryScope,
     ReadRequest,
 )
-from nanomem.ops.control.service import NanoMemControlService, RetentionPolicy
+from nanomem.service.control.service import NanoMemControlService, RetentionPolicy
 from nanomem.service.factory import service_from_config
 
 pytest.importorskip("lancedb")

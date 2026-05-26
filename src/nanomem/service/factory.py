@@ -16,8 +16,8 @@ from nanomem.pipeline.retrieval.indexes.lexical import LexicalMemoryUnitIndex
 from nanomem.service.core import NanoMemService
 from nanomem.pipeline.storage.base import MemoryStore
 from nanomem.pipeline.storage.sqlite import SQLiteMemoryUnitStore
-from nanomem.ops.control.service import NanoMemControlService
-from nanomem.ops.maintenance.service import NanoMemMaintenanceService
+from nanomem.service.control.service import NanoMemControlService
+from nanomem.ops.maintenance.service import NanoMemMaintenanceService  # layering-exception: factory.py is the composition root and must construct all layers
 
 
 def service_from_config(config: NanoMemConfig) -> NanoMemService:

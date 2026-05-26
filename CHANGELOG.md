@@ -2,6 +2,93 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0a1] — 2026-05-26
+
+Paper-aligned horizontal-layering refactor. `src/nanomem/` is now
+organized as six layers that match the companion paper's Section 4
+figure 1:1. A `tools/check_layering.py` script + `tests/test_layering.py`
+machine-enforce the dependency direction.
+
+### Changed (BREAKING)
+
+**Every sub-path import changes.** Top-level `from nanomem import X`
+is preserved — all 80+ public symbols remain importable from the top.
+The migration table:
+
+| v0.2.x path | v0.3 path |
+|-------------|-----------|
+| `nanomem.contracts.*` | `nanomem.core.contracts.*` |
+| `nanomem.errors` | `nanomem.core.errors` |
+| `nanomem.ids` / `nanomem.time` / `nanomem.serde` | `nanomem.core.{ids,time,serde}` |
+| `nanomem.policies` | `nanomem.core.policies` |
+| `nanomem.config` | `nanomem.core.config` |
+| `nanomem.extraction.*` | `nanomem.pipeline.representation.*` |
+| `nanomem.store.*` | `nanomem.pipeline.storage.*` |
+| `nanomem.index.*` (excl. embeddings) | `nanomem.pipeline.retrieval.indexes.*` |
+| `nanomem.index.embeddings.*` | `nanomem.pipeline.retrieval.embeddings.*` |
+| `nanomem.ranking.*` | `nanomem.pipeline.retrieval.ranking.*` |
+| `nanomem.ranking.ranker` | `nanomem.pipeline.retrieval.ranking.relevance_recency` |
+| `nanomem.render.*` | `nanomem.pipeline.utilization.*` |
+| `nanomem.render.context` | `nanomem.pipeline.utilization.evidence_context` |
+| `nanomem.factory` | `nanomem.service.factory` |
+| `nanomem.control.*` | `nanomem.service.control.*` |
+| `nanomem.server.*` | `nanomem.transports.http.*` |
+| `nanomem.mcp.*` | `nanomem.transports.mcp.*` |
+| `nanomem.sdk.*` | `nanomem.transports.sdk.*` |
+| `nanomem.maintenance.*` | `nanomem.ops.maintenance.*` |
+| `nanomem.cli.*` | `nanomem.ops.cli.*` |
+| `nanomem.tui.*` | `nanomem.ops.tui.*` |
+| `nanomem.manager.*` | `nanomem.ops.manager_assets.*` |
+| `nanomem.adapters.*` | `nanomem.hosts.adapters.*` |
+| `nanomem.integrations.*` | `nanomem.hosts.plugins.*` |
+| `nanomem.embeddings.*` (deprecation shim) | **removed** — use `nanomem.pipeline.retrieval.embeddings.*` |
+| `from nanomem import X` (top-level) | **unchanged** |
+
+Entry-point binaries are unaffected; only the underlying module paths
+in `pyproject.toml` changed:
+- `nanomem`           → `nanomem.ops.cli.main:main`
+- `nanomem-server`    → `nanomem.transports.http.main:main`
+- `nanomem-mcp`       → `nanomem.transports.mcp.main:main`
+- `nanomem-agent-hook`→ `nanomem.hosts.plugins.hooks:main`
+
+### Added
+
+- `tools/check_layering.py` — AST-walking layering enforcer.
+- `tests/test_layering.py` — pytest gate that runs the checker.
+- `# layering-exception: <reason>` comment escape hatch for two
+  documented composition-root cases (`service/factory.py` constructing
+  ops services, `ops/cli/main.py` invoking `install-codex-hooks` from
+  hosts).
+
+### Changed (non-breaking)
+
+- File renames within moved layers (semantic honesty):
+  - `render/context.py` → `pipeline/utilization/evidence_context.py`
+  - `ranking/ranker.py` → `pipeline/retrieval/ranking/relevance_recency.py`
+  - `manager/` → `ops/manager_assets/` (the package only bundles
+    HTML/CSS/JS; the routes live in `transports/http/manager/`)
+  - `integrations/` → `hosts/plugins/` (matches content: agent-harness
+    plugins, not generic integrations)
+- The 6-layer rule:
+  - `core/`       — only stdlib (no other nanomem layers)
+  - `pipeline/`   — may import `core`
+  - `service/`    — may import `pipeline`, `core`
+  - `transports/` — may import `service`, `pipeline`, `core`
+  - `ops/`        — may import `service`, `pipeline`, `core`
+  - `hosts/`      — may import everything
+
+### Removed
+
+- `nanomem.embeddings` deprecation shim (introduced in v0.2.0a1).
+  Use `nanomem.pipeline.retrieval.embeddings` instead.
+
+### Process
+
+Produced as 11 batches (B1–B11) via the `architecture-refactor` skill.
+Each batch one commit; pytest green between batches; layering check
+green at the end. Inline `# layering-exception` comments are
+intentional and reviewed.
+
 ## [0.2.0a2] — 2026-05-26
 
 Housekeeping pass on top of the v0.2.0a1 structural refactor. Same

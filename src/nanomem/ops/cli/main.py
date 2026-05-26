@@ -6,7 +6,7 @@ import json
 import sys
 from typing import TextIO
 
-from nanomem.ops.control import (
+from nanomem.service.control import (
     NanoMemControlService,
     OperationLogRetentionPolicy,
     RetentionPolicy,
@@ -14,7 +14,7 @@ from nanomem.ops.control import (
 from nanomem.core.config import NanoMemConfig, load_config
 from nanomem.core.contracts import FlushRequest, MemoryScope, MemoryUnit, TimeRange
 from nanomem.service.factory import extractor_from_config, index_from_config
-from nanomem.hosts.plugins.codex import install_codex_hooks
+from nanomem.hosts.plugins.codex import install_codex_hooks  # layering-exception: CLI install-codex-hooks subcommand invokes host plugin
 from nanomem.ops.maintenance import NanoMemMaintenanceService
 from nanomem.service.core import NanoMemService
 from nanomem.pipeline.storage.sqlite import SQLiteMemoryUnitStore

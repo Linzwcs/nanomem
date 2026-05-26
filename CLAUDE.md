@@ -34,13 +34,13 @@ CI matrix: Python 3.10 / 3.11 / 3.12 (Ubuntu) — runs `compileall` then `pytest
 
 ### Manager UI (React/Vite, in `manager-ui/`)
 
-The web manager has a Python-served bundled asset path *and* a separate React/Vite source tree. The Vite build emits compiled assets back into the Python package at `src/nanomem/manager/assets/`.
+The web manager has a Python-served bundled asset path *and* a separate React/Vite source tree. The Vite build emits compiled assets back into the Python package at `src/nanomem/ops/manager_assets/assets/`.
 
 ```bash
 cd manager-ui
 npm install
 npm run dev        # vite dev server, proxies /manager/api → 127.0.0.1:8765
-npm run build      # tsc + vite build → ../src/nanomem/manager/assets/
+npm run build      # tsc + vite build → ../src/nanomem/ops/manager_assets/assets/
 npm test           # vitest
 ```
 
@@ -101,36 +101,73 @@ CLI:    administrative — stats, list, logs, backup, export, retention, reindex
 
 `/manager` and `/manager/api/*` are **control-plane only** — never expose them as agent-facing tools or to untrusted networks. Likewise, MCP must not expose backup/export/retention/reindex.
 
-### Source layout (`src/nanomem/`)
+### Source layout (`src/nanomem/`) — v0.3 horizontal layering
+
+Six layers; each may only import from layers below it.
+`tools/check_layering.py` + `tests/test_layering.py` enforce the rule.
 
 ```
-contracts.py         frozen dataclasses for all public types — keep stable
-config.py            JSON / simple YAML config loading
-factory.py           config-driven construction (service_from_config, control_from_config, ...)
-ids.py, time.py      id generation + timestamp helpers
-policies.py          recency / retention policy enums
+core/                    foundations (stdlib only)
+  contracts/             frozen dataclasses for public types
+  errors.py              NanoMemError hierarchy
+  ids.py / time.py       ID + timestamp helpers
+  serde.py               dict ↔ contract conversion
+  policies/              scope and namespace matching
+  config.py              config schema + loaders
 
-service/             capture & read orchestration (core.py, async_core.py, capture.py, read.py)
-extraction/          heuristic.py (default), llm.py, eval.py, events.py
-store/               sqlite.py is the only durable fact store today
-index/               lexical, dense, hybrid (in-memory) + lancedb adapter
-embeddings/          hashing (default, deterministic) + openai_compatible
-ranking/             relevance + recency ranker
-render/              evidence context renderer (token-budget aware)
+pipeline/                paper-axis-aligned capabilities
+  representation/        memory unit extraction (heuristic, llm/*)
+  storage/               durable fact store (sqlite)
+  retrieval/             find candidates
+    indexes/             lexical, dense, hybrid, lancedb
+    embeddings/          hashing (default), openai_compatible
+    ranking/             relevance + recency (relevance_recency.py)
+  utilization/           pack ranked units under token budget
+                         (evidence_context.py)
 
-server/              HTTP API (stdlib BaseHTTPRequestHandler) + manager routes
-mcp/                 stdio MCP server (read-only)
-sdk/                 sync + async HTTP clients
-cli/                 command-line administration
-control/             stats, backup, export, retention, reindex, integrity check
-maintenance/         configured maintenance workflows
-adapters/            host integrations (Codex, OpenClaw-like, NanoBot, MCP server adapter)
-integrations/        agent hook runner (`nanomem-agent-hook`)
-manager/             bundled manager assets (built from manager-ui/)
-tui/                 terminal UI
+service/                 pipeline orchestration
+  core.py / async_core.py  NanoMemService (sync + async)
+  capture.py / read.py     pipeline implementations
+  facade.py                ControlFacade for transports/http
+  factory.py               config-driven construction
+  control/                 control-plane operations (stats, backup,
+                           export, retention, reindex)
+
+transports/              wire formats
+  http/                  stdlib server (v1 data plane + manager UI)
+  mcp/                   stdio MCP server (read-only)
+  sdk/                   sync + async HTTP clients
+
+ops/                     operator-facing tools
+  maintenance/           composed control workflows
+  cli/                   `nanomem` command-line
+  tui/                   terminal dashboard
+  manager_assets/        bundled HTML/CSS/JS for manager UI
+
+hosts/                   external-harness integration
+  adapters/              AgentMemoryAdapter + per-host adapters
+                         (Codex, OpenClaw, NanoBot, MCP)
+  plugins/               agent hook runner (`nanomem-agent-hook`),
+                         Codex install helper
 ```
 
-Tests in `tests/` mirror the package areas they cover (`tests/service/`, `tests/index/`, `tests/store/`, ...).
+Layering rule (machine-enforced):
+
+```
+hosts/      may import service, transports, ops, pipeline, core
+ops/        may import service, pipeline, core
+transports/ may import service, pipeline, core
+service/    may import pipeline, core
+pipeline/   may import core
+core/       only stdlib
+```
+
+Two documented exceptions (marked `# layering-exception:` on the
+import line):
+- `service/factory.py` constructs ops/maintenance — composition root.
+- `ops/cli/main.py` invokes `install_codex_hooks` from `hosts/plugins/codex`.
+
+Tests in `tests/` mirror the package areas they cover.
 
 ## Conventions That Matter
 
@@ -139,7 +176,7 @@ Tests in `tests/` mirror the package areas they cover (`tests/service/`, `tests/
 - **`flush` is window control, not a write.** It seals pending dialogue buffers so extracted units become searchable. Because windows don't own scope, flushing pending state requires both `session_id` and extraction `scope`.
 - **NanoMem does not implement ANN.** The local `dense` index is intentionally bounded (scope-filter first, then scan up to `index.dense_scan_limit`). For real ANN, use the LanceDB adapter or a future Postgres + pgvector adapter — never expand SQLite into a vector engine via JSON scans.
 - **Local data dir.** Default state lives under `.nanomem/` (db, lancedb/, backups/, exports/). Never commit it. Bind the HTTP server to `127.0.0.1`.
-- **Style.** Python 3.10+, `from __future__ import annotations`, frozen dataclasses, protocols / ABCs, explicit serialization helpers in `serde.py`. Public contracts stay in `contracts.py`; cross-module construction stays in `factory.py`.
+- **Style.** Python 3.10+, `from __future__ import annotations`, frozen dataclasses, protocols / ABCs, explicit serialization helpers in `core/serde.py`. Public contracts stay in `core/contracts/`; cross-module construction stays in `service/factory.py`.
 - **Tests.** `pytest` with deterministic fixtures — temporary SQLite DBs and hashing embeddings; avoid network-backed providers. Mirror package paths in test names. Add regressions for store migrations, schema parsing, ranking, and CLI/server edge cases when changing those areas.
 - **Status: alpha.** Public contracts may still change. The README's *Feature Status* table is the source of truth for what's stable vs. in transition vs. planned.
 

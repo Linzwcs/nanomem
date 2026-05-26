@@ -5,7 +5,7 @@ from nanomem.core.contracts import (
     MemoryScope,
     MemoryUnit,
 )
-from nanomem.ops.control.service import (
+from nanomem.service.control.service import (
     NanoMemControlService,
     RetentionPolicy,
 )

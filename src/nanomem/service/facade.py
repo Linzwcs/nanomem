@@ -14,7 +14,7 @@ retention, reindex) still belong on the CLI/control plane and should
 
 from __future__ import annotations
 
-from nanomem.ops.control.service import DatabaseStats, NanoMemControlService
+from nanomem.service.control.service import DatabaseStats, NanoMemControlService
 
 
 class ControlFacade:
