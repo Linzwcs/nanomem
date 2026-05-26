@@ -2,6 +2,71 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0a4] — 2026-05-26
+
+Three independently-justified cleanups that strip benchmark-era cruft
+and reduce nesting that didn't earn its way. All BREAKING for direct
+sub-path imports; top-level `from nanomem import X` unchanged.
+
+### Removed (BREAKING)
+
+- **LLM extractor internal chunking.** The benchmark code's
+  `ExtractionChunk`, `message_chunks`, role-segment splitting, and
+  per-chunk `max_messages_per_chunk` / `max_chars_per_chunk` knobs are
+  gone. The production contract is now: **one Dialogue is one
+  extraction unit, sent as one LLM call.** Caller decides dialogue
+  boundary via `capture` / `flush` / session window. If a dialogue
+  exceeds the model's context, the underlying API error propagates —
+  that's a contract violation by the caller, not something to paper
+  over with internal splitting.
+
+  Removed from `ExtractionConfig`: `max_messages_per_chunk`,
+  `max_chars_per_chunk`. Removed from `ExtractionResult.stats`:
+  `chunk_count`, `max_messages_per_chunk`, `max_chars_per_chunk`.
+  Removed from `MemoryUnit.metadata`: `chunk_id`, `chunk_message_count`.
+  Module `nanomem.pipeline.representation.llm.chunking` deleted.
+
+- **`transports/http/v1/` and `transports/http/manager/`** subpackages
+  flattened. Each held one useful file plus an `__init__.py` — paper
+  nesting, no navigational value:
+
+  | before | after |
+  | --- | --- |
+  | `transports.http.v1.schemas` | `transports.http.schemas` |
+  | `transports.http.manager.routes` | `transports.http.manager` |
+  | `transports.http.manager` (re-export) | `transports.http.manager` |
+
+  Data plane vs control plane is now expressed by file
+  (`schemas.py` vs `manager.py`) instead of by directory.
+
+- **`ops/maintenance/` and `ops/tui/`** subpackages flattened to
+  `ops/maintenance.py` and `ops/tui.py`. Both were 1-impl-file +
+  __init__-re-export shells; the flat file exposes the same names.
+
+- **`ops/manager_assets/`** renamed to **`ops/manager_ui/`** and the
+  inner `assets/` subdirectory flattened up one level (the doubled
+  name `manager_assets.assets` was awkward). String references
+  updated:
+  - `_MANAGER_ASSET_PACKAGE` constant in `transports/http/manager.py`
+    → `"nanomem.ops.manager_ui"`.
+  - `pyproject.toml` `[tool.setuptools.package-data]` key →
+    `"nanomem.ops.manager_ui"`.
+
+  | before | after |
+  | --- | --- |
+  | `ops.maintenance.service.NanoMemMaintenanceService` | `ops.maintenance.NanoMemMaintenanceService` |
+  | `ops.tui.dashboard.build_dashboard` | `ops.tui.build_dashboard` |
+  | `ops.manager_assets.assets.<file>` | `ops.manager_ui.<file>` |
+
+  `ops/cli/` kept as a package because it ships `__main__.py` for
+  `python -m nanomem.ops.cli`.
+
+### Process
+
+160 tests pass (was 163 in v0.3.0a3 — 3 chunking-specific tests
+deleted). Layering check green. Three sequential D-batches
+(D1: drop chunking, D2: flatten transports/http, D3: flatten ops).
+
 ## [0.3.0a3] — 2026-05-26
 
 ### Removed (BREAKING)
