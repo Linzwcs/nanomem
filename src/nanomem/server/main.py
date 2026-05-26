@@ -3,8 +3,10 @@ from __future__ import annotations
 import argparse
 
 from nanomem.config import load_config
+from nanomem.control.service import NanoMemControlService
 from nanomem.factory import service_from_config
 from nanomem.server.app import NanoMemHTTPServer
+from nanomem.service.facade import ControlFacade
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -16,10 +18,17 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     service = service_from_config(load_config(args.config))
+    control_facade = ControlFacade(
+        NanoMemControlService(
+            store=service.store,  # type: ignore[arg-type]
+            index=service.index,
+        )
+    )
     server = NanoMemHTTPServer(
         (args.host, args.port),
         service,
         max_body_bytes=args.max_body_bytes,
+        control_facade=control_facade,
     )
     print(f"NanoMem server listening on http://{args.host}:{args.port}")
     try:

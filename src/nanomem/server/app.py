@@ -7,6 +7,7 @@ from typing import Any
 
 from nanomem.server.manager import handle_manager_get, handle_manager_post
 from nanomem.service.core import NanoMemService
+from nanomem.service.facade import ControlFacade
 from nanomem.server.schemas import (
     capture_request_from_json,
     capture_result_to_json,
@@ -24,23 +25,34 @@ class NanoMemHTTPServer(ThreadingHTTPServer):
         service: NanoMemService,
         *,
         max_body_bytes: int = 1_000_000,
+        control_facade: ControlFacade | None = None,
     ) -> None:
-        handler = make_handler(service, max_body_bytes=max_body_bytes)
+        handler = make_handler(
+            service,
+            max_body_bytes=max_body_bytes,
+            control_facade=control_facade,
+        )
         super().__init__(server_address, handler)
         self.service = service
+        self.control_facade = control_facade
 
 
 def make_handler(
     service: NanoMemService,
     *,
     max_body_bytes: int = 1_000_000,
+    control_facade: ControlFacade | None = None,
 ) -> type[BaseHTTPRequestHandler]:
     class NanoMemHandler(BaseHTTPRequestHandler):
         server_version = "NanoMemHTTP/0.1"
 
         def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API
             try:
-                manager_response = handle_manager_get(service, self.path)
+                manager_response = handle_manager_get(
+                    service,
+                    self.path,
+                    facade=control_facade,
+                )
                 if manager_response is not None:
                     _write_response(self, manager_response)
                     return

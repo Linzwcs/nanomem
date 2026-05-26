@@ -7,7 +7,6 @@ import json
 from typing import Any
 from urllib.parse import parse_qs, unquote, urlparse
 
-from nanomem.control.service import NanoMemControlService
 from nanomem.contracts import (
     Dialogue,
     DialogueWindow,
@@ -22,6 +21,7 @@ from nanomem.contracts import (
 from nanomem.ids import new_id
 from nanomem.serde import read_request_from_json, read_result_to_json
 from nanomem.service.core import NanoMemService
+from nanomem.service.facade import ControlFacade
 from nanomem.time import now_utc_iso
 
 _MANAGER_ASSET_PACKAGE = "nanomem.manager.assets"
@@ -37,6 +37,8 @@ class ManagerResponse:
 def handle_manager_get(
     service: NanoMemService,
     path: str,
+    *,
+    facade: ControlFacade | None = None,
 ) -> ManagerResponse | None:
     parsed = urlparse(path)
     normalized_path = _normalized_control_path(parsed.path)
@@ -49,7 +51,7 @@ def handle_manager_get(
         return None
     query = parse_qs(parsed.query, keep_blank_values=False)
     if normalized_path == "/manager/api/stats":
-        return _json_response(_stats_payload(service))
+        return _json_response(_stats_payload(service, facade=facade))
     if normalized_path == "/manager/api/sessions":
         return _json_response(_sessions_payload(service, query))
     if normalized_path.startswith("/manager/api/sessions/"):
@@ -97,12 +99,28 @@ def handle_manager_post(
     )
 
 
-def _stats_payload(service: NanoMemService) -> dict[str, Any]:
-    control = NanoMemControlService(
-        store=service.store,  # type: ignore[arg-type]
-        index=service.index,
+def _stats_payload(
+    service: NanoMemService,
+    *,
+    facade: ControlFacade | None = None,
+) -> dict[str, Any]:
+    resolved = facade or _default_facade(service)
+    return asdict(resolved.stats())
+
+
+def _default_facade(service: NanoMemService) -> ControlFacade:
+    # Back-compat path: server/app.py historically constructed manager
+    # routes with only a NanoMemService. Build a fresh ControlFacade
+    # against the service's store/index. New code should pass a facade
+    # explicitly via handle_manager_get(service, path, facade=...).
+    from nanomem.control.service import NanoMemControlService
+
+    return ControlFacade(
+        NanoMemControlService(
+            store=service.store,  # type: ignore[arg-type]
+            index=service.index,
+        )
     )
-    return asdict(control.stats())
 
 
 def _memory_units_payload(
