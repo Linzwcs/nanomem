@@ -13,7 +13,7 @@ Top-level :mod:`nanomem.server.app` wires both into one stdlib
 from __future__ import annotations
 
 from nanomem.transports.http.app import NanoMemHTTPServer, make_handler
-from nanomem.transports.http.v1.schemas import (
+from nanomem.transports.http.schemas import (
     capture_request_from_json,
     capture_result_to_json,
     read_request_from_json,

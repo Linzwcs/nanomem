@@ -5,10 +5,10 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from typing import Any
 
-from nanomem.transports.http.manager.routes import handle_manager_get, handle_manager_post
+from nanomem.transports.http.manager import handle_manager_get, handle_manager_post
 from nanomem.service.core import NanoMemService
 from nanomem.service.facade import ControlFacade
-from nanomem.transports.http.v1.schemas import (
+from nanomem.transports.http.schemas import (
     capture_request_from_json,
     capture_result_to_json,
     flush_request_from_json,
