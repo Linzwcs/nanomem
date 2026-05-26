@@ -6,7 +6,7 @@ from typing import Any
 from urllib import request as urlrequest
 from urllib.error import HTTPError, URLError
 
-from nanomem.contracts import (
+from nanomem.core.contracts import (
     CaptureRequest,
     CaptureResult,
     FlushRequest,

@@ -19,7 +19,7 @@ import json
 import os
 from typing import Any
 
-from nanomem.contracts import (
+from nanomem.core.contracts import (
     CaptureSkip,
     DialogueRef,
     ExtractionRequest,

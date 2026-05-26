@@ -12,7 +12,7 @@ from typing import Any, TextIO
 import uuid
 
 from nanomem.adapters.agent import AgentMemoryAdapter, AgentMessage
-from nanomem.contracts import FlushRequest, MemoryScope
+from nanomem.core.contracts import FlushRequest, MemoryScope
 from nanomem.sdk import NanoMemClient, NanoMemClientError
 from nanomem.time import now_utc_iso
 

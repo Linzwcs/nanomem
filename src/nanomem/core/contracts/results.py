@@ -12,8 +12,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from nanomem.contracts.core import MemoryUnit
-from nanomem.contracts.requests import ReadRequest
+from .core import MemoryUnit
+from .requests import ReadRequest
 
 
 @dataclass(frozen=True)

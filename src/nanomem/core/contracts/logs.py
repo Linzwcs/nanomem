@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from nanomem.contracts.core import MemoryScope
+from .core import MemoryScope
 
 
 @dataclass(frozen=True)

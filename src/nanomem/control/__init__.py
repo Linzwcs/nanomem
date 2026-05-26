@@ -11,7 +11,7 @@ Both are re-exported here so existing
 
 from __future__ import annotations
 
-from nanomem.contracts import OperationLogEntry, ReindexResult
+from nanomem.core.contracts import OperationLogEntry, ReindexResult
 from nanomem.control.service import (
     NanoMemAdminService,
     NanoMemControlService,

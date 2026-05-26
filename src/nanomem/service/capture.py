@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, replace
 
-from nanomem.contracts import (
+from nanomem.core.contracts import (
     CaptureRequest,
     CaptureResult,
     CaptureSkip,

@@ -8,7 +8,7 @@ import threading
 import pytest
 
 from nanomem.config import config_from_mapping
-from nanomem.contracts import (
+from nanomem.core.contracts import (
     CaptureDialogue,
     CaptureRequest,
     DialogueMessage,

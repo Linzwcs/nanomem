@@ -7,7 +7,7 @@ import json
 from typing import Any
 from urllib.parse import parse_qs, unquote, urlparse
 
-from nanomem.contracts import (
+from nanomem.core.contracts import (
     Dialogue,
     DialogueWindow,
     DialogueWindowSelector,

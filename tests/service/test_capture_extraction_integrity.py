@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from nanomem.contracts import (
+from nanomem.core.contracts import (
     CaptureDialogue,
     CaptureRequest,
     DialogueRef,

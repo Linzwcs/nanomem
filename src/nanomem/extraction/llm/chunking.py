@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from nanomem.contracts import CaptureSkip, DialogueMessage, ExtractionRequest
+from nanomem.core.contracts import CaptureSkip, DialogueMessage, ExtractionRequest
 from nanomem.errors import ConfigError
 from nanomem.extraction.events import (
     is_extractable_message,

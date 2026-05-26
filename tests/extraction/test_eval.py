@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from nanomem.contracts import (
+from nanomem.core.contracts import (
     DialogueMessage,
     Dialogue,
     ExtractionRequest,

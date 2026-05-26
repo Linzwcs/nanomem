@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, replace
 
-from nanomem.contracts import MemoryUnitSelector, ReindexResult
+from nanomem.core.contracts import MemoryUnitSelector, ReindexResult
 from nanomem.index.base import MemoryUnitIndex
 from nanomem.store.base import MemoryStore
 

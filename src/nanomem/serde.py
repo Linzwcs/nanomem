@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import asdict
 from typing import Any
 
-from nanomem.contracts import (
+from nanomem.core.contracts import (
     CaptureDialogue,
     CaptureRequest,
     CaptureResult,

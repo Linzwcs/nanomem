@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Protocol, Sequence
 
-from nanomem.contracts import (
+from nanomem.core.contracts import (
     CaptureDialogue,
     CaptureRequest,
     CaptureResult,

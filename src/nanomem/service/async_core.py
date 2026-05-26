@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 
-from nanomem.contracts import (
+from nanomem.core.contracts import (
     CaptureRequest,
     CaptureResult,
     FlushRequest,

@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from nanomem.contracts import IndexHit, MemoryUnit, RankedMemoryUnit
+from nanomem.core.contracts import IndexHit, MemoryUnit, RankedMemoryUnit
 
 
 class Ranker(Protocol):

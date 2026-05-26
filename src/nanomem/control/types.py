@@ -13,7 +13,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from nanomem.contracts import (
+from nanomem.core.contracts import (
     MemoryScope,
     MemoryUnit,
     OperationLogEntry,

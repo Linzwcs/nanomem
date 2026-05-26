@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-from nanomem.contracts import (
+from nanomem.core.contracts import (
     CaptureSkip,
     DialogueMessage,
     DialogueRef,

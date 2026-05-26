@@ -7,7 +7,7 @@ import urllib.request
 
 import pytest
 
-from nanomem.contracts import (
+from nanomem.core.contracts import (
     CaptureDialogue,
     CaptureRequest,
     DialogueMessage,

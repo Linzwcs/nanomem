@@ -13,7 +13,7 @@ from nanomem.service.capture import CapturePipeline
 from nanomem.service.read import ReadPipeline
 from nanomem.store.base import MemoryStore
 from nanomem.store.sqlite import SQLiteMemoryUnitStore
-from nanomem.contracts import (
+from nanomem.core.contracts import (
     CaptureRequest,
     CaptureResult,
     FlushRequest,

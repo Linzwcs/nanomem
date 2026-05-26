@@ -7,7 +7,7 @@ before retrieval scoring.
 
 from __future__ import annotations
 
-from nanomem.contracts import MemoryScope
+from nanomem.core.contracts import MemoryScope
 
 
 def scope_matches(candidate: MemoryScope, request: MemoryScope) -> bool:

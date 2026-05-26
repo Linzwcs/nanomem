@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-from nanomem.contracts.core import (
+from .core import (
     CaptureDialogue,
     Dialogue,
     MemoryScope,

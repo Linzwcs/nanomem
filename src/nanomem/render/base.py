@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from nanomem.contracts import PackedContext, RankedMemoryUnit
+from nanomem.core.contracts import PackedContext, RankedMemoryUnit
 
 
 class Renderer(Protocol):

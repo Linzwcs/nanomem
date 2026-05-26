@@ -12,7 +12,7 @@ from nanomem.control import (
     RetentionPolicy,
 )
 from nanomem.config import NanoMemConfig, load_config
-from nanomem.contracts import FlushRequest, MemoryScope, MemoryUnit, TimeRange
+from nanomem.core.contracts import FlushRequest, MemoryScope, MemoryUnit, TimeRange
 from nanomem.factory import extractor_from_config, index_from_config
 from nanomem.integrations.codex import install_codex_hooks
 from nanomem.maintenance import NanoMemMaintenanceService

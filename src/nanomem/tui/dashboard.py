@@ -10,7 +10,7 @@ from nanomem.control import (
     RetentionPolicy,
     RetentionPreview,
 )
-from nanomem.contracts import MemoryUnit, OperationLogEntry
+from nanomem.core.contracts import MemoryUnit, OperationLogEntry
 from nanomem.time import now_utc_iso
 
 

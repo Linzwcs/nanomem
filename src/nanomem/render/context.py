@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-from nanomem.contracts import PackedContext, RankedMemoryUnit
+from nanomem.core.contracts import PackedContext, RankedMemoryUnit
 
 
 TOKEN_PATTERN = re.compile(r"[A-Za-z0-9_]+|[\u4e00-\u9fff]|[^\s]")

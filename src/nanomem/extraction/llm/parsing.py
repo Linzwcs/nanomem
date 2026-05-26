@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from nanomem.contracts import CaptureSkip, ExtractionRequest, ExtractionResult
+from nanomem.core.contracts import CaptureSkip, ExtractionRequest, ExtractionResult
 from nanomem.errors import ExtractionError
 from nanomem.extraction.events import is_extractable_message
 

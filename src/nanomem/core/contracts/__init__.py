@@ -1,24 +1,24 @@
 """Public data contracts for the nanomem package.
 
-This package preserves the historical ``from nanomem.contracts import X``
-surface by re-exporting every public name from the split sub-modules:
+This package re-exports every public name from the split sub-modules so
+``from nanomem.core.contracts import X`` works for any of them:
 
-- :mod:`nanomem.contracts.core` — domain entities (Session, Dialogue,
-  MemoryUnit, MemoryScope, ...)
-- :mod:`nanomem.contracts.requests` — request payloads
+- :mod:`nanomem.core.contracts.core` — domain entities (Session,
+  Dialogue, MemoryUnit, MemoryScope, ...)
+- :mod:`nanomem.core.contracts.requests` — request payloads
   (CaptureRequest, ReadRequest, FlushRequest, ...)
-- :mod:`nanomem.contracts.results` — result and retrieval payloads
+- :mod:`nanomem.core.contracts.results` — result and retrieval payloads
   (CaptureResult, ReadResult, RankedMemoryUnit, PackedContext, ...)
-- :mod:`nanomem.contracts.selectors` — query filters
-- :mod:`nanomem.contracts.logs` — :class:`OperationLogEntry`
+- :mod:`nanomem.core.contracts.selectors` — query filters
+- :mod:`nanomem.core.contracts.logs` — :class:`OperationLogEntry`
 
-New code may import from the sub-modules directly. Existing code that
-imports from :mod:`nanomem.contracts` continues to work unchanged.
+The flat top-level ``from nanomem import X`` form (re-exported from
+:mod:`nanomem.__init__`) also remains the most convenient public surface.
 """
 
 from __future__ import annotations
 
-from nanomem.contracts.core import (
+from .core import (
     CaptureDialogue,
     Dialogue,
     DialogueMessage,
@@ -30,15 +30,15 @@ from nanomem.contracts.core import (
     Session,
     TimeRange,
 )
-from nanomem.contracts.logs import OperationLogEntry
-from nanomem.contracts.requests import (
+from .logs import OperationLogEntry
+from .requests import (
     CaptureRequest,
     ExtractionRequest,
     FlushRequest,
     IndexSearchRequest,
     ReadRequest,
 )
-from nanomem.contracts.results import (
+from .results import (
     CaptureResult,
     CaptureSkip,
     ExtractionResult,
@@ -49,7 +49,7 @@ from nanomem.contracts.results import (
     ReadResult,
     ReindexResult,
 )
-from nanomem.contracts.selectors import (
+from .selectors import (
     DialogueWindowSelector,
     MemoryUnitSelector,
     OperationLogSelector,

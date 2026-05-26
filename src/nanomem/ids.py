@@ -5,7 +5,7 @@ import json
 from typing import Any
 from uuid import uuid4
 
-from nanomem.contracts import DialogueRef, MemoryScope
+from nanomem.core.contracts import DialogueRef, MemoryScope
 
 
 def stable_id(prefix: str, payload: Any) -> str:

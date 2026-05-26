@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-from nanomem.contracts.core import DialogueStatus, TimeRange
+from .core import DialogueStatus, TimeRange
 
 
 @dataclass(frozen=True)

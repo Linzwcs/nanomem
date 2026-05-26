@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import sqlite3
 
-from nanomem.contracts import (
+from nanomem.core.contracts import (
     DialogueMessage,
     Dialogue,
     DialogueRef,

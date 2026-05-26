@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from nanomem.contracts import CaptureSkip, DialogueMessage
+from nanomem.core.contracts import CaptureSkip, DialogueMessage
 
 
 VISIBLE_ROLES = {"user", "assistant", "system_visible", "other"}

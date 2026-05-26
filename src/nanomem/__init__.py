@@ -21,7 +21,7 @@ import X`` form below is preserved for convenience.
 from __future__ import annotations
 
 # --- Contracts ---
-from nanomem.contracts import (
+from nanomem.core.contracts import (
     CaptureDialogue,
     CaptureRequest,
     CaptureResult,

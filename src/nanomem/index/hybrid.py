@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from nanomem.contracts import IndexHit, IndexSearchRequest, MemoryUnit
+from nanomem.core.contracts import IndexHit, IndexSearchRequest, MemoryUnit
 from nanomem.index.base import MemoryUnitIndex
 from nanomem.index.dense import DenseMemoryUnitIndex
 from nanomem.index.lexical import LexicalMemoryUnitIndex

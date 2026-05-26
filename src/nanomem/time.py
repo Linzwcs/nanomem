@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from nanomem.contracts import TimeRange
+from nanomem.core.contracts import TimeRange
 
 
 def now_utc_iso() -> str:

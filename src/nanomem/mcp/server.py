@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any, TextIO
 
-from nanomem.contracts import ReadRequest
+from nanomem.core.contracts import ReadRequest
 from nanomem.serde import read_request_from_json, read_result_to_json
 from nanomem.service.core import NanoMemService
 
