@@ -5,7 +5,7 @@ export default defineConfig({
   plugins: [react()],
   base: "/manager/assets/",
   build: {
-    outDir: "../src/nanomem/manager/assets",
+    outDir: "../src/nanomem/admin/manager_ui",
     emptyOutDir: false,
     cssCodeSplit: false,
     rollupOptions: {
