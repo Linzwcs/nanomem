@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0a6] — 2026-05-26
+
+### Removed (BREAKING)
+
+- **`nanomem.core.policies` package gone.** Reserved 6 alphas ago to
+  "hold future update / dedup / conflict policies" — no such policies
+  materialized. Concrete contents:
+  - `scope_matches(a, b)` — never used outside the package's own
+    re-export. (Equivalent to `a == b` on frozen dataclasses.)
+  - `namespace_matches(candidate, namespaces)` — one-line predicate
+    `namespaces is None or candidate in namespaces`. Used in 2 sites;
+    inlined.
+
+  Net delta: -57 lines, +2 inline expressions, same behavior.
+
+  Migration: `from nanomem.core.policies import namespace_matches`
+  → inline `if request.namespaces is not None and candidate not in request.namespaces: ...`
+
 ## [0.3.0a5] — 2026-05-26
 
 Two cleanups motivated by re-evaluation of what the operator-facing
