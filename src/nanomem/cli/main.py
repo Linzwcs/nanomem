@@ -17,7 +17,7 @@ from nanomem.factory import extractor_from_config, index_from_config
 from nanomem.integrations.codex import install_codex_hooks
 from nanomem.maintenance import NanoMemMaintenanceService
 from nanomem.service.core import NanoMemService
-from nanomem.store.sqlite import SQLiteMemoryUnitStore
+from nanomem.pipeline.storage.sqlite import SQLiteMemoryUnitStore
 from nanomem.tui.dashboard import (
     build_dashboard,
     render_dashboard,

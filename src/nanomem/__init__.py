@@ -70,7 +70,7 @@ from nanomem.index.hybrid import HybridMemoryUnitIndex
 from nanomem.index.lexical import LexicalMemoryUnitIndex
 from nanomem.ranking.base import Ranker
 from nanomem.render.base import Renderer
-from nanomem.store.sqlite import SQLiteMemoryUnitStore
+from nanomem.pipeline.storage.sqlite import SQLiteMemoryUnitStore
 
 # --- SDK ---
 from nanomem.sdk import AsyncNanoMemClient, NanoMemClient, NanoMemClientError

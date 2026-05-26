@@ -4,7 +4,7 @@ from dataclasses import asdict, replace
 
 from nanomem.core.contracts import MemoryUnitSelector, ReindexResult
 from nanomem.index.base import MemoryUnitIndex
-from nanomem.store.base import MemoryStore
+from nanomem.pipeline.storage.base import MemoryStore
 
 
 def rebuild_index(

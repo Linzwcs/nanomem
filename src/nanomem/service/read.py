@@ -23,7 +23,7 @@ from nanomem.render.context import (
     estimate_tokens,
     render_line_for_diagnostics,
 )
-from nanomem.store.base import MemoryStore
+from nanomem.pipeline.storage.base import MemoryStore
 from nanomem.core.time import now_utc_iso
 
 

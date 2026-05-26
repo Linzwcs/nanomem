@@ -10,7 +10,7 @@ from nanomem.control.service import (
     RetentionPolicy,
 )
 from nanomem.index.dense import DenseMemoryUnitIndex
-from nanomem.store.sqlite import SQLiteMemoryUnitStore
+from nanomem.pipeline.storage.sqlite import SQLiteMemoryUnitStore
 
 
 def _make_control(tmp_path) -> NanoMemControlService:

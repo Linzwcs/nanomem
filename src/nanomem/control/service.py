@@ -29,7 +29,7 @@ from nanomem.control.types import (
 from nanomem.index.base import MemoryUnitIndex
 from nanomem.index.dense import DenseMemoryUnitIndex
 from nanomem.index.rebuild import rebuild_index
-from nanomem.store.sqlite import SQLiteMemoryUnitStore
+from nanomem.pipeline.storage.sqlite import SQLiteMemoryUnitStore
 
 
 class NanoMemControlService:

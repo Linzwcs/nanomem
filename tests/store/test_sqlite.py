@@ -16,7 +16,7 @@ from nanomem.core.contracts import (
     OperationLogSelector,
     Session,
 )
-from nanomem.store.sqlite import SQLiteMemoryUnitStore
+from nanomem.pipeline.storage.sqlite import SQLiteMemoryUnitStore
 
 
 def test_sqlite_store_round_trips_dialogue_units_and_logs(tmp_path) -> None:

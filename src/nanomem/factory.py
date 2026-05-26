@@ -14,8 +14,8 @@ from nanomem.index.hybrid import HybridMemoryUnitIndex
 from nanomem.index.lancedb import LanceDBMemoryUnitIndex
 from nanomem.index.lexical import LexicalMemoryUnitIndex
 from nanomem.service.core import NanoMemService
-from nanomem.store.base import MemoryStore
-from nanomem.store.sqlite import SQLiteMemoryUnitStore
+from nanomem.pipeline.storage.base import MemoryStore
+from nanomem.pipeline.storage.sqlite import SQLiteMemoryUnitStore
 from nanomem.control.service import NanoMemControlService
 from nanomem.maintenance.service import NanoMemMaintenanceService
 

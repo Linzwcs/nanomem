@@ -3,7 +3,7 @@ from __future__ import annotations
 from nanomem.control.service import NanoMemControlService
 from nanomem.index.dense import DenseMemoryUnitIndex
 from nanomem.service.facade import ControlFacade
-from nanomem.store.sqlite import SQLiteMemoryUnitStore
+from nanomem.pipeline.storage.sqlite import SQLiteMemoryUnitStore
 
 
 def test_control_facade_delegates_stats(tmp_path) -> None:

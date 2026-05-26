@@ -9,7 +9,7 @@ from nanomem.core.config import (
 from nanomem.control.service import NanoMemControlService
 from nanomem.index.dense import DenseMemoryUnitIndex
 from nanomem.maintenance.service import NanoMemMaintenanceService
-from nanomem.store.sqlite import SQLiteMemoryUnitStore
+from nanomem.pipeline.storage.sqlite import SQLiteMemoryUnitStore
 
 
 def _make_maintenance(tmp_path, config: MaintenanceConfig) -> NanoMemMaintenanceService:

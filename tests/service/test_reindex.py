@@ -10,7 +10,7 @@ from nanomem.core.contracts import (
 )
 from nanomem.index.dense import DenseMemoryUnitIndex
 from nanomem.service.core import NanoMemService
-from nanomem.store.sqlite import SQLiteMemoryUnitStore
+from nanomem.pipeline.storage.sqlite import SQLiteMemoryUnitStore
 
 
 def test_service_reindex_rebuilds_active_index_from_store(tmp_path) -> None:

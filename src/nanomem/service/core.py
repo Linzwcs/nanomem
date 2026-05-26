@@ -11,8 +11,8 @@ from nanomem.render.base import Renderer
 from nanomem.render.context import EvidenceContextRenderer
 from nanomem.service.capture import CapturePipeline
 from nanomem.service.read import ReadPipeline
-from nanomem.store.base import MemoryStore
-from nanomem.store.sqlite import SQLiteMemoryUnitStore
+from nanomem.pipeline.storage.base import MemoryStore
+from nanomem.pipeline.storage.sqlite import SQLiteMemoryUnitStore
 from nanomem.core.contracts import (
     CaptureRequest,
     CaptureResult,
