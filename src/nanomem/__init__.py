@@ -82,9 +82,7 @@ from nanomem.transports.sdk import AsyncNanoMemClient, NanoMemClient, NanoMemCli
 from nanomem.hosts.adapters import (
     AgentMemoryAdapter,
     AgentMessage,
-    NanoBotMemoryAdapter,
     NanoMemMCPServer,
-    OpenClawMemoryAdapter,
 )
 
 # --- Config / Factory ---
@@ -188,9 +186,7 @@ __all__ = [
     # --- Adapters ---
     "AgentMemoryAdapter",
     "AgentMessage",
-    "NanoBotMemoryAdapter",
     "NanoMemMCPServer",
-    "OpenClawMemoryAdapter",
     # --- Config / Factory ---
     "BackupConfig",
     "ExportConfig",

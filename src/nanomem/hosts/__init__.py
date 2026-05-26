@@ -2,7 +2,7 @@
 
 - :mod:`nanomem.hosts.adapters` — generic adapter shapes
   (``AgentMemoryAdapter``, ``AgentMessage``, ``NanoMemBackend``) plus
-  per-host concrete adapters (Codex, OpenClaw, NanoBot, MCP).
+  the MCP server adapter.
 - :mod:`nanomem.hosts.plugins`  — higher-level host integrations that
   consume :mod:`nanomem.hosts.adapters` (was ``nanomem.integrations``
   in v0.2.x; renamed for clarity since the contents are agent-harness
