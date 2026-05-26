@@ -14,7 +14,7 @@ from nanomem.core.contracts import (
     TimeRange,
 )
 from nanomem.service.factory import service_from_config
-from nanomem.server.manager import handle_manager_get, handle_manager_post
+from nanomem.transports.http.manager import handle_manager_get, handle_manager_post
 
 
 def test_local_product_flow_persists_rebuilds_reads_renders_and_audits(

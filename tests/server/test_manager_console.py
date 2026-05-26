@@ -9,7 +9,7 @@ from nanomem.core.contracts import (
     FlushRequest,
     MemoryScope,
 )
-from nanomem.server.manager import handle_manager_get, handle_manager_post
+from nanomem.transports.http.manager import handle_manager_get, handle_manager_post
 from nanomem.service.core import NanoMemService
 
 

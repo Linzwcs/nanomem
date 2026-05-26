@@ -25,8 +25,8 @@ from nanomem.integrations.hooks import (
     run_read,
     run_spool,
 )
-from nanomem.sdk import NanoMemClient
-from nanomem.server.app import NanoMemHTTPServer
+from nanomem.transports.sdk import NanoMemClient
+from nanomem.transports.http.app import NanoMemHTTPServer
 from nanomem.service.core import NanoMemService
 
 

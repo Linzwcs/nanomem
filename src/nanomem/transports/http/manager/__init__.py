@@ -6,13 +6,13 @@ operator UI and admin endpoints. Never expose it to untrusted networks.
 Public dispatch lives in :mod:`nanomem.server.manager.routes`
 (:func:`handle_manager_get`, :func:`handle_manager_post`,
 :class:`ManagerResponse`). It is re-exported here so existing
-``from nanomem.server.manager import handle_manager_get`` import sites
+``from nanomem.transports.http.manager import handle_manager_get`` import sites
 continue to work.
 """
 
 from __future__ import annotations
 
-from nanomem.server.manager.routes import (
+from nanomem.transports.http.manager.routes import (
     ManagerResponse,
     handle_manager_get,
     handle_manager_post,

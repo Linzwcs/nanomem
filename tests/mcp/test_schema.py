@@ -6,7 +6,7 @@ from nanomem.core.contracts import (
     DialogueMessage,
     MemoryScope,
 )
-from nanomem.mcp.server import NanoMemMCPServer
+from nanomem.transports.mcp.server import NanoMemMCPServer
 from nanomem.service.core import NanoMemService
 
 

@@ -73,7 +73,7 @@ from nanomem.pipeline.utilization.base import Renderer
 from nanomem.pipeline.storage.sqlite import SQLiteMemoryUnitStore
 
 # --- SDK ---
-from nanomem.sdk import AsyncNanoMemClient, NanoMemClient, NanoMemClientError
+from nanomem.transports.sdk import AsyncNanoMemClient, NanoMemClient, NanoMemClientError
 
 # --- Adapters ---
 from nanomem.adapters import (

@@ -11,7 +11,7 @@ and any breaking change ripples through plugin ecosystems.
 
 from __future__ import annotations
 
-from nanomem.server.v1.schemas import (
+from nanomem.transports.http.v1.schemas import (
     capture_request_from_json,
     capture_request_to_json,
     capture_result_from_json,

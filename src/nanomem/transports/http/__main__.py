@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from nanomem.server.main import main
+from nanomem.transports.http.main import main
 
 
 if __name__ == "__main__":

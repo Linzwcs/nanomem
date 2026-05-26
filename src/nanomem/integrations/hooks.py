@@ -13,7 +13,7 @@ import uuid
 
 from nanomem.adapters.agent import AgentMemoryAdapter, AgentMessage
 from nanomem.core.contracts import FlushRequest, MemoryScope
-from nanomem.sdk import NanoMemClient, NanoMemClientError
+from nanomem.transports.sdk import NanoMemClient, NanoMemClientError
 from nanomem.core.time import now_utc_iso
 
 

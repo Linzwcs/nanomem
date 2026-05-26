@@ -5,7 +5,7 @@ import sys
 
 from nanomem.core.config import load_config
 from nanomem.service.factory import service_from_config
-from nanomem.mcp.server import NanoMemMCPServer, run_stdio
+from nanomem.transports.mcp.server import NanoMemMCPServer, run_stdio
 
 
 def main(argv: list[str] | None = None) -> int:

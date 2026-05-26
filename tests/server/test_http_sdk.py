@@ -15,8 +15,8 @@ from nanomem.core.contracts import (
     MemoryScope,
     ReadRequest,
 )
-from nanomem.sdk import NanoMemClient, NanoMemClientError
-from nanomem.server.app import NanoMemHTTPServer
+from nanomem.transports.sdk import NanoMemClient, NanoMemClientError
+from nanomem.transports.http.app import NanoMemHTTPServer
 from nanomem.service.core import NanoMemService
 
 
