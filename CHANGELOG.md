@@ -2,6 +2,54 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0a2] — 2026-05-26
+
+Housekeeping pass on top of the v0.2.0a1 structural refactor. Same
+discipline (one batch one commit, tests green between batches,
+independent reviewer subagent at the end). No new behavior; only
+folder structure, naming, and packaging.
+
+### Changed (BREAKING)
+
+- **`src/nanomem/control/service.py`** is split into
+  `control/types.py` (13 result and policy dataclasses) plus
+  `control/service.py` (`NanoMemControlService` itself).
+  `from nanomem.control import X` and `from nanomem.control.service
+  import X` continue to work via the package `__init__` re-export.
+  New code may target `from nanomem.control.types import X`.
+- **`src/nanomem/extraction/llm.py`** (650 lines) is now a package:
+  `extraction/llm/{__init__,extractor,client,chunking,parsing}.py`.
+  Every previously-public name (`LLMMemoryUnitExtractor`,
+  `LLM_EXTRACTION_PROMPT`, `LLM_EXTRACTION_PROMPT_VERSION`,
+  `ALLOWED_MEMORY_TYPES`, `LLMExtractionPayloadError`,
+  `ExtractionChunk`, `LLMCompletionClient`,
+  `OpenAIChatCompletionClient`, `DEFAULT_MAX_MESSAGES_PER_CHUNK`)
+  still imports as `from nanomem.extraction.llm import X`.
+- **`src/nanomem/server/`** now mirrors the data-plane vs control-plane
+  boundary the docs always described:
+  - `server/v1/` — data plane (was `server/schemas.py`)
+  - `server/manager/` — control plane (was `server/manager.py`)
+  - `server/app.py` and `server/main.py` unchanged in role.
+  External imports (`from nanomem.server.manager import
+  handle_manager_get`, `from nanomem.server import NanoMemHTTPServer`)
+  unchanged.
+
+### Changed (non-breaking)
+
+- **Top-level `nanomem.__init__.py`** is now organized into 8
+  commented sections (Contracts / Errors / Service / Capabilities /
+  SDK / Adapters / Config & Factory / Admin & Control). Both the
+  imports block and `__all__` list share the same ordering.
+- **`nanomem_service_with_defaults`** factory helper (added in
+  v0.2.0a1) is now exported at the top level —
+  `from nanomem import nanomem_service_with_defaults` works.
+
+### Deprecated
+
+- `nanomem.embeddings` shim removal pinned to **v0.3.0** via the new
+  `nanomem.embeddings.__deprecated_removal__` constant and an updated
+  warning message. Migrate to `nanomem.index.embeddings` before then.
+
 ## [0.2.0a1] — 2026-05-26
 
 First structural refactor since the alpha. Goal: tighten interface seams,
