@@ -7,7 +7,6 @@ from nanomem.core.contracts import (
     IndexSearchRequest,
     MemoryUnit,
 )
-from nanomem.core.policies import namespace_matches
 from nanomem.core.time import timestamp_in_range
 
 
@@ -51,7 +50,7 @@ class LexicalMemoryUnitIndex:
             timestamp = unit.timestamp or unit.available_at
             if unit.scope.owner_id != request.owner_id:
                 continue
-            if not namespace_matches(unit.scope.namespace or "", request.namespaces):
+            if request.namespaces is not None and (unit.scope.namespace or "") not in request.namespaces:
                 continue
             if not timestamp_in_range(timestamp, request.time_range):
                 continue
