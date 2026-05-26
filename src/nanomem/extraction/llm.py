@@ -18,19 +18,12 @@ from nanomem.extraction.events import (
     is_extractable_message,
     non_extractable_message_skip,
 )
+from nanomem.extraction.prompts import (
+    ALLOWED_MEMORY_TYPES,
+    LLM_EXTRACTION_PROMPT,
+    LLM_EXTRACTION_PROMPT_VERSION,
+)
 from nanomem.ids import scope_payload, stable_id
-
-
-ALLOWED_MEMORY_TYPES = {
-    "preference",
-    "correction",
-    "habit",
-    "background",
-    "relationship",
-    "user_event",
-    "agent_interaction_event",
-    "uncertain",
-}
 
 
 DEFAULT_MAX_MESSAGES_PER_CHUNK = 24
@@ -40,35 +33,6 @@ DEFAULT_MAX_MESSAGES_PER_CHUNK = 24
 class ExtractionChunk:
     chunk_id: int
     messages: tuple[tuple[int, DialogueMessage], ...]
-
-
-LLM_EXTRACTION_PROMPT = """
-Extract durable long-term personal memory units from the visible dialogue.
-
-Return JSON only:
-{
-  "units": [
-    {
-      "text": "...",
-      "message_range": null,
-      "memory_type": "preference|correction|habit|background|relationship|user_event|agent_interaction_event|uncertain"
-    }
-  ],
-  "skipped": [
-    {"message_range": [0, 1], "reason": "...", "detail": "..."}
-  ]
-}
-
-Rules:
-- Extract only user-related durable personal facts.
-- Use third-person, evidence-grounded wording.
-- Only the visible extractable messages are provided; do not infer hidden/tool content.
-- Do not extract project docs, code facts, logs, current task state, or raw tool output.
-- Do not resolve conflicts or synthesize a canonical profile.
-- message_range is optional evidence attribution. Use null by default.
-- If a unit has precise evidence, message_range may be a valid half-open range over the provided original indexes.
-- A non-null message_range must cover only contiguous provided messages; do not span omitted indexes.
-""".strip()
 
 
 class LLMCompletionClient(Protocol):
@@ -369,6 +333,7 @@ class LLMMemoryUnitExtractor:
                         "extractor": self.name,
                         "model": self.model,
                         "chunk_id": chunk_id,
+                        "prompt_version": LLM_EXTRACTION_PROMPT_VERSION,
                         **_optional_metadata(item),
                     },
                 )
