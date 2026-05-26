@@ -21,6 +21,7 @@ from nanomem.contracts import (
     Session,
     TimeRange,
 )
+from nanomem.errors import ContractError, StoreError
 from nanomem.time import now_utc_iso
 
 
@@ -193,9 +194,9 @@ class SQLiteMemoryUnitStore:
         order: str = "newest_first",
     ) -> tuple[Session, ...]:
         if offset < 0:
-            raise ValueError("offset must be non-negative")
+            raise ContractError("offset must be non-negative")
         if limit is not None and limit < 0:
-            raise ValueError("limit must be non-negative")
+            raise ContractError("limit must be non-negative")
         direction = "ASC" if order == "oldest_first" else "DESC"
         query = f"SELECT * FROM sessions ORDER BY updated_at {direction}, session_id ASC"
         params: list[object] = []
@@ -226,9 +227,9 @@ class SQLiteMemoryUnitStore:
         order: str = "oldest_first",
     ) -> tuple[Dialogue, ...]:
         if offset < 0:
-            raise ValueError("offset must be non-negative")
+            raise ContractError("offset must be non-negative")
         if limit is not None and limit < 0:
-            raise ValueError("limit must be non-negative")
+            raise ContractError("limit must be non-negative")
         clauses: list[str] = []
         params: list[object] = []
         if session_id is not None:
@@ -576,7 +577,7 @@ class SQLiteMemoryUnitStore:
             with self._connection:
                 current_version = _schema_version(self._connection)
                 if current_version > SCHEMA_VERSION:
-                    raise RuntimeError(
+                    raise StoreError(
                         "NanoMem database schema is newer than this code: "
                         f"{current_version} > {SCHEMA_VERSION}"
                     )
@@ -898,9 +899,9 @@ def _query_units_sql(
     count: bool,
 ) -> tuple[str, list[object]]:
     if selector.offset < 0:
-        raise ValueError("MemoryUnitSelector.offset must be non-negative")
+        raise ContractError("MemoryUnitSelector.offset must be non-negative")
     if selector.limit is not None and selector.limit < 0:
-        raise ValueError("MemoryUnitSelector.limit must be non-negative")
+        raise ContractError("MemoryUnitSelector.limit must be non-negative")
     clauses: list[str] = []
     params: list[object] = []
     if selector.owner_id is not None:
@@ -963,9 +964,9 @@ def _query_dialogue_windows_sql(
     selector: DialogueWindowSelector,
 ) -> tuple[str, list[object]]:
     if selector.offset < 0:
-        raise ValueError("DialogueWindowSelector.offset must be non-negative")
+        raise ContractError("DialogueWindowSelector.offset must be non-negative")
     if selector.limit is not None and selector.limit < 0:
-        raise ValueError("DialogueWindowSelector.limit must be non-negative")
+        raise ContractError("DialogueWindowSelector.limit must be non-negative")
     clauses: list[str] = []
     params: list[object] = []
     if selector.session_id is not None:
