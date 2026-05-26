@@ -76,7 +76,7 @@ from nanomem.pipeline.storage.sqlite import SQLiteMemoryUnitStore
 from nanomem.transports.sdk import AsyncNanoMemClient, NanoMemClient, NanoMemClientError
 
 # --- Adapters ---
-from nanomem.adapters import (
+from nanomem.hosts.adapters import (
     AgentMemoryAdapter,
     AgentMessage,
     NanoBotMemoryAdapter,

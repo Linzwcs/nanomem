@@ -18,7 +18,7 @@ from nanomem.core.contracts import (
     ReadRequest,
 )
 from nanomem.service.factory import service_from_config
-from nanomem.integrations.hooks import (
+from nanomem.hosts.plugins.hooks import (
     HookConfig,
     config_from_env,
     run_capture,

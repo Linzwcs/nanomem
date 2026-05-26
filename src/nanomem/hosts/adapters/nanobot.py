@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from nanomem.adapters.agent import AgentMemoryAdapter
+from nanomem.hosts.adapters.agent import AgentMemoryAdapter
 
 
 class NanoBotMemoryAdapter(AgentMemoryAdapter):

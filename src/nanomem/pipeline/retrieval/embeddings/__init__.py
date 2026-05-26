@@ -1,11 +1,9 @@
-"""Embedding models used by the index backends.
+"""Embedding models used by the retrieval indexes.
 
-This package was previously at ``nanomem.embeddings``. The new location
-co-locates embedding models with the index backends that consume them
-(``dense``, ``hybrid``, ``lancedb``).
-
-Backward compatibility: ``from nanomem.embeddings import X`` still works
-through a shim at the old location. Prefer the new path for new code.
+Co-located with the index backends that consume them (``dense``,
+``hybrid``, ``lancedb``). Implementations satisfy the
+:class:`~nanomem.pipeline.retrieval.embeddings.base.EmbeddingModel`
+Protocol.
 """
 
 from __future__ import annotations

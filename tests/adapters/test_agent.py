@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from nanomem.adapters.agent import AgentMemoryAdapter, AgentMessage
+from nanomem.hosts.adapters.agent import AgentMemoryAdapter, AgentMessage
 from nanomem.core.contracts import MemoryScope
 from nanomem.service.core import NanoMemService
 

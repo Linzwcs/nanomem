@@ -37,7 +37,7 @@ Repository = "https://github.com/Linzwcs/nanomem"
 nanomem = "nanomem.ops.cli.main:main"
 nanomem-server = "nanomem.transports.http.main:main"
 nanomem-mcp = "nanomem.transports.mcp.main:main"
-nanomem-agent-hook = "nanomem.integrations.hooks:main"
+nanomem-agent-hook = "nanomem.hosts.plugins.hooks:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

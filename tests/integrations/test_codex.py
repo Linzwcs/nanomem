@@ -6,7 +6,7 @@ import json
 import pytest
 
 from nanomem.ops.cli.main import main
-from nanomem.integrations.codex import codex_hooks_config, install_codex_hooks
+from nanomem.hosts.plugins.codex import codex_hooks_config, install_codex_hooks
 
 
 def test_codex_hooks_config_uses_spool_read_and_capture() -> None:
