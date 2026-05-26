@@ -4,6 +4,7 @@ from nanomem.config import NanoMemConfig, load_config
 from nanomem.embeddings.base import EmbeddingModel
 from nanomem.embeddings.hashing import HashingEmbeddingModel
 from nanomem.embeddings.openai_compatible import OpenAICompatibleEmbeddingModel
+from nanomem.errors import ConfigError
 from nanomem.extraction.base import MemoryUnitExtractor
 from nanomem.extraction.heuristic import HeuristicMemoryUnitExtractor
 from nanomem.extraction.llm import LLMMemoryUnitExtractor
@@ -71,7 +72,7 @@ def maintenance_from_config_file(path: str) -> NanoMemMaintenanceService:
 
 def store_from_config(config: NanoMemConfig) -> MemoryStore:
     if config.store.backend != "sqlite":
-        raise ValueError(f"Unsupported store backend: {config.store.backend}")
+        raise ConfigError(f"Unsupported store backend: {config.store.backend}")
     return SQLiteMemoryUnitStore(config.store.path)
 
 
@@ -102,7 +103,7 @@ def index_from_config(config: NanoMemConfig) -> MemoryUnitIndex:
             lexical_weight=config.index.lexical_weight,
             dense_weight=config.index.dense_weight,
         )
-    raise ValueError(f"Unsupported index backend: {backend}")
+    raise ConfigError(f"Unsupported index backend: {backend}")
 
 
 def embedding_from_config(config: NanoMemConfig) -> EmbeddingModel:
@@ -114,14 +115,14 @@ def embedding_from_config(config: NanoMemConfig) -> EmbeddingModel:
         )
     if embedding.backend == "openai_compatible":
         if not embedding.model:
-            raise ValueError("openai_compatible embedding requires model")
+            raise ConfigError("openai_compatible embedding requires model")
         return OpenAICompatibleEmbeddingModel(
             model=embedding.model,
             api_key=embedding.api_key,
             api_key_env=embedding.api_key_env,
             base_url=embedding.base_url,
         )
-    raise ValueError(f"Unsupported embedding backend: {embedding.backend}")
+    raise ConfigError(f"Unsupported embedding backend: {embedding.backend}")
 
 
 def extractor_from_config(config: NanoMemConfig) -> MemoryUnitExtractor:
@@ -130,14 +131,14 @@ def extractor_from_config(config: NanoMemConfig) -> MemoryUnitExtractor:
         return HeuristicMemoryUnitExtractor()
     if extraction.backend == "llm":
         if not extraction.model:
-            raise ValueError("llm extraction requires model")
+            raise ConfigError("llm extraction requires model")
         fallback = None
         if extraction.fallback_backend is None:
             fallback = None
         elif extraction.fallback_backend == "heuristic":
             fallback = HeuristicMemoryUnitExtractor()
         else:
-            raise ValueError(
+            raise ConfigError(
                 "Unsupported extraction fallback backend: "
                 f"{extraction.fallback_backend}"
             )
@@ -151,4 +152,4 @@ def extractor_from_config(config: NanoMemConfig) -> MemoryUnitExtractor:
             max_messages_per_chunk=extraction.max_messages_per_chunk,
             max_chars_per_chunk=extraction.max_chars_per_chunk,
         )
-    raise ValueError(f"Unsupported extraction backend: {extraction.backend}")
+    raise ConfigError(f"Unsupported extraction backend: {extraction.backend}")

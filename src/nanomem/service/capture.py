@@ -18,6 +18,7 @@ from nanomem.contracts import (
     OperationLogEntry,
     Session,
 )
+from nanomem.errors import ConfigError, ContractError, ExtractionError
 from nanomem.extraction.base import MemoryUnitExtractor
 from nanomem.extraction.events import is_extractable_message
 from nanomem.ids import new_id, stable_id
@@ -40,7 +41,7 @@ class CapturePipeline:
         max_dialogue_tokens: int = DEFAULT_MAX_DIALOGUE_TOKENS,
     ) -> None:
         if max_dialogue_tokens <= 0:
-            raise ValueError("max_dialogue_tokens must be positive")
+            raise ConfigError("max_dialogue_tokens must be positive")
         self.store = store
         self.index = index
         self.extractor = extractor
@@ -100,9 +101,9 @@ class CapturePipeline:
         flush_time = request.flush_time or now_utc_iso()
         windows = self.store.query_dialogue_windows(_flush_selector(request))
         if windows and request.session_id is None:
-            raise ValueError("FlushRequest.session_id is required")
+            raise ContractError("FlushRequest.session_id is required")
         if windows and request.scope is None:
-            raise ValueError("FlushRequest.scope is required for extraction routing")
+            raise ContractError("FlushRequest.scope is required for extraction routing")
         scope = _resolve_scope(request.scope) if request.scope else None
         units: list[MemoryUnit] = []
         skipped: list[CaptureSkip] = []
@@ -339,16 +340,16 @@ class CapturePipeline:
 
 def _validate_capture_request(request: CaptureRequest) -> None:
     if not request.scope.owner_id:
-        raise ValueError("CaptureRequest.scope.owner_id is required")
+        raise ContractError("CaptureRequest.scope.owner_id is required")
     if not request.capture_time:
-        raise ValueError("CaptureRequest.capture_time is required")
+        raise ContractError("CaptureRequest.capture_time is required")
     if not request.dialogue.occurred_at:
-        raise ValueError("CaptureRequest.dialogue.occurred_at is required")
+        raise ContractError("CaptureRequest.dialogue.occurred_at is required")
     if not request.dialogue.messages:
-        raise ValueError("CaptureRequest.dialogue.messages is required")
+        raise ContractError("CaptureRequest.dialogue.messages is required")
     for index, message in enumerate(request.dialogue.messages):
         if not message.timestamp:
-            raise ValueError(f"DialogueMessage[{index}].timestamp is required")
+            raise ContractError(f"DialogueMessage[{index}].timestamp is required")
 
 
 def _resolve_scope(scope: MemoryScope) -> MemoryScope:
@@ -455,32 +456,32 @@ def _validate_extraction_units(
 ) -> None:
     for unit in units:
         if unit.scope != scope:
-            raise ValueError(f"MemoryUnit {unit.unit_id} has unexpected scope")
+            raise ExtractionError(f"MemoryUnit {unit.unit_id} has unexpected scope")
         if not unit.text.strip():
-            raise ValueError(f"MemoryUnit {unit.unit_id} text is required")
+            raise ExtractionError(f"MemoryUnit {unit.unit_id} text is required")
         if not unit.memory_type:
-            raise ValueError(f"MemoryUnit {unit.unit_id} memory_type is required")
+            raise ExtractionError(f"MemoryUnit {unit.unit_id} memory_type is required")
         if not unit.timestamp:
-            raise ValueError(f"MemoryUnit {unit.unit_id} timestamp is required")
+            raise ExtractionError(f"MemoryUnit {unit.unit_id} timestamp is required")
         if not unit.available_at:
-            raise ValueError(f"MemoryUnit {unit.unit_id} available_at is required")
+            raise ExtractionError(f"MemoryUnit {unit.unit_id} available_at is required")
         for ref in unit.dialogue_refs:
             if ref.dialogue_id != dialogue.dialogue_id:
-                raise ValueError(
+                raise ExtractionError(
                     f"MemoryUnit {unit.unit_id} references a different dialogue"
                 )
             if ref.message_range is None:
                 continue
             start, end = ref.message_range
             if start < 0 or end <= start or end > len(dialogue.messages):
-                raise ValueError(
+                raise ExtractionError(
                     f"MemoryUnit {unit.unit_id} has invalid dialogue ref range"
                 )
             if not all(
                 is_extractable_message(message)
                 for message in dialogue.messages[start:end]
             ):
-                raise ValueError(
+                raise ExtractionError(
                     f"MemoryUnit {unit.unit_id} references non-extractable evidence"
                 )
 

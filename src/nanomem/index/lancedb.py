@@ -7,6 +7,7 @@ from typing import Any
 from nanomem.contracts import IndexHit, IndexSearchRequest, MemoryUnit
 from nanomem.embeddings.base import EmbeddingModel
 from nanomem.embeddings.hashing import HashingEmbeddingModel
+from nanomem.errors import ConfigError
 
 
 class LanceDBMemoryUnitIndex:
@@ -139,7 +140,7 @@ class LanceDBMemoryUnitIndex:
             if stored.get(key) != expected[key]
         }
         if mismatches:
-            raise ValueError(
+            raise ConfigError(
                 "LanceDB index metadata mismatch. Run reindex or clear the "
                 f"index before using this configuration: {mismatches}"
             )
@@ -262,7 +263,7 @@ def _sql_literal(value: str) -> str:
 def _normalized_distance_type(value: str) -> str:
     text = value.strip().lower()
     if text not in {"cosine", "l2", "dot"}:
-        raise ValueError(f"Unsupported LanceDB distance_type: {value}")
+        raise ConfigError(f"Unsupported LanceDB distance_type: {value}")
     return text
 
 

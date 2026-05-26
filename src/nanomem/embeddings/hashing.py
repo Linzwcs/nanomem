@@ -4,6 +4,7 @@ import hashlib
 import math
 
 from nanomem.embeddings.base import EmbeddingModel
+from nanomem.errors import ConfigError
 from nanomem.index.lexical import tokenize
 
 
@@ -12,7 +13,7 @@ class HashingEmbeddingModel:
 
     def __init__(self, *, dimensions: int = 128, name: str | None = None) -> None:
         if dimensions <= 0:
-            raise ValueError("HashingEmbeddingModel dimensions must be positive")
+            raise ConfigError("HashingEmbeddingModel dimensions must be positive")
         self.dimensions = dimensions
         self.name = name or f"hashing_embedding_{dimensions}"
 

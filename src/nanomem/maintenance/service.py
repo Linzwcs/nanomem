@@ -18,6 +18,7 @@ from nanomem.control.service import (
     SchemaStatus,
 )
 from nanomem.config import MaintenanceConfig, RetentionConfig
+from nanomem.errors import ConfigError
 
 
 @dataclass(frozen=True)
@@ -98,7 +99,7 @@ class NanoMemMaintenanceService:
 
         if self.config.backup.enabled:
             if not self.config.backup.path:
-                raise ValueError("maintenance.backup.path is required")
+                raise ConfigError("maintenance.backup.path is required")
             backup = self.control.backup(
                 self.config.backup.path,
                 overwrite=self.config.backup.overwrite,
@@ -106,7 +107,7 @@ class NanoMemMaintenanceService:
 
         if self.config.export.enabled:
             if not self.config.export.path:
-                raise ValueError("maintenance.export.path is required")
+                raise ConfigError("maintenance.export.path is required")
             export = self.control.export_json(
                 self.config.export.path,
                 include_operation_logs=(

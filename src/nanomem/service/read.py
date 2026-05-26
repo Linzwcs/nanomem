@@ -13,6 +13,7 @@ from nanomem.contracts import (
     ReadRequest,
     ReadResult,
 )
+from nanomem.errors import ContractError
 from nanomem.ids import new_id
 from nanomem.index.base import MemoryUnitIndex
 from nanomem.index.lexical import tokenize
@@ -165,14 +166,14 @@ class ReadPipeline:
 
 def _validate_read_request(request: ReadRequest) -> None:
     if not request.owner_id:
-        raise ValueError("ReadRequest.owner_id is required")
+        raise ContractError("ReadRequest.owner_id is required")
     if not request.query_time:
-        raise ValueError("ReadRequest.query_time is required")
+        raise ContractError("ReadRequest.query_time is required")
 
 
 def _validate_recency_policy(value: str) -> None:
     if value not in {"recent", "balanced", "historical"}:
-        raise ValueError(f"Unsupported recency_policy: {value}")
+        raise ContractError(f"Unsupported recency_policy: {value}")
 
 
 def _query_text(query: str | dict[str, Any]) -> str:

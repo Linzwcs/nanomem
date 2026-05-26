@@ -30,16 +30,23 @@ class NanoMemError(Exception):
     """Base class for every exception raised by the nanomem package."""
 
 
-class ConfigError(NanoMemError):
-    """Invalid configuration value, missing field, or unreadable config file."""
+class ConfigError(NanoMemError, ValueError):
+    """Invalid configuration value, missing field, or unreadable config file.
+
+    Multi-inherits from :class:`ValueError` so legacy
+    ``except ValueError`` blocks (and existing tests) keep catching it
+    while new code can prefer ``except ConfigError`` / ``except NanoMemError``.
+    """
 
 
-class ContractError(NanoMemError):
+class ContractError(NanoMemError, ValueError):
     """Request payload violates the public contract (HTTP/SDK boundary).
 
     Raised when a caller submits a request whose shape, types, or required
     fields do not match the documented contract. Distinct from validation
     failures on otherwise well-shaped data.
+
+    Multi-inherits from :class:`ValueError` for backward compatibility.
     """
 
 
@@ -68,8 +75,13 @@ class CaptureError(NanoMemError):
     """Capture-side pipeline failure not attributable to extraction alone."""
 
 
-class ExtractionError(CaptureError):
-    """Fact extraction failure (heuristic or LLM extractor)."""
+class ExtractionError(CaptureError, ValueError):
+    """Fact extraction failure (heuristic or LLM extractor).
+
+    Multi-inherits from :class:`ValueError` for backward compatibility with
+    existing ``except ValueError`` tests that exercised the pre-refactor
+    extractor validation paths.
+    """
 
 
 __all__ = [

@@ -13,6 +13,7 @@ from nanomem.contracts import (
     ExtractionResult,
     MemoryUnit,
 )
+from nanomem.errors import ConfigError, ExtractionError
 from nanomem.extraction.base import MemoryUnitExtractor
 from nanomem.extraction.events import (
     is_extractable_message,
@@ -79,12 +80,17 @@ class OpenAIChatCompletionClient:
         content = response.choices[0].message.content or "{}"
         parsed = json.loads(content)
         if not isinstance(parsed, dict):
-            raise ValueError("LLM extractor response must be a JSON object")
+            raise ExtractionError("LLM extractor response must be a JSON object")
         return parsed
 
 
-class LLMExtractionPayloadError(ValueError):
-    pass
+class LLMExtractionPayloadError(ExtractionError, ValueError):
+    """Raised when the LLM response payload violates the extraction schema.
+
+    Inherits from both :class:`~nanomem.errors.ExtractionError` and
+    :class:`ValueError` so legacy ``except ValueError`` blocks keep
+    catching it while new code can prefer ``except ExtractionError``.
+    """
 
 
 class LLMMemoryUnitExtractor:
@@ -146,7 +152,7 @@ class LLMMemoryUnitExtractor:
                     self.fallback.extract(request),
                     reason="missing_api_key",
                 )
-            raise RuntimeError("LLMMemoryUnitExtractor requires api_key or api_key_env")
+            raise ConfigError("LLMMemoryUnitExtractor requires api_key or api_key_env")
 
         units: list[MemoryUnit] = []
         all_skipped = list(skipped)
@@ -608,5 +614,5 @@ def _positive_int_or_none(value: int | None, *, field_name: str) -> int | None:
     if value is None:
         return None
     if value <= 0:
-        raise ValueError(f"{field_name} must be positive")
+        raise ConfigError(f"{field_name} must be positive")
     return value

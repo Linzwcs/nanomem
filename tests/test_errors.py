@@ -38,6 +38,19 @@ def test_index_error_does_not_shadow_builtin_index_error() -> None:
     assert not issubclass(IndexError_, IndexError)
 
 
+def test_input_validation_errors_remain_value_errors_for_back_compat() -> None:
+    # Pre-refactor callers caught ValueError on bad input. Keep that
+    # contract via multiple inheritance for the three "bad input" classes.
+    assert issubclass(ConfigError, ValueError)
+    assert issubclass(ContractError, ValueError)
+    assert issubclass(ExtractionError, ValueError)
+    # Non-input errors should NOT be ValueErrors.
+    assert not issubclass(StoreError, ValueError)
+    assert not issubclass(IndexError_, ValueError)
+    assert not issubclass(RenderError, ValueError)
+    assert not issubclass(RetrievalError, ValueError)
+
+
 def test_nanomem_error_can_be_caught_as_exception() -> None:
     with pytest.raises(NanoMemError):
         raise CaptureError("test")
