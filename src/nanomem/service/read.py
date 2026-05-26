@@ -18,7 +18,7 @@ from nanomem.core.ids import new_id
 from nanomem.pipeline.retrieval.indexes.base import MemoryUnitIndex
 from nanomem.pipeline.retrieval.indexes.lexical import tokenize
 from nanomem.pipeline.retrieval.ranking.relevance_recency import MemoryUnitRanker
-from nanomem.render.context import (
+from nanomem.pipeline.utilization.evidence_context import (
     EvidenceContextRenderer,
     estimate_tokens,
     render_line_for_diagnostics,

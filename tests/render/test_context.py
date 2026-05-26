@@ -6,7 +6,7 @@ from nanomem.core.contracts import (
     MemoryUnit,
     RankedMemoryUnit,
 )
-from nanomem.render.context import EvidenceContextRenderer, estimate_tokens
+from nanomem.pipeline.utilization.evidence_context import EvidenceContextRenderer, estimate_tokens
 
 
 def _ranked(unit_id: str, text: str, timestamp: str, rank: int = 1) -> RankedMemoryUnit:

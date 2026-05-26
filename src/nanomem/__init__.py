@@ -69,7 +69,7 @@ from nanomem.pipeline.retrieval.indexes.dense import DenseMemoryUnitIndex
 from nanomem.pipeline.retrieval.indexes.hybrid import HybridMemoryUnitIndex
 from nanomem.pipeline.retrieval.indexes.lexical import LexicalMemoryUnitIndex
 from nanomem.pipeline.retrieval.ranking.base import Ranker
-from nanomem.render.base import Renderer
+from nanomem.pipeline.utilization.base import Renderer
 from nanomem.pipeline.storage.sqlite import SQLiteMemoryUnitStore
 
 # --- SDK ---

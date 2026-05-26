@@ -9,8 +9,8 @@ from nanomem.core.contracts import (
 )
 from nanomem.pipeline.retrieval.ranking.base import Ranker
 from nanomem.pipeline.retrieval.ranking.relevance_recency import MemoryUnitRanker
-from nanomem.render.base import Renderer
-from nanomem.render.context import EvidenceContextRenderer
+from nanomem.pipeline.utilization.base import Renderer
+from nanomem.pipeline.utilization.evidence_context import EvidenceContextRenderer
 
 
 def _ranked() -> RankedMemoryUnit:
