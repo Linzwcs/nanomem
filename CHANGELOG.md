@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0a3] — 2026-05-26
+
+### Removed (BREAKING)
+
+- **`NanoBotMemoryAdapter`** and **`OpenClawMemoryAdapter`** are gone.
+  Both were empty `pass`-style subclasses of `AgentMemoryAdapter` that
+  added no behavior — they existed only as naming wrappers. Use
+  `AgentMemoryAdapter` directly:
+
+  ```python
+  # before
+  from nanomem import NanoBotMemoryAdapter, OpenClawMemoryAdapter
+
+  # after
+  from nanomem import AgentMemoryAdapter, MemoryScope
+  adapter = AgentMemoryAdapter(backend, MemoryScope(owner_id="..."))
+  ```
+
+  Top-level exports `NanoBotMemoryAdapter` and `OpenClawMemoryAdapter`
+  removed; `nanomem.hosts.adapters.{nanobot,openclaw}` modules deleted.
+  The "OpenClaw-like" and "NanoBot-like" prose mentions in docs are
+  unchanged — they describe target harness *categories*, not specific
+  adapter classes.
+
 ## [0.3.0a2] — 2026-05-26
 
 Two paper-aligned production features land on top of the v0.3.0a1
