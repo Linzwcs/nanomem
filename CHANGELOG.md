@@ -2,6 +2,68 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0a2] — 2026-05-26
+
+Two paper-aligned production features land on top of the v0.3.0a1
+layered architecture. No structural changes; both are pure additions
+in their target layers.
+
+### Added
+
+- **`TimeMergedRenderer`** at `nanomem.pipeline.utilization.time_merge`.
+  Ports the paper's Time+Merge utilization policy and adds the design
+  knob the experimental impl was missing: **the time format string IS
+  the merge bucket key**. Coarser format = more facts collapse:
+
+  | `time_format`        | granularity  | typical effect           |
+  | -------------------- | ------------ | ------------------------ |
+  | `"%Y-%m-%d %H:%M"`   | minute       | near-zero merge          |
+  | `"%Y-%m-%d"`         | daily (def.) | typical setting          |
+  | `"%Y-%m"`            | monthly      | aggressive merge         |
+  | `"%Y"`               | yearly       | extreme merge            |
+
+  Different namespaces stay separate even in the same time bucket.
+  Unparseable timestamps land in an explicit `unknown` bucket and
+  never merge with parseable ones.
+
+- **`CachedEmbeddingModel`** at `nanomem.pipeline.retrieval.embeddings.cache`.
+  Wraps any `EmbeddingModel` with a persistent sqlite-backed cache.
+  Key: `(model_name, sha256(text))`. Vectors stored as compact
+  `struct.pack` float64 (8 bytes/dim). Drop-in replacement for the
+  wrapped model. Essential for affordably running LLM extraction or
+  benchmark configs that re-embed the same text repeatedly.
+
+  ```python
+  from nanomem import CachedEmbeddingModel, HashingEmbeddingModel
+
+  cached = CachedEmbeddingModel(
+      HashingEmbeddingModel(),
+      path=".nanomem/embed-cache.db",
+  )
+  ```
+
+- Both classes are exported at the top level:
+  `from nanomem import TimeMergedRenderer, CachedEmbeddingModel,
+  EvidenceContextRenderer`.
+
+### Not added (deliberately deferred)
+
+- **`nanomem benchmark` CLI**. Benchmark-grade evaluation belongs in
+  the companion `nanomem-exp` repo, not the production CLI. The
+  reason is design-substantive, not effort: a benchmark prompt must
+  be greedy (eval poses arbitrary questions); a production prompt
+  should be selective (users have preferences about what to remember).
+  Shipping a single CLI surface for both would mislead users about
+  default behavior. For paper-faithful reproduction, see the
+  `nanomem-exp` repository.
+
+- **Full read-result cache**. The embedding cache reliably hits on
+  repeated `embed()` calls (same text → same vector). A full
+  read-result cache would rarely hit (different queries every turn)
+  and is hard to invalidate cleanly (any capture potentially
+  invalidates every cached result). Embedding cache covers the
+  expensive part; read pipeline is fast enough to re-run.
+
 ## [0.3.0a1] — 2026-05-26
 
 Paper-aligned horizontal-layering refactor. `src/nanomem/` is now

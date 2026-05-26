@@ -65,11 +65,14 @@ from nanomem.service.core import NanoMemService
 # --- Capabilities (behind Protocols where applicable) ---
 from nanomem.pipeline.representation.heuristic import HeuristicMemoryUnitExtractor
 from nanomem.pipeline.representation.llm import LLMMemoryUnitExtractor
+from nanomem.pipeline.retrieval.embeddings.cache import CachedEmbeddingModel
 from nanomem.pipeline.retrieval.indexes.dense import DenseMemoryUnitIndex
 from nanomem.pipeline.retrieval.indexes.hybrid import HybridMemoryUnitIndex
 from nanomem.pipeline.retrieval.indexes.lexical import LexicalMemoryUnitIndex
 from nanomem.pipeline.retrieval.ranking.base import Ranker
 from nanomem.pipeline.utilization.base import Renderer
+from nanomem.pipeline.utilization.evidence_context import EvidenceContextRenderer
+from nanomem.pipeline.utilization.time_merge import TimeMergedRenderer
 from nanomem.pipeline.storage.sqlite import SQLiteMemoryUnitStore
 
 # --- SDK ---
@@ -167,7 +170,9 @@ __all__ = [
     "AsyncNanoMemService",
     "NanoMemService",
     # --- Capabilities ---
+    "CachedEmbeddingModel",
     "DenseMemoryUnitIndex",
+    "EvidenceContextRenderer",
     "HeuristicMemoryUnitExtractor",
     "HybridMemoryUnitIndex",
     "LexicalMemoryUnitIndex",
@@ -175,6 +180,7 @@ __all__ = [
     "Ranker",
     "Renderer",
     "SQLiteMemoryUnitStore",
+    "TimeMergedRenderer",
     # --- SDK ---
     "AsyncNanoMemClient",
     "NanoMemClient",
