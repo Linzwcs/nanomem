@@ -34,13 +34,13 @@ CI matrix: Python 3.10 / 3.11 / 3.12 (Ubuntu) — runs `compileall` then `pytest
 
 ### Manager UI (React/Vite, in `manager-ui/`)
 
-The web manager has a Python-served bundled asset path *and* a separate React/Vite source tree. The Vite build emits compiled assets back into the Python package at `src/nanomem/ops/manager_assets/assets/`.
+The web manager has a Python-served bundled asset path *and* a separate React/Vite source tree. The Vite build emits compiled assets back into the Python package at `src/nanomem/admin/manager_ui/`.
 
 ```bash
 cd manager-ui
 npm install
 npm run dev        # vite dev server, proxies /manager/api → 127.0.0.1:8765
-npm run build      # tsc + vite build → ../src/nanomem/ops/manager_assets/assets/
+npm run build      # tsc + vite build → ../src/nanomem/admin/manager_ui/
 npm test           # vitest
 ```
 
@@ -138,15 +138,13 @@ transports/              wire formats
   mcp/                   stdio MCP server (read-only)
   sdk/                   sync + async HTTP clients
 
-ops/                     operator-facing tools
-  maintenance/           composed control workflows
+admin/                   operator-facing tools
   cli/                   `nanomem` command-line
-  tui/                   terminal dashboard
-  manager_assets/        bundled HTML/CSS/JS for manager UI
+  tui.py                 terminal dashboard
+  manager_ui/            bundled HTML/CSS/JS for manager UI
 
 hosts/                   external-harness integration
-  adapters/              AgentMemoryAdapter + per-host adapters
-                         (Codex, OpenClaw, NanoBot, MCP)
+  adapters/              AgentMemoryAdapter + MCP adapter
   plugins/               agent hook runner (`nanomem-agent-hook`),
                          Codex install helper
 ```
@@ -154,18 +152,17 @@ hosts/                   external-harness integration
 Layering rule (machine-enforced):
 
 ```
-hosts/      may import service, transports, ops, pipeline, core
-ops/        may import service, pipeline, core
+hosts/      may import service, transports, admin, pipeline, core
+admin/      may import service, pipeline, core
 transports/ may import service, pipeline, core
 service/    may import pipeline, core
 pipeline/   may import core
 core/       only stdlib
 ```
 
-Two documented exceptions (marked `# layering-exception:` on the
+One documented exception (marked `# layering-exception:` on the
 import line):
-- `service/factory.py` constructs ops/maintenance — composition root.
-- `ops/cli/main.py` invokes `install_codex_hooks` from `hosts/plugins/codex`.
+- `admin/cli/main.py` invokes `install_codex_hooks` from `hosts/plugins/codex`.
 
 Tests in `tests/` mirror the package areas they cover.
 

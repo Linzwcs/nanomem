@@ -5,8 +5,8 @@ imports respect the layer dependency rule:
 
 ::
 
-    hosts/        may import from service, transports, ops, pipeline, core
-    ops/          may import from service, pipeline, core
+    hosts/        may import from service, transports, admin, pipeline, core
+    admin/        may import from service, pipeline, core
     transports/   may import from service, pipeline, core
     service/      may import from pipeline, core
     pipeline/     may import from core
@@ -39,7 +39,7 @@ LAYER_ORDER: tuple[str, ...] = (
     "pipeline",
     "service",
     "transports",
-    "ops",
+    "admin",
     "hosts",
 )
 
@@ -51,8 +51,8 @@ ALLOWED: dict[str, frozenset[str]] = {
     "pipeline": frozenset({"core"}),
     "service": frozenset({"core", "pipeline"}),
     "transports": frozenset({"core", "pipeline", "service"}),
-    "ops": frozenset({"core", "pipeline", "service"}),
-    "hosts": frozenset({"core", "pipeline", "service", "transports", "ops"}),
+    "admin": frozenset({"core", "pipeline", "service"}),
+    "hosts": frozenset({"core", "pipeline", "service", "transports", "admin"}),
 }
 
 

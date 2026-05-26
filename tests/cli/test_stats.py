@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import io
 
-from nanomem.ops.cli.main import main
+from nanomem.admin.cli.main import main
 
 
 def test_stats_command_reports_new_scope_terms() -> None:

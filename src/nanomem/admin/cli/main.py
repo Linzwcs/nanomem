@@ -17,7 +17,7 @@ from nanomem.service.factory import extractor_from_config, index_from_config
 from nanomem.hosts.plugins.codex import install_codex_hooks  # layering-exception: CLI install-codex-hooks subcommand invokes host plugin
 from nanomem.service.core import NanoMemService
 from nanomem.pipeline.storage.sqlite import SQLiteMemoryUnitStore
-from nanomem.ops.tui import (
+from nanomem.admin.tui import (
     build_dashboard,
     render_dashboard,
     run_dashboard_watch,

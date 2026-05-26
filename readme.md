@@ -551,18 +551,17 @@ src/nanomem/
     mcp/                 stdio MCP server (read-only)
     sdk/                 sync + async HTTP clients
 
-  ops/                   operator-facing tools
-    maintenance/         composed control workflows
+  admin/                 operator-facing tools
     cli/                 `nanomem` command-line
-    tui/                 terminal dashboard
-    manager_assets/      bundled HTML/CSS/JS for the manager UI
+    tui.py               terminal dashboard
+    manager_ui/          bundled HTML/CSS/JS for the manager UI
 
   hosts/                 external-harness integration
-    adapters/            AgentMemoryAdapter + per-host adapters
+    adapters/            AgentMemoryAdapter + MCP adapter
     plugins/             hook runner, Codex install helper
 
 manager-ui/              React/Vite manager source (builds into
-                         src/nanomem/ops/manager_assets/assets/)
+                         src/nanomem/admin/manager_ui/)
 tools/                   maintenance scripts (check_layering.py)
 docs/                    product, architecture, manager, plugin docs
 tests/                   pytest regression tests
@@ -571,8 +570,8 @@ tests/                   pytest regression tests
 Layering rule (machine-enforced):
 
 ```text
-hosts/      may import service, transports, ops, pipeline, core
-ops/        may import service, pipeline, core
+hosts/      may import service, transports, admin, pipeline, core
+admin/      may import service, pipeline, core
 transports/ may import service, pipeline, core
 service/    may import pipeline, core
 pipeline/   may import core

@@ -1,5 +1,5 @@
 from __future__ import annotations
 
-from nanomem.ops.cli.main import main
+from nanomem.admin.cli.main import main
 
 __all__ = ["main"]

@@ -14,7 +14,7 @@ Evidence-Density Principle*:
 
 Layering rule: ``pipeline/`` modules may import from :mod:`nanomem.core`
 only. They must not import :mod:`nanomem.service`,
-:mod:`nanomem.transports`, :mod:`nanomem.ops`, or :mod:`nanomem.hosts`.
+:mod:`nanomem.transports`, :mod:`nanomem.admin`, or :mod:`nanomem.hosts`.
 """
 
 from __future__ import annotations

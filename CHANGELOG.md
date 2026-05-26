@@ -2,6 +2,60 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0a5] — 2026-05-26
+
+Two cleanups motivated by re-evaluation of what the operator-facing
+layer is actually for. Both BREAKING for sub-path imports; top-level
+`from nanomem import X` only loses the symbols listed below.
+
+### Removed (BREAKING)
+
+- **`maintenance` entirely.** `NanoMemMaintenanceService` /
+  `MaintenancePlan` / `MaintenanceRunResult` / `MaintenanceConfig` /
+  `BackupConfig` / `ExportConfig` / `RetentionConfig` /
+  `maintenance_from_config{,_file}` are all gone. So are the
+  `nanomem maintenance-plan` and `nanomem maintenance-run` CLI
+  subcommands. The wrapper added real value (dry-run, warnings, auto
+  reindex) but no documented audience and no README mention — a
+  feature without an audience is overhead. Operators wanting a
+  scheduled workflow chain the existing per-task CLI subcommands
+  (`nanomem backup` / `export` / `retention-apply` / `reindex`) in
+  their own cron script.
+- The `# layering-exception` on `service/factory.py` (which existed
+  only because the factory had to import from the maintenance module)
+  is gone too. Now there is exactly **one** layering exception in the
+  codebase.
+
+### Changed (BREAKING)
+
+- **`ops/` → `admin/`.** The name "ops" suggested SRE / DevOps work,
+  which is not what the package contains. The actual contents are
+  operator-facing data-management tools (CLI, TUI, manager UI assets).
+  "admin" matches the existing `NanoMemAdminService` alias and is the
+  honest name. Every `nanomem.ops.*` sub-path renames to
+  `nanomem.admin.*`:
+
+  | before | after |
+  | --- | --- |
+  | `nanomem.ops.cli` | `nanomem.admin.cli` |
+  | `nanomem.ops.tui` | `nanomem.admin.tui` |
+  | `nanomem.ops.manager_ui` | `nanomem.admin.manager_ui` |
+
+  Entry point binaries unchanged; only the underlying module path in
+  `pyproject.toml` shifts to `nanomem.admin.cli.main:main`.
+  `[tool.setuptools.package-data]` key shifts to
+  `"nanomem.admin.manager_ui"`. The `_MANAGER_ASSET_PACKAGE` constant
+  in `transports/http/manager.py` follows.
+
+  Layering checker updated: `LAYER_ORDER` and `ALLOWED` now name
+  `admin` instead of `ops`.
+
+### Process
+
+156 tests pass. Layering green. One `# layering-exception` remaining
+(`admin/cli/main.py` invoking `install_codex_hooks` from
+`hosts/plugins/codex` — operator-tool invokes host plugin).
+
 ## [0.3.0a4] — 2026-05-26
 
 Three independently-justified cleanups that strip benchmark-era cruft

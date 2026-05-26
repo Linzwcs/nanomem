@@ -9,7 +9,7 @@
   plugins, not generic integrations).
 
 Layering rule: ``hosts/`` is the highest layer — it may import from
-:mod:`nanomem.service`, :mod:`nanomem.transports`, :mod:`nanomem.ops`,
+:mod:`nanomem.service`, :mod:`nanomem.transports`, :mod:`nanomem.admin`,
 :mod:`nanomem.pipeline`, :mod:`nanomem.core`.
 """
 
