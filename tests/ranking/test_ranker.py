@@ -6,7 +6,7 @@ from nanomem.core.contracts import (
     MemoryScope,
     MemoryUnit,
 )
-from nanomem.ranking.ranker import MemoryUnitRanker
+from nanomem.pipeline.retrieval.ranking.relevance_recency import MemoryUnitRanker
 
 
 def _unit(unit_id: str, text: str, timestamp: str) -> MemoryUnit:

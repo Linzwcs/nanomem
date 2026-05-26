@@ -9,7 +9,7 @@ from nanomem.control.service import (
     NanoMemControlService,
     RetentionPolicy,
 )
-from nanomem.index.dense import DenseMemoryUnitIndex
+from nanomem.pipeline.retrieval.indexes.dense import DenseMemoryUnitIndex
 from nanomem.pipeline.storage.sqlite import SQLiteMemoryUnitStore
 
 

@@ -7,8 +7,8 @@ from nanomem.core.contracts import (
     MemoryUnit,
     RankedMemoryUnit,
 )
-from nanomem.ranking.base import Ranker
-from nanomem.ranking.ranker import MemoryUnitRanker
+from nanomem.pipeline.retrieval.ranking.base import Ranker
+from nanomem.pipeline.retrieval.ranking.relevance_recency import MemoryUnitRanker
 from nanomem.render.base import Renderer
 from nanomem.render.context import EvidenceContextRenderer
 

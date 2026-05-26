@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from nanomem.core.contracts import IndexSearchRequest, TimeRange
-from nanomem.index.lancedb import (
+from nanomem.pipeline.retrieval.indexes.lancedb import (
     _distance_to_score,
     _normalized_distance_type,
     _search_filter,

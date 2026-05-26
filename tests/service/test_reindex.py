@@ -8,7 +8,7 @@ from nanomem.core.contracts import (
     MemoryUnitSelector,
     ReadRequest,
 )
-from nanomem.index.dense import DenseMemoryUnitIndex
+from nanomem.pipeline.retrieval.indexes.dense import DenseMemoryUnitIndex
 from nanomem.service.core import NanoMemService
 from nanomem.pipeline.storage.sqlite import SQLiteMemoryUnitStore
 

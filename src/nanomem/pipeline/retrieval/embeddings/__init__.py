@@ -10,9 +10,9 @@ through a shim at the old location. Prefer the new path for new code.
 
 from __future__ import annotations
 
-from nanomem.index.embeddings.base import EmbeddingModel
-from nanomem.index.embeddings.hashing import HashingEmbeddingModel
-from nanomem.index.embeddings.openai_compatible import OpenAICompatibleEmbeddingModel
+from nanomem.pipeline.retrieval.embeddings.base import EmbeddingModel
+from nanomem.pipeline.retrieval.embeddings.hashing import HashingEmbeddingModel
+from nanomem.pipeline.retrieval.embeddings.openai_compatible import OpenAICompatibleEmbeddingModel
 
 
 __all__ = [

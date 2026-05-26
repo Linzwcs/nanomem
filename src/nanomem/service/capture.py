@@ -22,7 +22,7 @@ from nanomem.core.errors import ConfigError, ContractError, ExtractionError
 from nanomem.pipeline.representation.base import MemoryUnitExtractor
 from nanomem.pipeline.representation.events import is_extractable_message
 from nanomem.core.ids import new_id, stable_id
-from nanomem.index.base import MemoryUnitIndex
+from nanomem.pipeline.retrieval.indexes.base import MemoryUnitIndex
 from nanomem.pipeline.storage.base import MemoryStore
 from nanomem.core.time import now_utc_iso
 

@@ -7,7 +7,7 @@ from nanomem.core.config import (
     RetentionConfig,
 )
 from nanomem.control.service import NanoMemControlService
-from nanomem.index.dense import DenseMemoryUnitIndex
+from nanomem.pipeline.retrieval.indexes.dense import DenseMemoryUnitIndex
 from nanomem.maintenance.service import NanoMemMaintenanceService
 from nanomem.pipeline.storage.sqlite import SQLiteMemoryUnitStore
 

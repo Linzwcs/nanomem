@@ -65,10 +65,10 @@ from nanomem.service.core import NanoMemService
 # --- Capabilities (behind Protocols where applicable) ---
 from nanomem.pipeline.representation.heuristic import HeuristicMemoryUnitExtractor
 from nanomem.pipeline.representation.llm import LLMMemoryUnitExtractor
-from nanomem.index.dense import DenseMemoryUnitIndex
-from nanomem.index.hybrid import HybridMemoryUnitIndex
-from nanomem.index.lexical import LexicalMemoryUnitIndex
-from nanomem.ranking.base import Ranker
+from nanomem.pipeline.retrieval.indexes.dense import DenseMemoryUnitIndex
+from nanomem.pipeline.retrieval.indexes.hybrid import HybridMemoryUnitIndex
+from nanomem.pipeline.retrieval.indexes.lexical import LexicalMemoryUnitIndex
+from nanomem.pipeline.retrieval.ranking.base import Ranker
 from nanomem.render.base import Renderer
 from nanomem.pipeline.storage.sqlite import SQLiteMemoryUnitStore
 

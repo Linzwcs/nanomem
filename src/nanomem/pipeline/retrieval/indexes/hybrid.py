@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from nanomem.core.contracts import IndexHit, IndexSearchRequest, MemoryUnit
-from nanomem.index.base import MemoryUnitIndex
-from nanomem.index.dense import DenseMemoryUnitIndex
-from nanomem.index.lexical import LexicalMemoryUnitIndex
+from nanomem.pipeline.retrieval.indexes.base import MemoryUnitIndex
+from nanomem.pipeline.retrieval.indexes.dense import DenseMemoryUnitIndex
+from nanomem.pipeline.retrieval.indexes.lexical import LexicalMemoryUnitIndex
 
 
 class HybridMemoryUnitIndex:

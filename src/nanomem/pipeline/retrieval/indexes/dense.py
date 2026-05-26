@@ -5,8 +5,8 @@ from nanomem.core.contracts import (
     IndexSearchRequest,
     MemoryUnit,
 )
-from nanomem.index.embeddings.base import EmbeddingModel
-from nanomem.index.embeddings.hashing import HashingEmbeddingModel
+from nanomem.pipeline.retrieval.embeddings.base import EmbeddingModel
+from nanomem.pipeline.retrieval.embeddings.hashing import HashingEmbeddingModel
 from nanomem.core.policies import namespace_matches
 from nanomem.core.time import timestamp_in_range
 

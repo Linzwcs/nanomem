@@ -9,7 +9,7 @@ This module re-exports embedding classes from their new home at
     from nanomem.embeddings import HashingEmbeddingModel
 
     # after
-    from nanomem.index.embeddings import HashingEmbeddingModel
+    from nanomem.pipeline.retrieval.embeddings import HashingEmbeddingModel
 
 Importing from this shim emits :class:`DeprecationWarning`. The shim
 itself will be deleted in v0.3.0; check
@@ -20,9 +20,9 @@ from __future__ import annotations
 
 import warnings
 
-from nanomem.index.embeddings.base import EmbeddingModel
-from nanomem.index.embeddings.hashing import HashingEmbeddingModel
-from nanomem.index.embeddings.openai_compatible import OpenAICompatibleEmbeddingModel
+from nanomem.pipeline.retrieval.embeddings.base import EmbeddingModel
+from nanomem.pipeline.retrieval.embeddings.hashing import HashingEmbeddingModel
+from nanomem.pipeline.retrieval.embeddings.openai_compatible import OpenAICompatibleEmbeddingModel
 
 
 __deprecated_removal__ = "0.3.0"

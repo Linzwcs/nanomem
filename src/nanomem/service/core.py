@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from nanomem.pipeline.representation.base import MemoryUnitExtractor
 from nanomem.pipeline.representation.heuristic import HeuristicMemoryUnitExtractor
-from nanomem.index.base import MemoryUnitIndex
-from nanomem.index.dense import DenseMemoryUnitIndex
-from nanomem.index.rebuild import rebuild_index
-from nanomem.ranking.base import Ranker
-from nanomem.ranking.ranker import MemoryUnitRanker
+from nanomem.pipeline.retrieval.indexes.base import MemoryUnitIndex
+from nanomem.pipeline.retrieval.indexes.dense import DenseMemoryUnitIndex
+from nanomem.pipeline.retrieval.indexes.rebuild import rebuild_index
+from nanomem.pipeline.retrieval.ranking.base import Ranker
+from nanomem.pipeline.retrieval.ranking.relevance_recency import MemoryUnitRanker
 from nanomem.render.base import Renderer
 from nanomem.render.context import EvidenceContextRenderer
 from nanomem.service.capture import CapturePipeline

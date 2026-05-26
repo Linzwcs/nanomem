@@ -6,8 +6,8 @@ from typing import Any
 
 from nanomem.core.contracts import IndexHit, IndexSearchRequest, MemoryUnit
 from nanomem.core.errors import ConfigError
-from nanomem.index.embeddings.base import EmbeddingModel
-from nanomem.index.embeddings.hashing import HashingEmbeddingModel
+from nanomem.pipeline.retrieval.embeddings.base import EmbeddingModel
+from nanomem.pipeline.retrieval.embeddings.hashing import HashingEmbeddingModel
 
 
 class LanceDBMemoryUnitIndex:

@@ -15,9 +15,9 @@ from nanomem.core.contracts import (
 )
 from nanomem.core.errors import ContractError
 from nanomem.core.ids import new_id
-from nanomem.index.base import MemoryUnitIndex
-from nanomem.index.lexical import tokenize
-from nanomem.ranking.ranker import MemoryUnitRanker
+from nanomem.pipeline.retrieval.indexes.base import MemoryUnitIndex
+from nanomem.pipeline.retrieval.indexes.lexical import tokenize
+from nanomem.pipeline.retrieval.ranking.relevance_recency import MemoryUnitRanker
 from nanomem.render.context import (
     EvidenceContextRenderer,
     estimate_tokens,

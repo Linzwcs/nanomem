@@ -26,9 +26,9 @@ from nanomem.control.types import (
     SchemaMigrationRecord,
     SchemaStatus,
 )
-from nanomem.index.base import MemoryUnitIndex
-from nanomem.index.dense import DenseMemoryUnitIndex
-from nanomem.index.rebuild import rebuild_index
+from nanomem.pipeline.retrieval.indexes.base import MemoryUnitIndex
+from nanomem.pipeline.retrieval.indexes.dense import DenseMemoryUnitIndex
+from nanomem.pipeline.retrieval.indexes.rebuild import rebuild_index
 from nanomem.pipeline.storage.sqlite import SQLiteMemoryUnitStore
 
 

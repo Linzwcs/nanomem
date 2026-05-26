@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from nanomem.core.contracts import IndexSearchRequest, MemoryScope, MemoryUnit
-from nanomem.index.lexical import LexicalMemoryUnitIndex
+from nanomem.pipeline.retrieval.indexes.lexical import LexicalMemoryUnitIndex
 
 
 def test_lexical_index_clear_removes_owner_index_entries() -> None:

@@ -6,7 +6,7 @@ import pytest
 
 from nanomem.core.config import config_from_mapping
 from nanomem.factory import index_from_config
-from nanomem.index.dense import DenseMemoryUnitIndex
+from nanomem.pipeline.retrieval.indexes.dense import DenseMemoryUnitIndex
 from nanomem.service.core import NanoMemService
 
 

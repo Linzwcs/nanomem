@@ -6,7 +6,7 @@ from nanomem.core.contracts import (
     MemoryScope,
     MemoryUnit,
 )
-from nanomem.index.hybrid import HybridMemoryUnitIndex
+from nanomem.pipeline.retrieval.indexes.hybrid import HybridMemoryUnitIndex
 
 
 def _unit(unit_id: str, text: str, *, namespace: str = "personal") -> MemoryUnit:

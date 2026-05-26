@@ -4,8 +4,8 @@ import hashlib
 import math
 
 from nanomem.core.errors import ConfigError
-from nanomem.index.embeddings.base import EmbeddingModel
-from nanomem.index.lexical import tokenize
+from nanomem.pipeline.retrieval.embeddings.base import EmbeddingModel
+from nanomem.pipeline.retrieval.indexes.lexical import tokenize
 
 
 class HashingEmbeddingModel:
