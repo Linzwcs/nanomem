@@ -6,7 +6,7 @@ and produces an ordered sequence of :class:`~nanomem.contracts.RankedMemoryUnit`
 records under a chosen recency policy.
 
 The default implementation is
-:class:`nanomem.ranking.ranker.MemoryUnitRanker`, which combines relevance
+:class:`nanomem.pipeline.retrieval.ranking.relevance_recency.MemoryUnitRanker`, which combines relevance
 and recency under one of ``"recent"`` / ``"balanced"`` / ``"historical"``
 policies.
 

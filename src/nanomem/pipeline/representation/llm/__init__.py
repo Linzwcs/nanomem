@@ -6,13 +6,13 @@ public surface is unchanged: every name that was importable as
 
 Sub-modules:
 
-- :mod:`nanomem.extraction.llm.extractor` — :class:`LLMMemoryUnitExtractor`
-- :mod:`nanomem.extraction.llm.client`    — :class:`LLMCompletionClient`
+- :mod:`nanomem.pipeline.representation.llm.extractor` — :class:`LLMMemoryUnitExtractor`
+- :mod:`nanomem.pipeline.representation.llm.client`    — :class:`LLMCompletionClient`
                                             Protocol + OpenAI reference impl
-- :mod:`nanomem.extraction.llm.chunking`  — dialogue chunking
-- :mod:`nanomem.extraction.llm.parsing`   — payload schema + transform
+- :mod:`nanomem.pipeline.representation.llm.chunking`  — dialogue chunking
+- :mod:`nanomem.pipeline.representation.llm.parsing`   — payload schema + transform
 
-Prompt text lives in :mod:`nanomem.extraction.prompts` (re-imported
+Prompt text lives in :mod:`nanomem.pipeline.representation.prompts` (re-imported
 here for ``from nanomem.pipeline.representation.llm import LLM_EXTRACTION_PROMPT``
 back-compat).
 """

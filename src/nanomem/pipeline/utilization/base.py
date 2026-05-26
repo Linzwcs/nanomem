@@ -4,7 +4,7 @@ A ``Renderer`` packs a ranked sequence of memory units into a single
 ``PackedContext`` block under an optional post-render token budget.
 
 The default implementation is
-:class:`nanomem.render.context.EvidenceContextRenderer`, which renders
+:class:`nanomem.pipeline.utilization.evidence_context.EvidenceContextRenderer`, which renders
 each unit on one line with its timestamp and namespace label.
 
 The interface is a :class:`typing.Protocol` — implementations satisfy

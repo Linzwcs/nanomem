@@ -2,10 +2,10 @@
 
 The class composes:
 
-- :mod:`nanomem.extraction.llm.chunking` to slice dialogues into
+- :mod:`nanomem.pipeline.representation.llm.chunking` to slice dialogues into
   per-LLM-call chunks under message/char budgets
-- :mod:`nanomem.extraction.llm.client` to actually call the model
-- :mod:`nanomem.extraction.llm.parsing` to validate and transform the
+- :mod:`nanomem.pipeline.representation.llm.client` to actually call the model
+- :mod:`nanomem.pipeline.representation.llm.parsing` to validate and transform the
   JSON payload into :class:`~nanomem.contracts.MemoryUnit` and
   :class:`~nanomem.contracts.CaptureSkip` records
 
@@ -57,7 +57,7 @@ from nanomem.core.ids import scope_payload, stable_id
 
 
 # Re-exported for backward compatibility with code that imported the
-# chunking budget from `nanomem.extraction.llm`.
+# chunking budget from `nanomem.pipeline.representation.llm`.
 from nanomem.pipeline.representation.llm.chunking import (  # noqa: F401  (re-export)
     DEFAULT_MAX_MESSAGES_PER_CHUNK,
 )
