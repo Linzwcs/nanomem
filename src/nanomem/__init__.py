@@ -106,7 +106,7 @@ from nanomem.service.factory import (
 )
 
 # --- Admin / Control ---
-from nanomem.control.service import (
+from nanomem.ops.control.service import (
     BackupResult,
     DatabaseStats,
     ExportResult,
@@ -123,7 +123,7 @@ from nanomem.control.service import (
     SchemaMigrationRecord,
     SchemaStatus,
 )
-from nanomem.maintenance import (
+from nanomem.ops.maintenance import (
     MaintenancePlan,
     MaintenanceRunResult,
     NanoMemMaintenanceService,

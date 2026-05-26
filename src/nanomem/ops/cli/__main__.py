@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from nanomem.cli.main import main
+from nanomem.ops.cli.main import main
 
 
 if __name__ == "__main__":

@@ -11,7 +11,7 @@ from nanomem.core.contracts import (
     ReindexResult,
     TimeRange,
 )
-from nanomem.control.types import (
+from nanomem.ops.control.types import (
     BackupResult,
     DatabaseStats,
     ExportResult,

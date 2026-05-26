@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-from nanomem.cli.main import main
+from nanomem.ops.cli.main import main
 from nanomem.integrations.codex import codex_hooks_config, install_codex_hooks
 
 

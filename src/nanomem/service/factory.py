@@ -16,8 +16,8 @@ from nanomem.pipeline.retrieval.indexes.lexical import LexicalMemoryUnitIndex
 from nanomem.service.core import NanoMemService
 from nanomem.pipeline.storage.base import MemoryStore
 from nanomem.pipeline.storage.sqlite import SQLiteMemoryUnitStore
-from nanomem.control.service import NanoMemControlService
-from nanomem.maintenance.service import NanoMemMaintenanceService
+from nanomem.ops.control.service import NanoMemControlService
+from nanomem.ops.maintenance.service import NanoMemMaintenanceService
 
 
 def service_from_config(config: NanoMemConfig) -> NanoMemService:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from nanomem.maintenance.service import (
+from nanomem.ops.maintenance.service import (
     MaintenancePlan,
     MaintenanceRunResult,
     NanoMemMaintenanceService,

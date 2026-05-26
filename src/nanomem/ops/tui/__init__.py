@@ -7,7 +7,7 @@ local state, not for agent-facing tools. Public API may shift.
 
 from __future__ import annotations
 
-from nanomem.tui.dashboard import (
+from nanomem.ops.tui.dashboard import (
     DashboardSnapshot,
     MonitorHealth,
     build_dashboard,

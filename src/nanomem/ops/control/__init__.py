@@ -6,17 +6,17 @@ Public surface is split between:
 - :mod:`nanomem.control.service` — :class:`NanoMemControlService` itself
 
 Both are re-exported here so existing
-``from nanomem.control import X`` import sites continue to work.
+``from nanomem.ops.control import X`` import sites continue to work.
 """
 
 from __future__ import annotations
 
 from nanomem.core.contracts import OperationLogEntry, ReindexResult
-from nanomem.control.service import (
+from nanomem.ops.control.service import (
     NanoMemAdminService,
     NanoMemControlService,
 )
-from nanomem.control.types import (
+from nanomem.ops.control.types import (
     BackupResult,
     DatabaseStats,
     ExportResult,

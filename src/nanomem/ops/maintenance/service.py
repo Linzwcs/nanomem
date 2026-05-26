@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
-from nanomem.control.service import (
+from nanomem.ops.control.service import (
     BackupResult,
     ExportResult,
     IntegrityCheckResult,

@@ -6,7 +6,7 @@ import json
 import sys
 from typing import TextIO
 
-from nanomem.control import (
+from nanomem.ops.control import (
     NanoMemControlService,
     OperationLogRetentionPolicy,
     RetentionPolicy,
@@ -15,10 +15,10 @@ from nanomem.core.config import NanoMemConfig, load_config
 from nanomem.core.contracts import FlushRequest, MemoryScope, MemoryUnit, TimeRange
 from nanomem.service.factory import extractor_from_config, index_from_config
 from nanomem.integrations.codex import install_codex_hooks
-from nanomem.maintenance import NanoMemMaintenanceService
+from nanomem.ops.maintenance import NanoMemMaintenanceService
 from nanomem.service.core import NanoMemService
 from nanomem.pipeline.storage.sqlite import SQLiteMemoryUnitStore
-from nanomem.tui.dashboard import (
+from nanomem.ops.tui.dashboard import (
     build_dashboard,
     render_dashboard,
     run_dashboard_watch,

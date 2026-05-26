@@ -24,7 +24,7 @@ from nanomem.service.core import NanoMemService
 from nanomem.service.facade import ControlFacade
 from nanomem.core.time import now_utc_iso
 
-_MANAGER_ASSET_PACKAGE = "nanomem.manager.assets"
+_MANAGER_ASSET_PACKAGE = "nanomem.ops.manager_assets.assets"
 
 
 @dataclass(frozen=True)
@@ -113,7 +113,7 @@ def _default_facade(service: NanoMemService) -> ControlFacade:
     # routes with only a NanoMemService. Build a fresh ControlFacade
     # against the service's store/index. New code should pass a facade
     # explicitly via handle_manager_get(service, path, facade=...).
-    from nanomem.control.service import NanoMemControlService
+    from nanomem.ops.control.service import NanoMemControlService
 
     return ControlFacade(
         NanoMemControlService(

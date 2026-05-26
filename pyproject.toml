@@ -34,7 +34,7 @@ Homepage = "https://github.com/Linzwcs/nanomem"
 Repository = "https://github.com/Linzwcs/nanomem"
 
 [project.scripts]
-nanomem = "nanomem.cli.main:main"
+nanomem = "nanomem.ops.cli.main:main"
 nanomem-server = "nanomem.transports.http.main:main"
 nanomem-mcp = "nanomem.transports.mcp.main:main"
 nanomem-agent-hook = "nanomem.integrations.hooks:main"
@@ -43,7 +43,7 @@ nanomem-agent-hook = "nanomem.integrations.hooks:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-"nanomem.manager.assets" = ["*.html", "*.css", "*.js"]
+"nanomem.ops.manager_assets.assets" = ["*.html", "*.css", "*.js"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
