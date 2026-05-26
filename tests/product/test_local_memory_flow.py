@@ -13,7 +13,7 @@ from nanomem.core.contracts import (
     ReadRequest,
     TimeRange,
 )
-from nanomem.factory import service_from_config
+from nanomem.service.factory import service_from_config
 from nanomem.server.manager import handle_manager_get, handle_manager_post
 
 

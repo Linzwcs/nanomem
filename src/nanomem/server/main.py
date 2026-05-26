@@ -4,7 +4,7 @@ import argparse
 
 from nanomem.core.config import load_config
 from nanomem.control.service import NanoMemControlService
-from nanomem.factory import service_from_config
+from nanomem.service.factory import service_from_config
 from nanomem.server.app import NanoMemHTTPServer
 from nanomem.service.facade import ControlFacade
 

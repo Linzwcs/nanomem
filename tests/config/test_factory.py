@@ -10,7 +10,7 @@ from nanomem.core.contracts import (
     MemoryScope,
 )
 from nanomem.pipeline.representation.llm import LLMMemoryUnitExtractor
-from nanomem.factory import (
+from nanomem.service.factory import (
     embedding_from_config,
     extractor_from_config,
     service_from_config,

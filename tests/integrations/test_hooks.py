@@ -17,7 +17,7 @@ from nanomem.core.contracts import (
     OperationLogSelector,
     ReadRequest,
 )
-from nanomem.factory import service_from_config
+from nanomem.service.factory import service_from_config
 from nanomem.integrations.hooks import (
     HookConfig,
     config_from_env,

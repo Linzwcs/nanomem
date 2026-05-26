@@ -93,7 +93,7 @@ from nanomem.core.config import (
     RetentionConfig,
     load_config,
 )
-from nanomem.factory import (
+from nanomem.service.factory import (
     admin_from_config,
     admin_from_config_file,
     control_from_config,

@@ -4,7 +4,7 @@ import argparse
 import sys
 
 from nanomem.core.config import load_config
-from nanomem.factory import service_from_config
+from nanomem.service.factory import service_from_config
 from nanomem.mcp.server import NanoMemMCPServer, run_stdio
 
 
