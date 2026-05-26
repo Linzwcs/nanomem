@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 from nanomem.config import NanoMemConfig, load_config
-from nanomem.embeddings.base import EmbeddingModel
-from nanomem.embeddings.hashing import HashingEmbeddingModel
-from nanomem.embeddings.openai_compatible import OpenAICompatibleEmbeddingModel
 from nanomem.errors import ConfigError
 from nanomem.extraction.base import MemoryUnitExtractor
 from nanomem.extraction.heuristic import HeuristicMemoryUnitExtractor
 from nanomem.extraction.llm import LLMMemoryUnitExtractor
 from nanomem.index.base import MemoryUnitIndex
 from nanomem.index.dense import DenseMemoryUnitIndex
+from nanomem.index.embeddings.base import EmbeddingModel
+from nanomem.index.embeddings.hashing import HashingEmbeddingModel
+from nanomem.index.embeddings.openai_compatible import OpenAICompatibleEmbeddingModel
 from nanomem.index.hybrid import HybridMemoryUnitIndex
 from nanomem.index.lancedb import LanceDBMemoryUnitIndex
 from nanomem.index.lexical import LexicalMemoryUnitIndex

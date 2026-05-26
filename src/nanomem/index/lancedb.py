@@ -5,9 +5,9 @@ from pathlib import Path
 from typing import Any
 
 from nanomem.contracts import IndexHit, IndexSearchRequest, MemoryUnit
-from nanomem.embeddings.base import EmbeddingModel
-from nanomem.embeddings.hashing import HashingEmbeddingModel
 from nanomem.errors import ConfigError
+from nanomem.index.embeddings.base import EmbeddingModel
+from nanomem.index.embeddings.hashing import HashingEmbeddingModel
 
 
 class LanceDBMemoryUnitIndex:
