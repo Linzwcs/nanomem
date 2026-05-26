@@ -49,8 +49,6 @@ class ExtractionConfig:
     api_key_env: str | None = None
     fallback_backend: str | None = "heuristic"
     strict_schema: bool = True
-    max_messages_per_chunk: int | None = 24
-    max_chars_per_chunk: int | None = None
 
 
 @dataclass(frozen=True)
@@ -167,12 +165,6 @@ def config_from_mapping(payload: dict[str, Any]) -> NanoMemConfig:
             strict_schema=_optional_bool(
                 extraction_payload.get("strict_schema"),
                 default=True,
-            ),
-            max_messages_per_chunk=_optional_int(
-                extraction_payload.get("max_messages_per_chunk", 24)
-            ),
-            max_chars_per_chunk=_optional_int(
-                extraction_payload.get("max_chars_per_chunk")
             ),
         ),
         read=ReadConfig(

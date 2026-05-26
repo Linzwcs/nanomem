@@ -177,8 +177,6 @@ def extractor_from_config(config: NanoMemConfig) -> MemoryUnitExtractor:
             base_url=extraction.base_url,
             fallback=fallback,
             strict_schema=extraction.strict_schema,
-            max_messages_per_chunk=extraction.max_messages_per_chunk,
-            max_chars_per_chunk=extraction.max_chars_per_chunk,
         )
     raise ConfigError(f"Unsupported extraction backend: {extraction.backend}")
 

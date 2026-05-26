@@ -1,13 +1,24 @@
-"""LLM-backed extractor that turns dialogue chunks into MemoryUnits.
+"""LLM-backed extractor that turns a Dialogue into MemoryUnits in one call.
 
-The class composes:
+The extractor's contract is: **one Dialogue is one extraction unit.**
+The caller decides the dialogue boundary (capture / flush / session
+window). The extractor:
 
-- :mod:`nanomem.pipeline.representation.llm.chunking` to slice dialogues into
-  per-LLM-call chunks under message/char budgets
-- :mod:`nanomem.pipeline.representation.llm.client` to actually call the model
-- :mod:`nanomem.pipeline.representation.llm.parsing` to validate and transform the
-  JSON payload into :class:`~nanomem.contracts.MemoryUnit` and
-  :class:`~nanomem.contracts.CaptureSkip` records
+1. Filters out hidden / tool / empty messages.
+2. Sends the visible messages as a single LLM call.
+3. Parses the JSON payload into MemoryUnits + CaptureSkips.
+
+If a dialogue is too long for the underlying model's context window,
+the model's own error propagates — the caller is responsible for not
+handing the extractor an oversized dialogue (use ``flush()`` between
+sessions, or capture in narrower windows).
+
+The module composes:
+
+- :mod:`nanomem.pipeline.representation.llm.client` to call the model.
+- :mod:`nanomem.pipeline.representation.llm.parsing` to validate and
+  transform the JSON payload into :class:`~nanomem.core.contracts.MemoryUnit`
+  and :class:`~nanomem.core.contracts.CaptureSkip` records.
 
 Each call to :meth:`extract` is independent; the extractor holds no
 per-request state beyond configuration.
@@ -21,18 +32,18 @@ from typing import Any
 
 from nanomem.core.contracts import (
     CaptureSkip,
+    DialogueMessage,
     DialogueRef,
     ExtractionRequest,
     ExtractionResult,
     MemoryUnit,
 )
 from nanomem.core.errors import ConfigError
+from nanomem.core.ids import scope_payload, stable_id
 from nanomem.pipeline.representation.base import MemoryUnitExtractor
-from nanomem.pipeline.representation.llm.chunking import (
-    ExtractionChunk,
-    extractable_messages,
-    message_chunks,
-    positive_int_or_none,
+from nanomem.pipeline.representation.events import (
+    is_extractable_message,
+    non_extractable_message_skip,
 )
 from nanomem.pipeline.representation.llm.client import (
     LLMCompletionClient,
@@ -53,18 +64,14 @@ from nanomem.pipeline.representation.prompts import (
     LLM_EXTRACTION_PROMPT,
     LLM_EXTRACTION_PROMPT_VERSION,
 )
-from nanomem.core.ids import scope_payload, stable_id
-
-
-# Re-exported for backward compatibility with code that imported the
-# chunking budget from `nanomem.pipeline.representation.llm`.
-from nanomem.pipeline.representation.llm.chunking import (  # noqa: F401  (re-export)
-    DEFAULT_MAX_MESSAGES_PER_CHUNK,
-)
 
 
 class LLMMemoryUnitExtractor:
-    """OpenAI-compatible extractor with an optional local fallback."""
+    """OpenAI-compatible extractor with an optional local fallback.
+
+    Sends one LLM call per dialogue. No internal chunking — that is the
+    caller's responsibility, expressed via dialogue boundaries.
+    """
 
     name = "llm_v1"
 
@@ -78,8 +85,6 @@ class LLMMemoryUnitExtractor:
         fallback: MemoryUnitExtractor | None = None,
         completion_client: LLMCompletionClient | None = None,
         strict_schema: bool = True,
-        max_messages_per_chunk: int | None = DEFAULT_MAX_MESSAGES_PER_CHUNK,
-        max_chars_per_chunk: int | None = None,
     ) -> None:
         self.model = model
         self.api_key = api_key or (os.getenv(api_key_env) if api_key_env else None)
@@ -87,17 +92,9 @@ class LLMMemoryUnitExtractor:
         self.fallback = fallback
         self.completion_client = completion_client
         self.strict_schema = strict_schema
-        self.max_messages_per_chunk = positive_int_or_none(
-            max_messages_per_chunk,
-            field_name="max_messages_per_chunk",
-        )
-        self.max_chars_per_chunk = positive_int_or_none(
-            max_chars_per_chunk,
-            field_name="max_chars_per_chunk",
-        )
 
     def extract(self, request: ExtractionRequest) -> ExtractionResult:
-        visible_messages, skipped = extractable_messages(request)
+        visible_messages, skipped = _extractable_messages(request)
         if not visible_messages:
             return ExtractionResult(
                 units=(),
@@ -111,11 +108,6 @@ class LLMMemoryUnitExtractor:
                 },
             )
 
-        chunks = message_chunks(
-            visible_messages,
-            max_messages_per_chunk=self.max_messages_per_chunk,
-            max_chars_per_chunk=self.max_chars_per_chunk,
-        )
         if self.completion_client is None and not self.api_key:
             if self.fallback is not None:
                 return with_fallback_stats(
@@ -124,47 +116,40 @@ class LLMMemoryUnitExtractor:
                 )
             raise ConfigError("LLMMemoryUnitExtractor requires api_key or api_key_env")
 
-        units: list[MemoryUnit] = []
-        all_skipped = list(skipped)
-        for chunk in chunks:
-            try:
-                payload = self._complete(request, chunk=chunk)
-            except Exception:
-                if self.fallback is not None:
-                    return with_fallback_stats(
-                        self.fallback.extract(request),
-                        reason="llm_error",
-                    )
-                raise
-            try:
-                result = self._parse_payload(
-                    payload,
-                    request=request,
-                    allowed_indexes=tuple(index for index, _ in chunk.messages),
-                    chunk_id=chunk.chunk_id,
+        try:
+            payload = self._complete(request, visible_messages=visible_messages)
+        except Exception:
+            if self.fallback is not None:
+                return with_fallback_stats(
+                    self.fallback.extract(request),
+                    reason="llm_error",
                 )
-            except LLMExtractionPayloadError:
-                if self.fallback is not None:
-                    return with_fallback_stats(
-                        self.fallback.extract(request),
-                        reason="invalid_payload",
-                    )
-                raise
-            units.extend(result.units)
-            all_skipped.extend(result.skipped)
+            raise
 
+        try:
+            parsed = self._parse_payload(
+                payload,
+                request=request,
+                allowed_indexes=tuple(index for index, _ in visible_messages),
+            )
+        except LLMExtractionPayloadError:
+            if self.fallback is not None:
+                return with_fallback_stats(
+                    self.fallback.extract(request),
+                    reason="invalid_payload",
+                )
+            raise
+
+        all_skipped = (*skipped, *parsed.skipped)
         return ExtractionResult(
-            units=tuple(units),
-            skipped=tuple(all_skipped),
+            units=parsed.units,
+            skipped=all_skipped,
             stats={
                 "extractor": self.name,
                 "model": self.model,
-                "unit_count": len(units),
+                "unit_count": len(parsed.units),
                 "skipped_count": len(all_skipped),
                 "visible_message_count": len(visible_messages),
-                "chunk_count": len(chunks),
-                "max_messages_per_chunk": self.max_messages_per_chunk,
-                "max_chars_per_chunk": self.max_chars_per_chunk,
             },
         )
 
@@ -172,40 +157,39 @@ class LLMMemoryUnitExtractor:
         self,
         request: ExtractionRequest,
         *,
-        chunk: ExtractionChunk,
+        visible_messages: tuple[tuple[int, DialogueMessage], ...],
     ) -> dict[str, Any]:
         client = self.completion_client or OpenAIChatCompletionClient(
             api_key=str(self.api_key),
             base_url=self.base_url,
         )
-        messages = ({
-            "role": "system",
-            "content": LLM_EXTRACTION_PROMPT,
-        }, {
-            "role": "user",
-            "content": json.dumps(
-                {
-                    "scope": scope_payload(request.scope),
-                    "dialogue_id": request.dialogue.dialogue_id,
-                    "chunk_id": chunk.chunk_id,
-                    "messages": [
-                        {
-                            "index": index,
-                            "role": message.role,
-                            "speaker_id": message.speaker_id,
-                            "content": message.content,
-                            "timestamp": message.timestamp,
-                        }
-                        for index, message in chunk.messages
-                    ],
-                },
-                ensure_ascii=False,
-            ),
-        })
-        return client.complete(
-            model=self.model,
-            messages=messages,
+        messages = (
+            {
+                "role": "system",
+                "content": LLM_EXTRACTION_PROMPT,
+            },
+            {
+                "role": "user",
+                "content": json.dumps(
+                    {
+                        "scope": scope_payload(request.scope),
+                        "dialogue_id": request.dialogue.dialogue_id,
+                        "messages": [
+                            {
+                                "index": index,
+                                "role": message.role,
+                                "speaker_id": message.speaker_id,
+                                "content": message.content,
+                                "timestamp": message.timestamp,
+                            }
+                            for index, message in visible_messages
+                        ],
+                    },
+                    ensure_ascii=False,
+                ),
+            },
         )
+        return client.complete(model=self.model, messages=messages)
 
     def _parse_payload(
         self,
@@ -213,7 +197,6 @@ class LLMMemoryUnitExtractor:
         *,
         request: ExtractionRequest,
         allowed_indexes: tuple[int, ...],
-        chunk_id: int,
     ) -> ExtractionResult:
         units: list[MemoryUnit] = []
         skipped: list[CaptureSkip] = []
@@ -258,8 +241,8 @@ class LLMMemoryUnitExtractor:
                 handle_invalid(
                     skipped,
                     message_range_value=mr,
-                    reason="out_of_chunk_message_range",
-                    detail="message_range must stay inside the current chunk",
+                    reason="message_range_out_of_visible_set",
+                    detail="message_range references filtered (hidden/tool) messages",
                     strict=self.strict_schema,
                 )
                 continue
@@ -302,7 +285,6 @@ class LLMMemoryUnitExtractor:
                     metadata={
                         "extractor": self.name,
                         "model": self.model,
-                        "chunk_id": chunk_id,
                         "prompt_version": LLM_EXTRACTION_PROMPT_VERSION,
                         **optional_metadata(item),
                     },
@@ -328,18 +310,22 @@ class LLMMemoryUnitExtractor:
         return ExtractionResult(
             units=tuple(units),
             skipped=tuple(skipped),
-            stats={
-                "extractor": self.name,
-                "model": self.model,
-                "unit_count": len(units),
-                "skipped_count": len(skipped),
-                "chunk_id": chunk_id,
-                "chunk_message_count": len(allowed_indexes),
-            },
+            stats={},
         )
 
 
-__all__ = [
-    "DEFAULT_MAX_MESSAGES_PER_CHUNK",
-    "LLMMemoryUnitExtractor",
-]
+def _extractable_messages(
+    request: ExtractionRequest,
+) -> tuple[tuple[tuple[int, DialogueMessage], ...], list[CaptureSkip]]:
+    """Partition request messages into visible vs. skipped."""
+    visible: list[tuple[int, DialogueMessage]] = []
+    skipped: list[CaptureSkip] = []
+    for index, message in enumerate(request.dialogue.messages):
+        if is_extractable_message(message):
+            visible.append((index, message))
+        else:
+            skipped.append(non_extractable_message_skip(index, message))
+    return tuple(visible), skipped
+
+
+__all__ = ["LLMMemoryUnitExtractor"]

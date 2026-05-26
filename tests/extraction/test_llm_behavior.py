@@ -42,17 +42,12 @@ def test_llm_behavior_fixtures_cover_core_user_memory_types() -> None:
                         "text": "The user corrected the agent not to auto-commit code unless asked.",
                         "message_range": [1, 2],
                         "memory_type": "correction",
-                    }
-                ],
-                "skipped": [],
-            },
-            {
-                "units": [
+                    },
                     {
                         "text": "The user said they joined the NanoMem design review on May 6, 2026.",
                         "message_range": [2, 3],
                         "memory_type": "user_event",
-                    }
+                    },
                 ],
                 "skipped": [],
             },
@@ -83,7 +78,6 @@ def test_llm_behavior_fixtures_cover_core_user_memory_types() -> None:
         (1, 2),
         (2, 3),
     ]
-    assert result.stats["chunk_count"] == 2
 
 
 def test_llm_behavior_fixture_captures_agent_interaction_event() -> None:
@@ -188,7 +182,6 @@ def _extract(
     extractor = LLMMemoryUnitExtractor(
         model="test-model",
         completion_client=client,
-        max_messages_per_chunk=2,
     )
     return extractor.extract(
         ExtractionRequest(

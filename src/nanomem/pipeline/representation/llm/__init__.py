@@ -1,28 +1,23 @@
 """LLM-backed memory unit extractor.
 
-This package was previously a single 650-line ``llm.py`` file. The
-public surface is unchanged: every name that was importable as
-``from nanomem.pipeline.representation.llm import X`` is re-exported here.
-
 Sub-modules:
 
 - :mod:`nanomem.pipeline.representation.llm.extractor` — :class:`LLMMemoryUnitExtractor`
 - :mod:`nanomem.pipeline.representation.llm.client`    — :class:`LLMCompletionClient`
-                                            Protocol + OpenAI reference impl
-- :mod:`nanomem.pipeline.representation.llm.chunking`  — dialogue chunking
+                                                          Protocol + OpenAI reference impl
 - :mod:`nanomem.pipeline.representation.llm.parsing`   — payload schema + transform
 
-Prompt text lives in :mod:`nanomem.pipeline.representation.prompts` (re-imported
-here for ``from nanomem.pipeline.representation.llm import LLM_EXTRACTION_PROMPT``
-back-compat).
+The extractor's contract: **one Dialogue is one extraction unit.** No
+internal chunking. Caller decides dialogue boundaries via capture and
+flush.
+
+Prompt text lives in :mod:`nanomem.pipeline.representation.prompts`
+(re-imported here for ``from nanomem.pipeline.representation.llm import
+LLM_EXTRACTION_PROMPT`` back-compat).
 """
 
 from __future__ import annotations
 
-from nanomem.pipeline.representation.llm.chunking import (
-    DEFAULT_MAX_MESSAGES_PER_CHUNK,
-    ExtractionChunk,
-)
 from nanomem.pipeline.representation.llm.client import (
     LLMCompletionClient,
     OpenAIChatCompletionClient,
@@ -38,8 +33,6 @@ from nanomem.pipeline.representation.prompts import (
 
 __all__ = [
     "ALLOWED_MEMORY_TYPES",
-    "DEFAULT_MAX_MESSAGES_PER_CHUNK",
-    "ExtractionChunk",
     "LLMCompletionClient",
     "LLMExtractionPayloadError",
     "LLMMemoryUnitExtractor",

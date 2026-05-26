@@ -124,8 +124,6 @@ def test_llm_extraction_config_builds_extractor_options() -> None:
                 "model": "test-model",
                 "fallback_backend": "heuristic",
                 "strict_schema": False,
-                "max_messages_per_chunk": 6,
-                "max_chars_per_chunk": 2000,
             }
         }
     )
@@ -134,8 +132,6 @@ def test_llm_extraction_config_builds_extractor_options() -> None:
 
     assert isinstance(extractor, LLMMemoryUnitExtractor)
     assert extractor.strict_schema is False
-    assert extractor.max_messages_per_chunk == 6
-    assert extractor.max_chars_per_chunk == 2000
     assert extractor.fallback is not None
 
 
