@@ -6,7 +6,7 @@
 
 NanoMem is a local-first long-term personal memory backend for AI agents.
 
-It is built for agent harnesses that can already read files, search repos, run
+It is built for agent harnesses that already read files, search repos, run
 tools, inspect git, and use workspace-specific context. NanoMem keeps the part
 that does not belong in a repo: durable, cross-session, user-specific personal
 memory.
@@ -15,55 +15,110 @@ memory.
 The agent reads the workspace. NanoMem helps it remember the user.
 ```
 
-Status: alpha. The core local backend is implemented and tested, but public
+Status: alpha. The core local backend is implemented and tested. Public
 contracts may still change before a stable release.
 
-## Why NanoMem
+## Why This Design
 
-Most agent memory systems drift toward "store everything": chat transcripts,
-documents, code snippets, logs, search results, preferences, and task state in
-one retrieval pool. That makes source of truth unclear and lets large workspace
-artifacts bury the small personal facts that matter across sessions.
+NanoMem is not a generic "store everything" memory system. Its architecture is
+the production realization of an evaluated research principle:
 
-NanoMem takes the opposite boundary:
+> Personal memory helps an agent only through the bounded memory block that
+> reaches the LLM at answer time. The right metric is the **density of useful
+> evidence in that final rendered block**, not retrieval recall in isolation.
 
-- workspace facts stay in files, repos, logs, artifacts, and external systems;
-- NanoMem stores fine-grained personal `MemoryUnit`s;
-- indexes are derived and rebuildable;
-- `read` returns timestamped evidence, not a canonical user profile;
-- the agent-facing API stays small: `capture` and `read`.
+This claim — and the design choices it implies — was studied in the companion
+paper *Long-Term Personal Memory Under Budget: An Evidence-Density Principle*
+(initial experiment code in
+[nanomem-exp](../nanomem-exp), branch `initial-experiment-code`). Two design
+axes were varied under a fixed post-render token budget on LoCoMo and
+LongMemEval:
+
+- **Representation**: how dialogue is converted into memory — interaction
+  pairs, chunks, summaries, or **atomic fact records**;
+- **Utilization**: how retrieved units are ordered, merged, and packed into
+  the prompt — `default`, `merge`, `time`, `time+merge`.
+
+The controlled finding: **fact-style records + chronological merging
+(`Fact + Time+Merge`)** are the strongest combination across budgets. NanoMem's
+production stack (`extraction/` produces atomic facts, `render/` packs ranked
+facts with timestamps under a token budget) is the same configuration.
+
+### Validation Snapshot
+
+Protocol-aligned numbers from the paper draft (see
+[nanomem-exp/README.md](../nanomem-exp) on the `initial-experiment-code`
+branch). External rows use different reporting protocols and are shown as
+references.
+
+LoCoMo system comparison (Overall, ↑ better):
+
+| Method        | Tokens | Overall   |
+| ------------- | -----: | --------: |
+| Mem0          |   1.0k |     64.20 |
+| MemOS         |   2.5k |     80.76 |
+| Zep           |   1.4k |     85.22 |
+| EverMemOS     |   2.3k | **93.05** |
+| **Ours (1.0k)** | 1.75k | **92.92** |
+
+LongMemEval system comparison (Overall, ↑ better):
+
+| Method          | Tokens | Overall   |
+| --------------- | -----: | --------: |
+| Mem0            |   1.1k |     66.40 |
+| MemOS           |   1.4k |     77.80 |
+| EverMemOS       |   2.8k |     83.00 |
+| **Ours (1.0k)** | 1.75k |     87.40 |
+| **Ours (2.0k)** | 2.75k | **89.20** |
+
+Controlled 1000-token budget (mean of three runs):
+
+| Dataset     | Best controlled setting | Overall   |
+| ----------- | ----------------------- | --------: |
+| LoCoMo      | Fact + Time+Merge       | **75.11** |
+| LongMemEval | Fact + Time+Merge       | **84.07** |
+
+Reproduction configs and exporters live in `nanomem-exp` on the
+`initial-experiment-code` branch. This repository is the production backend
+that those experiments validate.
+
+## Product Boundary
+
+```text
+workspace facts        stay in files, repos, logs, artifacts, and external systems
+NanoMem MemoryUnits    durable personal facts with scope, time, and dialogue refs
+indexes                derived data, always rebuildable from the store
+read                   returns timestamped evidence, not a canonical user profile
+agent surface          stays small: capture and read
+```
 
 Good fits:
 
 - coding/local agents such as Codex, Claude Code, and OpenClaw-like runtimes;
 - personal assistants that need durable user preferences and corrections;
-- MCP hosts that need a small memory sidecar;
+- MCP hosts that need a small read-only memory sidecar;
 - local-first deployments where SQLite is enough as the source of truth.
 
-Non-goals:
-
-- workspace search replacement;
-- document ingestion or RAG over project files;
-- task database, scratchpad, or run log store;
-- raw event sourcing;
-- canonical truth maintenance for user profiles.
+Non-goals: workspace search replacement, document ingestion or RAG over
+project files, task database, run log store, raw event sourcing, canonical
+user-profile maintenance.
 
 ## Feature Status
 
-| Area | Status | Notes |
-| --- | --- | --- |
-| Core contracts | In transition | target model: `Session`, `Dialogue`, `DialogueWindow`, `MemoryUnit` |
-| Local store | Implemented | SQLite fact store with migrations and operation logs |
-| Capture pipeline | Implemented | Heuristic extractor by default; LLM extractor optional |
-| Read pipeline | Implemented | retrieval, ranking, evidence rendering, token budget |
-| HTTP API | Implemented | `/v1/health`, `/v1/capture`, `/v1/flush`, `/v1/read` |
-| Python SDK | Implemented | sync and async HTTP clients |
-| MCP server | Implemented | stdio server exposing read-only `nanomem_read` |
-| CLI/control plane | Implemented | stats, list, backup, export, retention, reindex, dashboard, Codex hook install |
-| Web manager | Local alpha | bundled static manager and React/Vite work-in-progress |
-| Index backends | Local alpha | lexical, dense, hybrid, optional LanceDB |
-| Agent plugins | Experimental | Codex project hooks plus Codex and Claude Code plugin skeletons |
-| Managed deployment | Planned | Postgres + pgvector is a future path, not current default |
+| Area              | Status        | Notes |
+| ----------------- | ------------- | ----- |
+| Core contracts    | In transition | target model: `Session`, `Dialogue`, `DialogueWindow`, `MemoryUnit` |
+| Local store       | Implemented   | SQLite fact store with migrations and operation logs |
+| Capture pipeline  | Implemented   | Heuristic extractor by default; LLM extractor optional |
+| Read pipeline     | Implemented   | retrieval, ranking, evidence rendering, token budget |
+| HTTP API          | Implemented   | `/v1/health`, `/v1/capture`, `/v1/flush`, `/v1/read` |
+| Python SDK        | Implemented   | sync and async HTTP clients |
+| MCP server        | Implemented   | stdio server exposing read-only `nanomem_read` |
+| CLI/control plane | Implemented   | stats, list, backup, export, retention, reindex, dashboard, Codex hook install |
+| Web manager       | Local alpha   | bundled static manager and React/Vite work-in-progress |
+| Index backends    | Local alpha   | lexical, dense, hybrid, optional LanceDB |
+| Agent plugins     | Experimental  | Codex project hooks plus Codex and Claude Code plugin skeletons |
+| Managed deployment| Planned       | Postgres + pgvector is a future path, not the current default |
 
 ## Quick Start
 
@@ -81,15 +136,9 @@ Create `nanomem.json`:
 ```json
 {
   "data_dir": ".nanomem",
-  "store": {
-    "backend": "sqlite"
-  },
-  "index": {
-    "backend": "dense"
-  },
-  "extraction": {
-    "backend": "heuristic"
-  },
+  "store": { "backend": "sqlite" },
+  "index": { "backend": "dense" },
+  "extraction": { "backend": "heuristic" },
   "read": {
     "default_recency_policy": "balanced",
     "default_max_units": 10
@@ -97,19 +146,14 @@ Create `nanomem.json`:
 }
 ```
 
-Start the local HTTP sidecar:
+Start the local HTTP sidecar and check health:
 
 ```bash
 nanomem-server --config nanomem.json --host 127.0.0.1 --port 8765
-```
-
-Check health:
-
-```bash
 curl http://127.0.0.1:8765/v1/health
 ```
 
-Write a memory from user-visible dialogue:
+Capture one user-visible turn:
 
 ```bash
 curl -X POST http://127.0.0.1:8765/v1/capture \
@@ -132,7 +176,7 @@ curl -X POST http://127.0.0.1:8765/v1/capture \
   }'
 ```
 
-Read relevant memory:
+Read relevant memory under a token budget:
 
 ```bash
 curl -X POST http://127.0.0.1:8765/v1/read \
@@ -147,7 +191,7 @@ curl -X POST http://127.0.0.1:8765/v1/read \
   }'
 ```
 
-The response includes ranked units and a packed context string similar to:
+The response contains ranked units and a packed, timestamped context block:
 
 ```json
 {
@@ -155,18 +199,7 @@ The response includes ranked units and a packed context string similar to:
     "text": "Relevant memory units:\n- [2026-05-19T10:00:00+08:00, namespace=personal] Please remember that I usually want architecture first, then code.",
     "token_count": 42,
     "unit_count": 1
-  },
-  "ranked_units": [
-    {
-      "rank": 1,
-      "score": 0.38,
-      "unit": {
-        "memory_type": "background",
-        "text": "Please remember that I usually want architecture first, then code.",
-        "timestamp": "2026-05-19T10:00:00+08:00"
-      }
-    }
-  ]
+  }
 }
 ```
 
@@ -177,28 +210,32 @@ http://127.0.0.1:8765/manager
 ```
 
 The manager is a control-plane UI for inspecting memory units, dialogues,
-operation logs, retrieval preview, and index health. Do not expose manager or
-control endpoints as agent-facing tools.
+operation logs, retrieval previews, and index health. Do not expose
+`/manager` or `/manager/api/*` as agent-facing tools or to untrusted networks.
+
+Full request/response examples:
+[docs/reports/request-response-examples.md](docs/reports/request-response-examples.md).
 
 ## Core Model
 
 NanoMem separates raw dialogue, window control, durable memory, and retrieval:
 
 ```text
-Session         = groups related capture streams
-Dialogue        = archived user-visible messages
-DialogueWindow  = buffering and extraction lifecycle
-MemoryUnit      = fine-grained durable personal fact
-IndexHit        = derived retrieval candidate
-PackedContext   = rendered evidence for an agent prompt
+Session         groups related capture streams
+Dialogue        archived user-visible messages (capture source of truth)
+DialogueWindow  open buffer + extraction lifecycle
+MemoryUnit      fine-grained durable personal fact (the storage unit)
+IndexHit        derived retrieval candidate
+PackedContext   rendered evidence block for an agent prompt
 ```
 
-Capture source is user-visible dialogue. `Dialogue` and `DialogueWindow`
-do not own memory scope. The first object with `owner_id` and `namespace` is
-the extracted `MemoryUnit`. Indexes are derived data and can be rebuilt.
-Rendered context is the final prompt input for an agent.
+`Dialogue` and `DialogueWindow` do not own memory scope. The first object
+carrying `owner_id` and `namespace` is the extracted `MemoryUnit`. Indexes are
+derived data and can always be rebuilt from the store. Rendered context is
+the final agent input — and, per the validation work above, the place where
+evidence density actually matters.
 
-Preferred memory style:
+Preferred memory style — third-person, evidence-grounded, timestamped:
 
 ```text
 The user said they prefer concise Chinese answers.
@@ -206,18 +243,18 @@ The user corrected the agent not to auto-commit code.
 The agent auto-committed code and the user reacted negatively.
 ```
 
-Avoid turning memory into direct hidden instructions:
+Avoid first-person commands and project-style assertions:
 
 ```text
-Do not auto-commit code.
-Always answer in Chinese.
-This repo uses pytest.
+Do not auto-commit code.            ← hidden instruction, not evidence
+Always answer in Chinese.           ← same problem
+This repo uses pytest.              ← workspace fact, belongs in CLAUDE.md/README
 ```
 
-The downstream agent should reason over evidence, time, scope, and conflicts.
-NanoMem should not silently synthesize a canonical user profile.
+The downstream agent should reason over evidence, time, scope, and
+conflicts. NanoMem must not silently synthesize a canonical user profile.
 
-## What To Store
+## What To Store / Not To Store
 
 Store durable, user-related personal facts:
 
@@ -250,17 +287,19 @@ understand or collaborate with the user, put it in NanoMem.
 
 ## Interfaces
 
-NanoMem intentionally keeps the agent-facing surface small:
+The agent-facing surface is intentionally small:
 
 ```text
 capture
 read
 ```
 
-`flush` is a session/window control operation. It seals pending dialogue
-buffers and makes extracted units searchable. Admin, backup, export, retention,
-delete, reindex, and raw dialogue inspection belong to CLI or control-plane
-surfaces, not to ordinary agent tools.
+`flush` is a session/window control operation, not a write. It seals pending
+dialogue buffers so extracted units become searchable. Because windows do not
+carry memory scope, flushing pending state requires both `session_id` and
+extraction `scope`. Admin, backup, export, retention, delete, reindex, and
+raw dialogue inspection belong to CLI or control-plane surfaces, not agent
+tools.
 
 ### HTTP
 
@@ -271,21 +310,10 @@ POST /v1/flush
 POST /v1/read
 ```
 
-Capture without `session_id` is a complete dialogue and extracts immediately.
-Capture with `session_id` appends raw messages to that session's open dialogue
-window; call `/v1/flush` when a session pauses, exits, or should become
-searchable before the token window fills. Because windows do not store memory
-scope, flushing a pending window requires both `session_id` and extraction
-`scope`.
-
-CLI equivalent:
-
-```bash
-nanomem flush --config nanomem.json --user-id demo-user --session-id codex-session
-```
-
-The JSON request and response shapes are documented in
-[docs/reports/request-response-examples.md](docs/reports/request-response-examples.md).
+Capture without `session_id` treats the payload as a complete dialogue and
+extracts immediately. Capture with `session_id` appends raw messages to that
+session's open dialogue window; call `/v1/flush` when a session pauses,
+exits, or should become searchable before the token window fills.
 
 ### Python SDK
 
@@ -331,6 +359,8 @@ result = client.read(
 print(result.context.text)
 ```
 
+`AsyncNanoMemClient` mirrors the same surface for async hosts.
+
 ### MCP
 
 Run the stdio MCP server:
@@ -340,9 +370,8 @@ nanomem-mcp --config nanomem.json
 ```
 
 MCP exposes `nanomem_read` only. Writes go through hook capture, the SDK, or
-the HTTP API, not through model-selected MCP tools. Control-plane actions such
-as backup, export, retention, and reindex should also stay out of the MCP
-surface.
+the HTTP API — never through model-selected MCP tools. Control-plane actions
+(backup, export, retention, reindex) also stay out of the MCP surface.
 
 ### CLI
 
@@ -356,18 +385,14 @@ nanomem migrations --config nanomem.json
 nanomem integrity-check --config nanomem.json
 nanomem reindex --config nanomem.json
 nanomem dashboard --config nanomem.json
+
+nanomem backup  --config nanomem.json --output .nanomem/backups/backup.db
+nanomem export  --config nanomem.json --output .nanomem/exports/export.json
+nanomem retention-preview      --config nanomem.json --before 2026-01-01T00:00:00+00:00
+nanomem log-retention-preview  --config nanomem.json --before 2026-01-01T00:00:00+00:00
 ```
 
-Backup, export, and retention examples:
-
-```bash
-nanomem backup --config nanomem.json --output .nanomem/backups/backup.db
-nanomem export --config nanomem.json --output .nanomem/exports/export.json
-nanomem retention-preview --config nanomem.json --before 2026-01-01T00:00:00+00:00
-nanomem log-retention-preview --config nanomem.json --before 2026-01-01T00:00:00+00:00
-```
-
-If the package is not installed, use module entry points from the repo root:
+Without the package installed, use module entry points from the repo root:
 
 ```bash
 PYTHONPATH=src python -m nanomem.cli --help
@@ -389,18 +414,18 @@ Default local state lives under one data directory:
 
 Supported config values:
 
-| Key | Values |
-| --- | --- |
-| `store.backend` | `sqlite` |
-| `index.backend` | `lexical`, `dense`, `hybrid`, `lancedb` |
-| `index.embedding.backend` | `hashing`, `openai_compatible` |
-| `extraction.backend` | `heuristic`, `llm` |
-| `read.default_recency_policy` | `recent`, `balanced`, `historical` |
+| Key                         | Values                                       |
+| --------------------------- | -------------------------------------------- |
+| `store.backend`             | `sqlite`                                     |
+| `index.backend`             | `lexical`, `dense`, `hybrid`, `lancedb`      |
+| `index.embedding.backend`   | `hashing`, `openai_compatible`               |
+| `extraction.backend`        | `heuristic`, `llm`                           |
+| `read.default_recency_policy` | `recent`, `balanced`, `historical`         |
 
 The default local setup is dependency-light:
 
 - SQLite is the fact store;
-- `dense` is the default index backend;
+- `dense` is the default index backend with bounded scope-filtered scan;
 - deterministic local hashing is the default embedding model;
 - `heuristic` is the default extractor;
 - `index.rebuild_on_startup = true` rebuilds derived indexes from SQLite.
@@ -410,7 +435,7 @@ config files committed to the repository.
 
 ### Optional LanceDB
 
-Install the optional dependency:
+For larger-scale local ANN, install the optional dependency:
 
 ```bash
 python -m pip install -e ".[dev,lancedb]"
@@ -431,6 +456,11 @@ Configure the local vector index:
 
 LanceDB stores retrieval fields and embeddings. SQLite remains the source of
 truth for `MemoryUnit` and `Dialogue`.
+
+NanoMem itself does not implement ANN. The in-memory `dense` index is
+deliberately bounded (scope-filter first, then scan up to
+`index.dense_scan_limit`). For real ANN, use LanceDB or a future Postgres +
+pgvector adapter — never expand SQLite into a vector engine via JSON scans.
 
 ## Agent Integrations
 
@@ -456,33 +486,26 @@ plugins/nanomem-claude-code/
 Hook runner examples:
 
 ```bash
-nanomem-agent-hook spool --host codex
-nanomem-agent-hook read --host codex
+nanomem-agent-hook spool   --host codex
+nanomem-agent-hook read    --host codex
 nanomem-agent-hook capture --host codex
-nanomem-agent-hook spool --host claude-code
-nanomem-agent-hook read --host claude-code
+nanomem-agent-hook spool   --host claude-code
+nanomem-agent-hook read    --host claude-code
 nanomem-agent-hook capture --host claude-code
 ```
 
-The plugins are explicit opt-in integrations. They connect to a local HTTP
-sidecar by default. For Codex, install project-level hooks first:
+For Codex, install project-level hooks:
 
 ```bash
 nanomem install-codex-hooks --project-dir .
-```
 
-Plugin-bundled Codex hooks remain an opt-in packaging path and should be
-validated separately. On the checked local CLI, interactive Codex executed
-project hooks after hook trust, while `codex exec` did not execute project,
-user, or plugin-bundled hooks.
-
-```bash
 export NANOMEM_BASE_URL=http://127.0.0.1:8765
 export NANOMEM_OWNER_ID="$USER"
 export NANOMEM_NAMESPACE=personal
 ```
 
-Detailed plugin docs:
+Plugin-bundled Codex hooks remain an opt-in packaging path and should be
+validated separately. Plugin docs:
 
 - [docs/plugins/README.md](docs/plugins/README.md)
 - [docs/plugins/codex.md](docs/plugins/codex.md)
@@ -493,27 +516,27 @@ Detailed plugin docs:
 
 ```text
 src/nanomem/
-  contracts.py        # core data contracts
-  config.py           # JSON / simple YAML config loading
-  factory.py          # config-driven construction
-  service/            # capture/read orchestration
-  store/              # SQLite persistence
-  index/              # lexical, dense, hybrid, LanceDB adapters
-  embeddings/         # hashing and OpenAI-compatible embeddings
-  extraction/         # heuristic and LLM extractors
-  ranking/            # relevance and recency ranking
-  render/             # packed context rendering
-  server/             # HTTP API and manager routes
-  mcp/                # stdio MCP server
-  sdk/                # Python HTTP clients
-  cli/                # command-line administration
-  control/            # stats, backup, export, retention, reindex
-  maintenance/        # configured maintenance workflows
-  adapters/           # host integration adapters
-  manager/            # bundled manager assets
-manager-ui/           # React/Vite manager source
-docs/                 # product, architecture, manager, and plugin docs
-tests/                # pytest regression tests
+  contracts.py        core data contracts (frozen dataclasses)
+  config.py           JSON / simple YAML config loading
+  factory.py          config-driven construction
+  service/            capture/read orchestration (sync + async)
+  store/              SQLite persistence
+  index/              lexical, dense, hybrid, LanceDB adapters
+  embeddings/         hashing and OpenAI-compatible embeddings
+  extraction/         heuristic and LLM extractors → atomic fact units
+  ranking/            relevance and recency ranking
+  render/             token-budget-aware evidence rendering
+  server/             HTTP API and manager routes
+  mcp/                stdio MCP server (read-only)
+  sdk/                Python sync/async HTTP clients
+  cli/                command-line administration
+  control/            stats, backup, export, retention, reindex
+  maintenance/        configured maintenance workflows
+  adapters/           host integration adapters
+  manager/            bundled manager assets
+manager-ui/           React/Vite manager source (builds into manager/assets/)
+docs/                 product, architecture, manager, and plugin docs
+tests/                pytest regression tests (mirrors package layout)
 ```
 
 Architecture rule of thumb:
@@ -522,54 +545,67 @@ Architecture rule of thumb:
 server -> service -> store/index/extraction/ranking/render -> contracts
 ```
 
-The service layer owns orchestration. Stores and indexes expose capabilities;
-they should not decide capture/read behavior.
+The service layer owns orchestration. Stores, indexes, extractors, rankers,
+and renderers are replaceable capabilities behind small interfaces — they
+should not decide capture/read behavior. Server code must not import concrete
+store/index internals; adapters must not bypass `NanoMemService`.
 
 ## Development
 
-Install dev dependencies:
+Install dev dependencies and run the test suite:
 
 ```bash
 python -m pip install -e ".[dev]"
-```
-
-Run tests:
-
-```bash
-PYTHONPATH=src python -m pytest
+python -m pytest
 ```
 
 Run a focused LanceDB integration test after installing the extra:
 
 ```bash
 python -m pip install -e ".[dev,lancedb]"
-PYTHONPATH=src python -m pytest tests/index/test_lancedb_integration.py
+python -m pytest tests/index/test_lancedb_integration.py
 ```
 
-CI runs compile and pytest on Python 3.10, 3.11, and 3.12.
+CI runs `compileall` and `pytest` on Python 3.10, 3.11, and 3.12.
+
+For benchmark reproduction (LoCoMo, LongMemEval, paired comparisons,
+budget curves), use the experiment platform in
+[`nanomem-exp`](../nanomem-exp), branch `initial-experiment-code`. That
+repository is the artifact-first evaluation harness; this repository is the
+production backend.
 
 ## Security And Data
 
 NanoMem stores personal memory data.
 
-- Do not commit `.nanomem/`, local databases, exports, backups, `.env`, or API keys.
+- Do not commit `.nanomem/`, local databases, exports, backups, `.env`, or
+  API keys.
 - Bind the HTTP server to `127.0.0.1` for local use.
 - Do not expose `/manager` or `/manager/api/*` to untrusted networks.
-- Keep raw workspace files, logs, tool output, and multimodal assets outside NanoMem.
+- Keep raw workspace files, logs, tool output, and multimodal assets outside
+  NanoMem.
 - Use backup/export/retention commands with temporary paths in tests.
-- Enable hook debug payloads only temporarily; they may contain prompt or transcript metadata.
+- Enable hook debug payloads only temporarily; they may contain prompt or
+  transcript metadata.
 
 ## Documentation Map
 
-- [docs/system-design.md](docs/system-design.md): top-level product and architecture design.
-- [docs/nanomem/README.md](docs/nanomem/README.md): modular design specs.
-- [docs/nanomem-product-rfc.md](docs/nanomem-product-rfc.md): product boundary and memory semantics.
-- [docs/agent-memory-positioning.md](docs/agent-memory-positioning.md): agent read/write guidance.
-- [docs/architecture-overview.md](docs/architecture-overview.md): diagrams, runtime layout, and store/index split.
-- [docs/index-backends.md](docs/index-backends.md): in-memory, LanceDB, and Postgres/pgvector strategy.
-- [docs/nanomem-code-architecture.md](docs/nanomem-code-architecture.md): module-level implementation architecture.
-- [docs/manager/README.md](docs/manager/README.md): web manager and control-plane design.
-- [docs/reports/request-response-examples.md](docs/reports/request-response-examples.md): complete API examples.
+Design and product context:
+
+- [docs/system-design.md](docs/system-design.md) — top-level product and architecture design.
+- [docs/nanomem-product-rfc.md](docs/nanomem-product-rfc.md) — product boundary and memory semantics.
+- [docs/agent-memory-positioning.md](docs/agent-memory-positioning.md) — agent read/write guidance.
+- [docs/architecture-overview.md](docs/architecture-overview.md) — diagrams, runtime layout, store/index split.
+- [docs/index-backends.md](docs/index-backends.md) — in-memory, LanceDB, and Postgres/pgvector strategy.
+- [docs/nanomem-code-architecture.md](docs/nanomem-code-architecture.md) — module-level implementation architecture.
+- [docs/manager/README.md](docs/manager/README.md) — web manager and control-plane design.
+- [docs/reports/request-response-examples.md](docs/reports/request-response-examples.md) — complete API examples.
+
+Companion evaluation work:
+
+- [`nanomem-exp`](../nanomem-exp), branch `initial-experiment-code` —
+  experiment configs, runners, and result tables for *Long-Term Personal
+  Memory Under Budget: An Evidence-Density Principle*.
 
 ## License
 
