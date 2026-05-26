@@ -58,44 +58,12 @@ class ReadConfig:
 
 
 @dataclass(frozen=True)
-class RetentionConfig:
-    enabled: bool = False
-    before: str | None = None
-    max_age_days: int | None = None
-
-
-@dataclass(frozen=True)
-class BackupConfig:
-    enabled: bool = False
-    path: str | None = None
-    overwrite: bool = False
-
-
-@dataclass(frozen=True)
-class ExportConfig:
-    enabled: bool = False
-    path: str | None = None
-    include_operation_logs: bool = True
-    overwrite: bool = False
-
-
-@dataclass(frozen=True)
-class MaintenanceConfig:
-    integrity_check: bool = True
-    backup: BackupConfig = field(default_factory=BackupConfig)
-    export: ExportConfig = field(default_factory=ExportConfig)
-    retention: RetentionConfig = field(default_factory=RetentionConfig)
-    operation_log_retention: RetentionConfig = field(default_factory=RetentionConfig)
-
-
-@dataclass(frozen=True)
 class NanoMemConfig:
     data_dir: str = DEFAULT_DATA_DIR
     store: StoreConfig = field(default_factory=StoreConfig)
     index: IndexConfig = field(default_factory=IndexConfig)
     extraction: ExtractionConfig = field(default_factory=ExtractionConfig)
     read: ReadConfig = field(default_factory=ReadConfig)
-    maintenance: MaintenanceConfig = field(default_factory=MaintenanceConfig)
 
 
 def load_config(path: str | Path) -> NanoMemConfig:
@@ -122,7 +90,6 @@ def config_from_mapping(payload: dict[str, Any]) -> NanoMemConfig:
     embedding_payload = _mapping(index_payload.get("embedding"))
     extraction_payload = _mapping(payload.get("extraction"))
     read_payload = _mapping(payload.get("read"))
-    maintenance_payload = _mapping(payload.get("maintenance"))
     store_path = _optional_str(store_payload.get("path"))
     return NanoMemConfig(
         data_dir=data_dir,
@@ -172,83 +139,6 @@ def config_from_mapping(payload: dict[str, Any]) -> NanoMemConfig:
                 read_payload.get("default_recency_policy", "balanced")),
             default_max_units=int(
                 read_payload.get("default_max_units", 10)),
-        ),
-        maintenance=MaintenanceConfig(
-            integrity_check=bool(
-                maintenance_payload.get("integrity_check", True)),
-            backup=BackupConfig(
-                enabled=bool(
-                    _mapping(maintenance_payload.get("backup")).get(
-                        "enabled",
-                        False,
-                    )
-                ),
-                path=_optional_str(
-                    _mapping(maintenance_payload.get("backup")).get("path")),
-                overwrite=bool(
-                    _mapping(maintenance_payload.get("backup")).get(
-                        "overwrite",
-                        False,
-                    )
-                ),
-            ),
-            export=ExportConfig(
-                enabled=bool(
-                    _mapping(maintenance_payload.get("export")).get(
-                        "enabled",
-                        False,
-                    )
-                ),
-                path=_optional_str(
-                    _mapping(maintenance_payload.get("export")).get("path")),
-                include_operation_logs=bool(
-                    _mapping(maintenance_payload.get("export")).get(
-                        "include_operation_logs",
-                        True,
-                    )
-                ),
-                overwrite=bool(
-                    _mapping(maintenance_payload.get("export")).get(
-                        "overwrite",
-                        False,
-                    )
-                ),
-            ),
-            retention=RetentionConfig(
-                enabled=bool(
-                    _mapping(maintenance_payload.get("retention")).get(
-                        "enabled",
-                        False,
-                    )
-                ),
-                before=_optional_str(
-                    _mapping(maintenance_payload.get("retention")).get(
-                        "before",
-                    )
-                ),
-                max_age_days=_optional_int(
-                    _mapping(maintenance_payload.get("retention")).get(
-                        "max_age_days",
-                    )
-                ),
-            ),
-            operation_log_retention=RetentionConfig(
-                enabled=bool(
-                    _mapping(
-                        maintenance_payload.get("operation_log_retention")
-                    ).get("enabled", False)
-                ),
-                before=_optional_str(
-                    _mapping(
-                        maintenance_payload.get("operation_log_retention")
-                    ).get("before")
-                ),
-                max_age_days=_optional_int(
-                    _mapping(
-                        maintenance_payload.get("operation_log_retention")
-                    ).get("max_age_days")
-                ),
-            ),
         ),
     )
 

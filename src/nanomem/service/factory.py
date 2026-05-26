@@ -17,7 +17,6 @@ from nanomem.service.core import NanoMemService
 from nanomem.pipeline.storage.base import MemoryStore
 from nanomem.pipeline.storage.sqlite import SQLiteMemoryUnitStore
 from nanomem.service.control.service import NanoMemControlService
-from nanomem.ops.maintenance import NanoMemMaintenanceService  # layering-exception: factory.py is the composition root and must construct all layers
 
 
 def service_from_config(config: NanoMemConfig) -> NanoMemService:
@@ -85,17 +84,6 @@ def admin_from_config(config: NanoMemConfig) -> NanoMemControlService:
 
 def admin_from_config_file(path: str) -> NanoMemControlService:
     return control_from_config_file(path)
-
-
-def maintenance_from_config(config: NanoMemConfig) -> NanoMemMaintenanceService:
-    return NanoMemMaintenanceService(
-        control=control_from_config(config),
-        config=config.maintenance,
-    )
-
-
-def maintenance_from_config_file(path: str) -> NanoMemMaintenanceService:
-    return maintenance_from_config(load_config(path))
 
 
 def store_from_config(config: NanoMemConfig) -> MemoryStore:
@@ -189,8 +177,6 @@ __all__ = [
     "embedding_from_config",
     "extractor_from_config",
     "index_from_config",
-    "maintenance_from_config",
-    "maintenance_from_config_file",
     "nanomem_service_with_defaults",
     "service_from_config",
     "service_from_config_file",

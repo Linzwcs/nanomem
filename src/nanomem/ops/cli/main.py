@@ -15,7 +15,6 @@ from nanomem.core.config import NanoMemConfig, load_config
 from nanomem.core.contracts import FlushRequest, MemoryScope, MemoryUnit, TimeRange
 from nanomem.service.factory import extractor_from_config, index_from_config
 from nanomem.hosts.plugins.codex import install_codex_hooks  # layering-exception: CLI install-codex-hooks subcommand invokes host plugin
-from nanomem.ops.maintenance import NanoMemMaintenanceService
 from nanomem.service.core import NanoMemService
 from nanomem.pipeline.storage.sqlite import SQLiteMemoryUnitStore
 from nanomem.ops.tui import (
@@ -53,18 +52,6 @@ def main(argv: list[str] | None = None, *, stdout: TextIO | None = None) -> int:
             return _backup(control, args=args, stdout=output)
         if args.command == "export":
             return _export(control, args=args, stdout=output)
-        if args.command == "maintenance-plan":
-            return _maintenance_plan(
-                _maintenance_service(control, config),
-                json_output=args.json,
-                stdout=output,
-            )
-        if args.command == "maintenance-run":
-            return _maintenance_run(
-                _maintenance_service(control, config),
-                args=args,
-                stdout=output,
-            )
         if args.command == "reindex":
             return _reindex(control, json_output=args.json, stdout=output)
         if args.command == "flush":
@@ -156,33 +143,6 @@ def _parser() -> argparse.ArgumentParser:
     export.add_argument("--no-logs", action="store_true")
     export.add_argument("--overwrite", action="store_true")
     export.add_argument("--json", action="store_true", help="Emit JSON.")
-
-    maintenance_plan = subparsers.add_parser(
-        "maintenance-plan",
-        help="Preview configured maintenance actions.",
-    )
-    maintenance_plan.add_argument(
-        "--config",
-        required=True,
-        help="NanoMem config YAML/JSON path.",
-    )
-    maintenance_plan.add_argument("--json", action="store_true", help="Emit JSON.")
-
-    maintenance_run = subparsers.add_parser(
-        "maintenance-run",
-        help="Run configured maintenance actions.",
-    )
-    maintenance_run.add_argument(
-        "--config",
-        required=True,
-        help="NanoMem config YAML/JSON path.",
-    )
-    maintenance_run.add_argument(
-        "--yes",
-        action="store_true",
-        help="Confirm configured maintenance actions.",
-    )
-    maintenance_run.add_argument("--json", action="store_true", help="Emit JSON.")
 
     reindex = subparsers.add_parser("reindex", help="Rebuild the active index.")
     _add_db_or_config_args(reindex)
@@ -417,80 +377,6 @@ def _export(
         f"Export written to {result.path}: {result.unit_count} units, "
         f"{result.operation_log_count} operation logs.\n"
     )
-    return 0
-
-
-def _maintenance_plan(
-    service: NanoMemMaintenanceService,
-    *,
-    json_output: bool,
-    stdout: TextIO,
-) -> int:
-    plan = service.plan()
-    payload = asdict(plan)
-    if json_output:
-        _write_json(payload, stdout)
-        return 0
-    stdout.write("Maintenance plan\n")
-    stdout.write(f"  schema_version: {plan.schema_status.schema_version}\n")
-    stdout.write(
-        f"  latest_schema_version: "
-        f"{plan.schema_status.latest_schema_version}\n"
-    )
-    stdout.write(f"  needs_migration: {plan.schema_status.needs_migration}\n")
-    if plan.integrity_check is not None:
-        stdout.write(f"  integrity_ok: {plan.integrity_check.ok}\n")
-    if plan.retention_preview is not None:
-        stdout.write(
-            f"  retention_matched_units: "
-            f"{plan.retention_preview.matched_unit_count}\n"
-        )
-    if plan.operation_log_retention_preview is not None:
-        stdout.write(
-            f"  log_retention_matched_logs: "
-            f"{plan.operation_log_retention_preview.matched_log_count}\n"
-        )
-    stdout.write(f"  planned_actions: {_csv(plan.planned_actions)}\n")
-    stdout.write(f"  warnings: {_csv(plan.warnings)}\n")
-    return 0
-
-
-def _maintenance_run(
-    service: NanoMemMaintenanceService,
-    *,
-    args: argparse.Namespace,
-    stdout: TextIO,
-) -> int:
-    if not args.yes:
-        stdout.write("Refusing to run maintenance without --yes.\n")
-        return 2
-    try:
-        result = service.run()
-    except FileExistsError as exc:
-        stdout.write(f"{exc}\n")
-        return 2
-    payload = asdict(result)
-    if args.json:
-        _write_json(payload, stdout)
-        return 0
-    stdout.write("Maintenance run completed\n")
-    stdout.write(f"  actions: {_csv(result.plan.planned_actions)}\n")
-    if result.backup is not None:
-        stdout.write(f"  backup: {result.backup.path}\n")
-    if result.export is not None:
-        stdout.write(f"  export: {result.export.path}\n")
-    if result.retention is not None:
-        stdout.write(
-            f"  deleted_units: {result.retention.deleted_unit_count}\n"
-        )
-    if result.operation_log_retention is not None:
-        stdout.write(
-            f"  deleted_operation_logs: "
-            f"{result.operation_log_retention.deleted_log_count}\n"
-        )
-    if result.integrity_after is not None:
-        stdout.write(f"  integrity_ok: {result.integrity_after.ok}\n")
-    stdout.write(f"  warnings: {_csv(result.warnings)}\n")
     return 0
 
 
@@ -803,18 +689,6 @@ def _store_from_args(
     if not getattr(args, "db", None):
         raise SystemExit("--db or --config is required")
     return SQLiteMemoryUnitStore(args.db)
-
-
-def _maintenance_service(
-    control: NanoMemControlService,
-    config: NanoMemConfig | None,
-) -> NanoMemMaintenanceService:
-    if config is None:
-        raise SystemExit("--config is required")
-    return NanoMemMaintenanceService(
-        control=control,
-        config=config.maintenance,
-    )
 
 
 def _service_from_cli_parts(

@@ -87,11 +87,7 @@ from nanomem.hosts.adapters import (
 
 # --- Config / Factory ---
 from nanomem.core.config import (
-    BackupConfig,
-    ExportConfig,
-    MaintenanceConfig,
     NanoMemConfig,
-    RetentionConfig,
     load_config,
 )
 from nanomem.service.factory import (
@@ -99,8 +95,6 @@ from nanomem.service.factory import (
     admin_from_config_file,
     control_from_config,
     control_from_config_file,
-    maintenance_from_config,
-    maintenance_from_config_file,
     nanomem_service_with_defaults,
     service_from_config,
     service_from_config_file,
@@ -123,11 +117,6 @@ from nanomem.service.control.service import (
     RetentionPreview,
     SchemaMigrationRecord,
     SchemaStatus,
-)
-from nanomem.ops.maintenance import (
-    MaintenancePlan,
-    MaintenanceRunResult,
-    NanoMemMaintenanceService,
 )
 
 
@@ -188,18 +177,12 @@ __all__ = [
     "AgentMessage",
     "NanoMemMCPServer",
     # --- Config / Factory ---
-    "BackupConfig",
-    "ExportConfig",
-    "MaintenanceConfig",
     "NanoMemConfig",
-    "RetentionConfig",
     "admin_from_config",
     "admin_from_config_file",
     "control_from_config",
     "control_from_config_file",
     "load_config",
-    "maintenance_from_config",
-    "maintenance_from_config_file",
     "nanomem_service_with_defaults",
     "service_from_config",
     "service_from_config_file",
@@ -208,11 +191,8 @@ __all__ = [
     "DatabaseStats",
     "ExportResult",
     "IntegrityCheckResult",
-    "MaintenancePlan",
-    "MaintenanceRunResult",
     "NanoMemAdminService",
     "NanoMemControlService",
-    "NanoMemMaintenanceService",
     "OperationLogRetentionApplyResult",
     "OperationLogRetentionPolicy",
     "OperationLogRetentionPreview",
