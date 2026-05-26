@@ -8,11 +8,11 @@ from nanomem.core.contracts import (
     ExtractionRequest,
     MemoryScope,
 )
-from nanomem.extraction.llm import (
+from nanomem.pipeline.representation.llm import (
     LLMMemoryUnitExtractor,
     LLM_EXTRACTION_PROMPT,
 )
-from nanomem.extraction.prompts import (
+from nanomem.pipeline.representation.prompts import (
     ALLOWED_MEMORY_TYPES,
     LLM_EXTRACTION_PROMPT_VERSION,
 )
@@ -119,8 +119,8 @@ def test_allowed_memory_types_includes_paper_vocabulary() -> None:
 def test_prompt_is_reimported_from_llm_module_for_backward_compat() -> None:
     # External code that imported the prompt from extraction.llm should
     # continue to work after the move.
-    from nanomem.extraction import llm as llm_module
-    from nanomem.extraction import prompts as prompts_module
+    from nanomem.pipeline.representation import llm as llm_module
+    from nanomem.pipeline.representation import prompts as prompts_module
 
     assert llm_module.LLM_EXTRACTION_PROMPT is prompts_module.LLM_EXTRACTION_PROMPT
     assert llm_module.ALLOWED_MEMORY_TYPES is prompts_module.ALLOWED_MEMORY_TYPES

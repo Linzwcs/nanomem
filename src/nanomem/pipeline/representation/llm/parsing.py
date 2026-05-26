@@ -12,7 +12,7 @@ from typing import Any
 
 from nanomem.core.contracts import CaptureSkip, ExtractionRequest, ExtractionResult
 from nanomem.core.errors import ExtractionError
-from nanomem.extraction.events import is_extractable_message
+from nanomem.pipeline.representation.events import is_extractable_message
 
 
 class LLMExtractionPayloadError(ExtractionError, ValueError):

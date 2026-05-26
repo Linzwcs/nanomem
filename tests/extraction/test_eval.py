@@ -6,13 +6,13 @@ from nanomem.core.contracts import (
     ExtractionRequest,
     MemoryScope,
 )
-from nanomem.extraction import (
+from nanomem.pipeline.representation import (
     ExpectedMemoryUnit,
     ExpectedSkip,
     ExtractionEvalCase,
     evaluate_extraction_cases,
 )
-from nanomem.extraction.heuristic import HeuristicMemoryUnitExtractor
+from nanomem.pipeline.representation.heuristic import HeuristicMemoryUnitExtractor
 
 
 def test_extraction_eval_report_matches_expected_units_and_skips() -> None:

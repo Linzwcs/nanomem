@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-from nanomem.extraction.base import MemoryUnitExtractor
-from nanomem.extraction.eval import (
+from nanomem.pipeline.representation.base import MemoryUnitExtractor
+from nanomem.pipeline.representation.eval import (
     ExpectedMemoryUnit,
     ExpectedSkip,
     ExtractionEvalCase,
     ExtractionEvalReport,
     evaluate_extraction_cases,
 )
-from nanomem.extraction.heuristic import HeuristicMemoryUnitExtractor
-from nanomem.extraction.llm import LLMMemoryUnitExtractor
+from nanomem.pipeline.representation.heuristic import HeuristicMemoryUnitExtractor
+from nanomem.pipeline.representation.llm import LLMMemoryUnitExtractor
 
 __all__ = [
     "ExpectedMemoryUnit",

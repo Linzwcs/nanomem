@@ -7,7 +7,7 @@ from nanomem.core.contracts import (
     ExtractionRequest,
     MemoryScope,
 )
-from nanomem.extraction.heuristic import HeuristicMemoryUnitExtractor
+from nanomem.pipeline.representation.heuristic import HeuristicMemoryUnitExtractor
 
 
 def _request(messages: tuple[DialogueMessage, ...]) -> ExtractionRequest:

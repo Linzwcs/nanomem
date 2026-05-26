@@ -12,7 +12,7 @@ from nanomem.core.contracts import (
     MemoryScope,
     MemoryUnit,
 )
-from nanomem.extraction.llm import LLMMemoryUnitExtractor
+from nanomem.pipeline.representation.llm import LLMMemoryUnitExtractor
 
 
 class FakeCompletionClient:

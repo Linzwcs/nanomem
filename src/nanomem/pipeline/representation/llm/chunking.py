@@ -11,7 +11,7 @@ from dataclasses import dataclass
 
 from nanomem.core.contracts import CaptureSkip, DialogueMessage, ExtractionRequest
 from nanomem.core.errors import ConfigError
-from nanomem.extraction.events import (
+from nanomem.pipeline.representation.events import (
     is_extractable_message,
     non_extractable_message_skip,
 )

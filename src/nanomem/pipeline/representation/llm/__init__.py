@@ -2,7 +2,7 @@
 
 This package was previously a single 650-line ``llm.py`` file. The
 public surface is unchanged: every name that was importable as
-``from nanomem.extraction.llm import X`` is re-exported here.
+``from nanomem.pipeline.representation.llm import X`` is re-exported here.
 
 Sub-modules:
 
@@ -13,23 +13,23 @@ Sub-modules:
 - :mod:`nanomem.extraction.llm.parsing`   — payload schema + transform
 
 Prompt text lives in :mod:`nanomem.extraction.prompts` (re-imported
-here for ``from nanomem.extraction.llm import LLM_EXTRACTION_PROMPT``
+here for ``from nanomem.pipeline.representation.llm import LLM_EXTRACTION_PROMPT``
 back-compat).
 """
 
 from __future__ import annotations
 
-from nanomem.extraction.llm.chunking import (
+from nanomem.pipeline.representation.llm.chunking import (
     DEFAULT_MAX_MESSAGES_PER_CHUNK,
     ExtractionChunk,
 )
-from nanomem.extraction.llm.client import (
+from nanomem.pipeline.representation.llm.client import (
     LLMCompletionClient,
     OpenAIChatCompletionClient,
 )
-from nanomem.extraction.llm.extractor import LLMMemoryUnitExtractor
-from nanomem.extraction.llm.parsing import LLMExtractionPayloadError
-from nanomem.extraction.prompts import (
+from nanomem.pipeline.representation.llm.extractor import LLMMemoryUnitExtractor
+from nanomem.pipeline.representation.llm.parsing import LLMExtractionPayloadError
+from nanomem.pipeline.representation.prompts import (
     ALLOWED_MEMORY_TYPES,
     LLM_EXTRACTION_PROMPT,
     LLM_EXTRACTION_PROMPT_VERSION,

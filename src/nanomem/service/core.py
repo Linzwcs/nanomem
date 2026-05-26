@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from nanomem.extraction.base import MemoryUnitExtractor
-from nanomem.extraction.heuristic import HeuristicMemoryUnitExtractor
+from nanomem.pipeline.representation.base import MemoryUnitExtractor
+from nanomem.pipeline.representation.heuristic import HeuristicMemoryUnitExtractor
 from nanomem.index.base import MemoryUnitIndex
 from nanomem.index.dense import DenseMemoryUnitIndex
 from nanomem.index.rebuild import rebuild_index

@@ -9,7 +9,7 @@ from nanomem.core.contracts import (
     DialogueMessage,
     MemoryScope,
 )
-from nanomem.extraction.llm import LLMMemoryUnitExtractor
+from nanomem.pipeline.representation.llm import LLMMemoryUnitExtractor
 from nanomem.factory import (
     embedding_from_config,
     extractor_from_config,

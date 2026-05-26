@@ -63,8 +63,8 @@ from nanomem.service.async_core import AsyncNanoMemService
 from nanomem.service.core import NanoMemService
 
 # --- Capabilities (behind Protocols where applicable) ---
-from nanomem.extraction.heuristic import HeuristicMemoryUnitExtractor
-from nanomem.extraction.llm import LLMMemoryUnitExtractor
+from nanomem.pipeline.representation.heuristic import HeuristicMemoryUnitExtractor
+from nanomem.pipeline.representation.llm import LLMMemoryUnitExtractor
 from nanomem.index.dense import DenseMemoryUnitIndex
 from nanomem.index.hybrid import HybridMemoryUnitIndex
 from nanomem.index.lexical import LexicalMemoryUnitIndex

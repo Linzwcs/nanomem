@@ -10,7 +10,7 @@ from nanomem.core.contracts import (
     ExtractionResult,
     MemoryUnit,
 )
-from nanomem.extraction.events import (
+from nanomem.pipeline.representation.events import (
     is_assistant_reply,
     is_extractable_message,
     non_extractable_message_skip,

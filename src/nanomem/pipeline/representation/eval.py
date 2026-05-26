@@ -9,7 +9,7 @@ from nanomem.core.contracts import (
     ExtractionResult,
     MemoryUnit,
 )
-from nanomem.extraction.base import MemoryUnitExtractor
+from nanomem.pipeline.representation.base import MemoryUnitExtractor
 
 
 @dataclass(frozen=True)

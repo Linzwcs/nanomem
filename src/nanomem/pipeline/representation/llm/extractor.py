@@ -27,18 +27,18 @@ from nanomem.core.contracts import (
     MemoryUnit,
 )
 from nanomem.core.errors import ConfigError
-from nanomem.extraction.base import MemoryUnitExtractor
-from nanomem.extraction.llm.chunking import (
+from nanomem.pipeline.representation.base import MemoryUnitExtractor
+from nanomem.pipeline.representation.llm.chunking import (
     ExtractionChunk,
     extractable_messages,
     message_chunks,
     positive_int_or_none,
 )
-from nanomem.extraction.llm.client import (
+from nanomem.pipeline.representation.llm.client import (
     LLMCompletionClient,
     OpenAIChatCompletionClient,
 )
-from nanomem.extraction.llm.parsing import (
+from nanomem.pipeline.representation.llm.parsing import (
     LLMExtractionPayloadError,
     handle_invalid,
     is_extractable_range,
@@ -48,7 +48,7 @@ from nanomem.extraction.llm.parsing import (
     timestamp_for_range,
     with_fallback_stats,
 )
-from nanomem.extraction.prompts import (
+from nanomem.pipeline.representation.prompts import (
     ALLOWED_MEMORY_TYPES,
     LLM_EXTRACTION_PROMPT,
     LLM_EXTRACTION_PROMPT_VERSION,
@@ -58,7 +58,7 @@ from nanomem.core.ids import scope_payload, stable_id
 
 # Re-exported for backward compatibility with code that imported the
 # chunking budget from `nanomem.extraction.llm`.
-from nanomem.extraction.llm.chunking import (  # noqa: F401  (re-export)
+from nanomem.pipeline.representation.llm.chunking import (  # noqa: F401  (re-export)
     DEFAULT_MAX_MESSAGES_PER_CHUNK,
 )
 

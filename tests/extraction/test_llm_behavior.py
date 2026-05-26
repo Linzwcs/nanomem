@@ -9,7 +9,7 @@ from nanomem.core.contracts import (
     ExtractionRequest,
     MemoryScope,
 )
-from nanomem.extraction.llm import LLMMemoryUnitExtractor
+from nanomem.pipeline.representation.llm import LLMMemoryUnitExtractor
 
 
 class ScriptedCompletionClient:
