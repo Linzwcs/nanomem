@@ -14,7 +14,7 @@ import uuid
 from nanomem.adapters.agent import AgentMemoryAdapter, AgentMessage
 from nanomem.core.contracts import FlushRequest, MemoryScope
 from nanomem.sdk import NanoMemClient, NanoMemClientError
-from nanomem.time import now_utc_iso
+from nanomem.core.time import now_utc_iso
 
 
 DEFAULT_BASE_URL = "http://127.0.0.1:8765"

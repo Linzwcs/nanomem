@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from nanomem.core.contracts import IndexHit, IndexSearchRequest, MemoryUnit
-from nanomem.errors import ConfigError
+from nanomem.core.errors import ConfigError
 from nanomem.index.embeddings.base import EmbeddingModel
 from nanomem.index.embeddings.hashing import HashingEmbeddingModel
 

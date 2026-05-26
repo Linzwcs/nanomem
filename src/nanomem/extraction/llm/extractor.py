@@ -26,7 +26,7 @@ from nanomem.core.contracts import (
     ExtractionResult,
     MemoryUnit,
 )
-from nanomem.errors import ConfigError
+from nanomem.core.errors import ConfigError
 from nanomem.extraction.base import MemoryUnitExtractor
 from nanomem.extraction.llm.chunking import (
     ExtractionChunk,
@@ -53,7 +53,7 @@ from nanomem.extraction.prompts import (
     LLM_EXTRACTION_PROMPT,
     LLM_EXTRACTION_PROMPT_VERSION,
 )
-from nanomem.ids import scope_payload, stable_id
+from nanomem.core.ids import scope_payload, stable_id
 
 
 # Re-exported for backward compatibility with code that imported the

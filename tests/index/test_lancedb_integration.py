@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from nanomem.config import config_from_mapping
+from nanomem.core.config import config_from_mapping
 from nanomem.core.contracts import (
     CaptureDialogue,
     CaptureRequest,

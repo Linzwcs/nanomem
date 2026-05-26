@@ -4,7 +4,7 @@ import json
 from typing import Any, TextIO
 
 from nanomem.core.contracts import ReadRequest
-from nanomem.serde import read_request_from_json, read_result_to_json
+from nanomem.core.serde import read_request_from_json, read_result_to_json
 from nanomem.service.core import NanoMemService
 
 

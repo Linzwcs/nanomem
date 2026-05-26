@@ -7,8 +7,8 @@ from nanomem.core.contracts import (
     IndexSearchRequest,
     MemoryUnit,
 )
-from nanomem.policies import namespace_matches
-from nanomem.time import timestamp_in_range
+from nanomem.core.policies import namespace_matches
+from nanomem.core.time import timestamp_in_range
 
 
 TOKEN_PATTERN = re.compile(r"[A-Za-z0-9_]+|[\u4e00-\u9fff]")

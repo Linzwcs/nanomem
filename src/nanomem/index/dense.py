@@ -7,8 +7,8 @@ from nanomem.core.contracts import (
 )
 from nanomem.index.embeddings.base import EmbeddingModel
 from nanomem.index.embeddings.hashing import HashingEmbeddingModel
-from nanomem.policies import namespace_matches
-from nanomem.time import timestamp_in_range
+from nanomem.core.policies import namespace_matches
+from nanomem.core.time import timestamp_in_range
 
 
 class DenseMemoryUnitIndex:

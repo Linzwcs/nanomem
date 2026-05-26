@@ -4,7 +4,7 @@ import importlib.util
 
 import pytest
 
-from nanomem.config import config_from_mapping
+from nanomem.core.config import config_from_mapping
 from nanomem.factory import index_from_config
 from nanomem.index.dense import DenseMemoryUnitIndex
 from nanomem.service.core import NanoMemService

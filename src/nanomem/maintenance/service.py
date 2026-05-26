@@ -17,8 +17,8 @@ from nanomem.control.service import (
     RetentionPreview,
     SchemaStatus,
 )
-from nanomem.config import MaintenanceConfig, RetentionConfig
-from nanomem.errors import ConfigError
+from nanomem.core.config import MaintenanceConfig, RetentionConfig
+from nanomem.core.errors import ConfigError
 
 
 @dataclass(frozen=True)

@@ -46,7 +46,7 @@ from nanomem.core.contracts import (
 )
 
 # --- Errors ---
-from nanomem.errors import (
+from nanomem.core.errors import (
     CaptureError,
     ConfigError,
     ContractError,
@@ -85,7 +85,7 @@ from nanomem.adapters import (
 )
 
 # --- Config / Factory ---
-from nanomem.config import (
+from nanomem.core.config import (
     BackupConfig,
     ExportConfig,
     MaintenanceConfig,

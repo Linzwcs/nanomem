@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import math
 
-from nanomem.errors import ConfigError
+from nanomem.core.errors import ConfigError
 from nanomem.index.embeddings.base import EmbeddingModel
 from nanomem.index.lexical import tokenize
 

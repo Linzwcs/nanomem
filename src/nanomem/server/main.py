@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 
-from nanomem.config import load_config
+from nanomem.core.config import load_config
 from nanomem.control.service import NanoMemControlService
 from nanomem.factory import service_from_config
 from nanomem.server.app import NanoMemHTTPServer

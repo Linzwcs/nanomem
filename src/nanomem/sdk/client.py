@@ -14,7 +14,7 @@ from nanomem.core.contracts import (
     ReadRequest,
     ReadResult,
 )
-from nanomem.serde import (
+from nanomem.core.serde import (
     capture_request_to_json,
     capture_result_from_json,
     flush_request_to_json,

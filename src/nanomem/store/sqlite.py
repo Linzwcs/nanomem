@@ -21,8 +21,8 @@ from nanomem.core.contracts import (
     Session,
     TimeRange,
 )
-from nanomem.errors import ContractError, StoreError
-from nanomem.time import now_utc_iso
+from nanomem.core.errors import ContractError, StoreError
+from nanomem.core.time import now_utc_iso
 
 
 SCHEMA_VERSION = 6

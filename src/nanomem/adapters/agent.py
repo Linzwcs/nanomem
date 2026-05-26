@@ -12,7 +12,7 @@ from nanomem.core.contracts import (
     ReadRequest,
     ReadResult,
 )
-from nanomem.time import now_utc_iso
+from nanomem.core.time import now_utc_iso
 
 
 class NanoMemBackend(Protocol):

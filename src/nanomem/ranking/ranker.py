@@ -5,7 +5,7 @@ from nanomem.core.contracts import (
     MemoryUnit,
     RankedMemoryUnit,
 )
-from nanomem.time import recency_score
+from nanomem.core.time import recency_score
 
 
 class MemoryUnitRanker:

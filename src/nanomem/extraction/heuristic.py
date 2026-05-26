@@ -15,7 +15,7 @@ from nanomem.extraction.events import (
     is_extractable_message,
     non_extractable_message_skip,
 )
-from nanomem.ids import scope_payload, stable_id
+from nanomem.core.ids import scope_payload, stable_id
 
 
 PERSONAL_SIGNAL_PATTERN = re.compile(

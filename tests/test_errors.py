@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from nanomem.errors import (
+from nanomem.core.errors import (
     CaptureError,
     ConfigError,
     ContractError,

@@ -9,14 +9,14 @@ policies will live as sibling submodules:
 - (future) ``nanomem.policies.dedup``     — append-time dedup policies
 - (future) ``nanomem.policies.conflict``  — read-time conflict resolution
 
-The historical ``from nanomem.policies import namespace_matches`` and
-``from nanomem.policies import scope_matches`` import sites continue
+The historical ``from nanomem.core.policies import namespace_matches`` and
+``from nanomem.core.policies import scope_matches`` import sites continue
 to work through this package ``__init__``.
 """
 
 from __future__ import annotations
 
-from nanomem.policies.scope import namespace_matches, scope_matches
+from nanomem.core.policies.scope import namespace_matches, scope_matches
 
 
 __all__ = [

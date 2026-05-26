@@ -58,7 +58,7 @@ class IndexError_(NanoMemError):
     """Index backend failure (lexical, dense, hybrid, lancedb, ...).
 
     The trailing underscore avoids shadowing the builtin :class:`IndexError`.
-    External users should ``from nanomem.errors import IndexError_ as
+    External users should ``from nanomem.core.errors import IndexError_ as
     NanoMemIndexError`` if a more readable local name is preferred.
     """
 

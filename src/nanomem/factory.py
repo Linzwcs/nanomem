@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from nanomem.config import NanoMemConfig, load_config
-from nanomem.errors import ConfigError
+from nanomem.core.config import NanoMemConfig, load_config
+from nanomem.core.errors import ConfigError
 from nanomem.extraction.base import MemoryUnitExtractor
 from nanomem.extraction.heuristic import HeuristicMemoryUnitExtractor
 from nanomem.extraction.llm import LLMMemoryUnitExtractor

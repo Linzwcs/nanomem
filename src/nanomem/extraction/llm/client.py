@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 from typing import Any, Protocol
 
-from nanomem.errors import ExtractionError
+from nanomem.core.errors import ExtractionError
 
 
 class LLMCompletionClient(Protocol):

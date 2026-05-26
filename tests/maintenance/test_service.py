@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from nanomem.config import (
+from nanomem.core.config import (
     BackupConfig,
     ExportConfig,
     MaintenanceConfig,

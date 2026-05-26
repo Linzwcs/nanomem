@@ -11,7 +11,7 @@ from nanomem.control import (
     RetentionPreview,
 )
 from nanomem.core.contracts import MemoryUnit, OperationLogEntry
-from nanomem.time import now_utc_iso
+from nanomem.core.time import now_utc_iso
 
 
 @dataclass(frozen=True)

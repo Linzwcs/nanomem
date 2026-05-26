@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from nanomem.config import load_config
+from nanomem.core.config import load_config
 from nanomem.factory import service_from_config
 from nanomem.mcp.server import NanoMemMCPServer, run_stdio
 

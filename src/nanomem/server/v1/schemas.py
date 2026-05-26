@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from nanomem.serde import (
+from nanomem.core.serde import (
     capture_request_from_json,
     capture_request_to_json,
     capture_result_from_json,
