@@ -18,7 +18,7 @@ from nanomem.hosts.plugins.codex import install_codex_hooks  # layering-exceptio
 from nanomem.ops.maintenance import NanoMemMaintenanceService
 from nanomem.service.core import NanoMemService
 from nanomem.pipeline.storage.sqlite import SQLiteMemoryUnitStore
-from nanomem.ops.tui.dashboard import (
+from nanomem.ops.tui import (
     build_dashboard,
     render_dashboard,
     run_dashboard_watch,

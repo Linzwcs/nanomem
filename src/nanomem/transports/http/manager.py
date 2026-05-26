@@ -24,7 +24,7 @@ from nanomem.service.core import NanoMemService
 from nanomem.service.facade import ControlFacade
 from nanomem.core.time import now_utc_iso
 
-_MANAGER_ASSET_PACKAGE = "nanomem.ops.manager_assets.assets"
+_MANAGER_ASSET_PACKAGE = "nanomem.ops.manager_ui"
 
 
 @dataclass(frozen=True)

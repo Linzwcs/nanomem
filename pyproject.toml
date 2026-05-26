@@ -43,7 +43,7 @@ nanomem-agent-hook = "nanomem.hosts.plugins.hooks:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-"nanomem.ops.manager_assets.assets" = ["*.html", "*.css", "*.js"]
+"nanomem.ops.manager_ui" = ["*.html", "*.css", "*.js"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
