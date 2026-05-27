@@ -112,35 +112,37 @@ export function SessionsPage() {
         )}
       </section>
 
-      <div className="pagination-bar">
-        <span>
-          Showing {sessions.data?.offset ?? 0}-
-          {(sessions.data?.offset ?? 0) + (sessions.data?.count ?? 0)} of{" "}
-          {sessions.data?.total_count ?? 0}
-        </span>
-        <div>
-          <button
-            type="button"
-            disabled={page <= 1}
-            onClick={() => updateSessionFilter("page", String(page - 1))}
-          >
-            <span className="button-content">
-              <ChevronLeft aria-hidden="true" size={16} />
-              Previous
-            </span>
-          </button>
-          <button
-            type="button"
-            disabled={!sessions.data?.has_more}
-            onClick={() => updateSessionFilter("page", String(page + 1))}
-          >
-            <span className="button-content">
-              Next
-              <ChevronRight aria-hidden="true" size={16} />
-            </span>
-          </button>
+      {(sessions.data?.has_more || page > 1) ? (
+        <div className="pagination-bar">
+          <span>
+            Showing {sessions.data?.offset ?? 0}-
+            {(sessions.data?.offset ?? 0) + (sessions.data?.count ?? 0)} of{" "}
+            {sessions.data?.total_count ?? 0}
+          </span>
+          <div>
+            <button
+              type="button"
+              disabled={page <= 1}
+              onClick={() => updateSessionFilter("page", String(page - 1))}
+            >
+              <span className="button-content">
+                <ChevronLeft aria-hidden="true" size={16} />
+                Previous
+              </span>
+            </button>
+            <button
+              type="button"
+              disabled={!sessions.data?.has_more}
+              onClick={() => updateSessionFilter("page", String(page + 1))}
+            >
+              <span className="button-content">
+                Next
+                <ChevronRight aria-hidden="true" size={16} />
+              </span>
+            </button>
+          </div>
         </div>
-      </div>
+      ) : null}
     </section>
   );
 }

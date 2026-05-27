@@ -167,6 +167,8 @@ export type StatsResponse = {
   dialogue_window_count: number;
   open_dialogue_window_count: number;
   operation_log_count: number;
+  applied_schema_migration_count?: number;
+  pending_schema_migration_count?: number;
   latest_operation_at: string | null;
   oldest_timestamp: string | null;
   newest_timestamp: string | null;

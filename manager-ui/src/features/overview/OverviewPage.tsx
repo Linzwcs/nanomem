@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Activity, Database, FolderTree, MessagesSquare, PanelsTopLeft } from "lucide-react";
 
 import { getStats } from "../../api/client";
 import { Badge, ErrorState, LoadingState } from "../../components/Status";
@@ -12,6 +13,12 @@ export function OverviewPage() {
 
   const payload = stats.data;
   const topOwners = payload?.top_owners ?? [];
+  const activeUnits = payload?.active_unit_count ?? 0;
+  const totalUnits = payload?.unit_count ?? 0;
+  const ownerCount = payload?.owner_count ?? 0;
+  const namespaceCount = payload?.namespace_count ?? 0;
+  const retentionDelta = totalUnits - activeUnits;
+  const indexHealth = payload?.index_health ?? "unknown";
 
   return (
     <section className="page-stack">
@@ -22,54 +29,82 @@ export function OverviewPage() {
         </div>
         <div className="header-actions">
           <Badge tone="good">online</Badge>
-          <Badge tone={payload?.index_health === "synced" ? "good" : "warn"}>
-            {payload?.index_health ?? "unknown"}
+          <Badge tone={indexHealth === "synced" ? "good" : "warn"}>
+            {indexHealth}
           </Badge>
         </div>
       </header>
 
-      <div className="results-strip">
-        <div className="filter-chip-list">
-          <span className="filter-hint">
-            Store {String(payload?.store ?? "unknown")} at{" "}
-            {String(payload?.path ?? "unknown")}
+      <section className="metric-hero">
+        <div className="metric-hero-body">
+          <p className="metric-hero-label">Active memory units</p>
+          <p className="metric-hero-value">{formatNumber(activeUnits)}</p>
+          <p className="metric-hero-sub">
+            across <strong>{formatNumber(ownerCount)}</strong> owner
+            {ownerCount === 1 ? "" : "s"} ·{" "}
+            <strong>{formatNumber(namespaceCount)}</strong> namespace
+            {namespaceCount === 1 ? "" : "s"}
+            {retentionDelta > 0 ? (
+              <>
+                {" "}
+                · <span className="metric-hero-mute">
+                  {formatNumber(retentionDelta)} retained
+                </span>
+              </>
+            ) : null}
+          </p>
+        </div>
+        <div className="metric-hero-meta">
+          <span className="metric-hero-meta-row">
+            <FolderTree aria-hidden size={14} />
+            {String(payload?.store ?? "unknown")} at{" "}
+            <code>{String(payload?.path ?? "unknown")}</code>
+          </span>
+          <span className="metric-hero-meta-row">
+            <Activity aria-hidden size={14} />
+            Latest op {formatTime(payload?.latest_operation_at) || "—"}
           </span>
         </div>
-        <span className="result-count">
-          Latest operation {formatTime(payload?.latest_operation_at)}
-        </span>
-      </div>
+      </section>
 
-      <div className="metric-grid">
-        <Metric label="Memory units" value={payload?.unit_count} />
-        <Metric label="Active units" value={payload?.active_unit_count} />
-        <Metric label="Sessions" value={payload?.session_count} />
-        <Metric label="Open windows" value={payload?.open_dialogue_window_count} />
-      </div>
-
-      <div className="metric-grid">
-        <Metric label="Dialogues" value={payload?.dialogue_count} />
-        <Metric label="Dialogue windows" value={payload?.dialogue_window_count} />
-        <Metric label="Index documents" value={payload?.index_document_count} />
-        <Metric label="Operations" value={payload?.operation_log_count} />
+      <div className="metric-grid metric-grid-3">
+        <Metric
+          icon={<MessagesSquare aria-hidden size={16} />}
+          label="Sessions"
+          value={payload?.session_count}
+          hint={`${formatNumber(payload?.dialogue_count)} dialogues`}
+        />
+        <Metric
+          icon={<PanelsTopLeft aria-hidden size={16} />}
+          label="Open windows"
+          value={payload?.open_dialogue_window_count}
+          hint={`${formatNumber(payload?.dialogue_window_count)} total windows`}
+          tone={(payload?.open_dialogue_window_count ?? 0) > 0 ? "warn" : "muted"}
+        />
+        <Metric
+          icon={<Database aria-hidden size={16} />}
+          label="Indexed documents"
+          value={payload?.index_document_count}
+          hint={`${payload?.index_backend ?? "—"} · ${indexHealth}`}
+          tone={indexHealth === "synced" ? "good" : "warn"}
+        />
       </div>
 
       <div className="overview-grid">
         <section className="panel table-panel">
+          <header className="panel-header">
+            <h2>Storage</h2>
+            <span className="panel-hint">
+              schema {String(payload?.schema_version ?? "?")} /{" "}
+              {String(payload?.latest_schema_version ?? "?")}
+            </span>
+          </header>
           <table className="data-table record-table">
-            <thead>
-              <tr>
-                <th>Storage</th>
-                <th>Value</th>
-              </tr>
-            </thead>
             <tbody>
-              <RecordRow label="Path" value={String(payload?.path ?? "unknown")} />
               <RecordRow
-                label="Schema"
-                value={`${String(payload?.schema_version ?? "unknown")} / ${String(
-                  payload?.latest_schema_version ?? "unknown",
-                )}`}
+                label="Path"
+                value={String(payload?.path ?? "unknown")}
+                mono
               />
               <RecordRow
                 label="File size"
@@ -79,11 +114,21 @@ export function OverviewPage() {
                 label="Operation logs"
                 value={formatNumber(payload?.operation_log_count)}
               />
+              {(payload?.pending_schema_migration_count ?? 0) > 0 ? (
+                <RecordRow
+                  label="Pending migrations"
+                  value={formatNumber(payload?.pending_schema_migration_count)}
+                />
+              ) : null}
             </tbody>
           </table>
         </section>
 
         <section className="panel table-panel">
+          <header className="panel-header">
+            <h2>Top namespaces</h2>
+            <span className="panel-hint">{topOwners.length} group{topOwners.length === 1 ? "" : "s"}</span>
+          </header>
           <table className="data-table namespace-table">
             <thead>
               <tr>
@@ -120,22 +165,46 @@ export function OverviewPage() {
   );
 }
 
-function Metric({ label, value }: { label: string; value: unknown }) {
+function Metric({
+  icon,
+  label,
+  value,
+  hint,
+  tone,
+}: {
+  icon?: React.ReactNode;
+  label: string;
+  value: unknown;
+  hint?: string;
+  tone?: "good" | "warn" | "muted";
+}) {
   return (
-    <div className="metric">
-      <span>{label}</span>
+    <div className={`metric metric-with-hint${tone ? ` metric-tone-${tone}` : ""}`}>
+      <span className="metric-label">
+        {icon}
+        {label}
+      </span>
       <strong>{formatNumber(value)}</strong>
+      {hint ? <span className="metric-hint">{hint}</span> : null}
     </div>
   );
 }
 
-function RecordRow({ label, value }: { label: string; value: string }) {
+function RecordRow({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
   return (
     <tr>
       <td>
         <strong>{label}</strong>
       </td>
-      <td>{value}</td>
+      <td className={mono ? "mono-cell" : undefined}>{value}</td>
     </tr>
   );
 }

@@ -263,35 +263,37 @@ export function MemoryUnitsPage() {
         )}
       </section>
 
-      <div className="pagination-bar">
-        <span>
-          Showing {units.data?.offset ?? 0}-
-          {(units.data?.offset ?? 0) + (units.data?.count ?? 0)} of{" "}
-          {units.data?.total_count ?? 0}
-        </span>
-        <div>
-          <button
-            type="button"
-            disabled={page <= 1}
-            onClick={() => updateMemoryUnitFilter("page", String(page - 1))}
-          >
-            <span className="button-content">
-              <ChevronLeft aria-hidden="true" size={16} />
-              Previous
-            </span>
-          </button>
-          <button
-            type="button"
-            disabled={!units.data?.has_more}
-            onClick={() => updateMemoryUnitFilter("page", String(page + 1))}
-          >
-            <span className="button-content">
-              Next
-              <ChevronRight aria-hidden="true" size={16} />
-            </span>
-          </button>
+      {(units.data?.has_more || page > 1) ? (
+        <div className="pagination-bar">
+          <span>
+            Showing {units.data?.offset ?? 0}-
+            {(units.data?.offset ?? 0) + (units.data?.count ?? 0)} of{" "}
+            {units.data?.total_count ?? 0}
+          </span>
+          <div>
+            <button
+              type="button"
+              disabled={page <= 1}
+              onClick={() => updateMemoryUnitFilter("page", String(page - 1))}
+            >
+              <span className="button-content">
+                <ChevronLeft aria-hidden="true" size={16} />
+                Previous
+              </span>
+            </button>
+            <button
+              type="button"
+              disabled={!units.data?.has_more}
+              onClick={() => updateMemoryUnitFilter("page", String(page + 1))}
+            >
+              <span className="button-content">
+                Next
+                <ChevronRight aria-hidden="true" size={16} />
+              </span>
+            </button>
+          </div>
         </div>
-      </div>
+      ) : null}
     </section>
   );
 }
