@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { getOperationLogs } from "../../api/client";
 import type { OperationLog } from "../../api/types";
+import { CopyableId } from "../../components/CopyableId";
 import { Badge, EmptyState, ErrorState, LoadingState } from "../../components/Status";
 import { TimeRangeFilter } from "../../components/TimeRangeFilter";
 import { formatTime } from "../../lib/format";
@@ -159,7 +160,7 @@ export function OperationsPage() {
                   <td>
                     <div className="operation-cell">
                       <strong>{log.operation_type}</strong>
-                      <span>{shortId(log.log_id)}</span>
+                      <CopyableId value={log.log_id} variant="compact" />
                     </div>
                   </td>
                   <td>

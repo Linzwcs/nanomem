@@ -1,8 +1,8 @@
 import { FormEvent, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { Loader2, Search } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { Loader2, Search, Sparkles } from "lucide-react";
 
-import { previewRetrieval } from "../../api/client";
+import { getMemoryUnits, previewRetrieval } from "../../api/client";
 import { Badge, EmptyState, ErrorState } from "../../components/Status";
 import { TimeRangeFilter } from "../../components/TimeRangeFilter";
 import { formatNumber, formatTime } from "../../lib/format";
@@ -21,6 +21,25 @@ export function RetrievalPreviewPage() {
   const [queryTime, setQueryTime] = useState(nowDateTimeInputValue());
   const [memoryRange, setMemoryRange] = useState({ start: "", end: "" });
   const preview = useMutation({ mutationFn: previewRetrieval });
+
+  // Sample one stored memory unit to seed the form. The first unit's
+  // owner/namespace + first few words of its text become an instant
+  // "this is what a working query looks like" example.
+  const sample = useQuery({
+    queryKey: ["retrieval-preview-sample"],
+    queryFn: () => getMemoryUnits({ limit: 1 }),
+    staleTime: 30_000,
+  });
+  const seed = sample.data?.units?.[0];
+
+  function applyExample() {
+    if (!seed) return;
+    setOwnerId(seed.scope.owner_id);
+    setNamespaces(seed.scope.namespace ?? "");
+    setQuery(seed.text.split(/[.!?\n]/)[0]?.slice(0, 80) ?? seed.text);
+    setQueryTime(nowDateTimeInputValue());
+    setMemoryRange({ start: "", end: "" });
+  }
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -101,6 +120,19 @@ export function RetrievalPreviewPage() {
           <TimeRangeFilter compact value={memoryRange} onChange={setMemoryRange} />
         </div>
         <div className="filter-actions">
+          {seed ? (
+            <button
+              type="button"
+              className="ghost-button"
+              onClick={applyExample}
+              title={`Prefill from ${seed.scope.owner_id}${seed.scope.namespace ? "/" + seed.scope.namespace : ""}`}
+            >
+              <span className="button-content">
+                <Sparkles aria-hidden="true" size={14} />
+                Use example
+              </span>
+            </button>
+          ) : null}
           <button type="submit" disabled={preview.isPending}>
             <span className="button-content">
               {preview.isPending ? (

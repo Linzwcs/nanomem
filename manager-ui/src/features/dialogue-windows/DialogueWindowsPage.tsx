@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { getDialogueWindows } from "../../api/client";
 import { Badge, EmptyState, ErrorState, LoadingState } from "../../components/Status";
+import { CopyableId } from "../../components/CopyableId";
 import { formatNumber, formatTime } from "../../lib/format";
 
 export function DialogueWindowsPage() {
@@ -115,7 +116,11 @@ export function DialogueWindowsPage() {
                 <tr key={window.dialogue_id}>
                   <td>
                     <div className="scope-cell">
-                      <strong className="mono-text">{window.dialogue_id}</strong>
+                      <CopyableId
+                        as="strong"
+                        value={window.dialogue_id}
+                        variant="compact"
+                      />
                       <span>{window.seal_reason ?? "active chunk"}</span>
                     </div>
                   </td>

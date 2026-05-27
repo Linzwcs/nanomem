@@ -482,6 +482,86 @@ a:hover {
   word-break: break-all;
 }
 
+.copyable-id {
+  align-items: center;
+  display: inline-flex;
+}
+
+.copyable-id-button {
+  align-items: center;
+  background: rgba(0, 0, 0, 0.035);
+  border: 1px solid transparent;
+  border-radius: 5px;
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 500;
+  gap: 6px;
+  line-height: 1;
+  padding: 3px 7px;
+  transition: background-color 120ms, color 120ms, border-color 120ms;
+}
+
+.copyable-id-button:hover {
+  background: rgba(0, 0, 0, 0.07);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+.copyable-id-button:focus-visible {
+  border-color: var(--accent, #2c64ff);
+  outline: none;
+}
+
+.copyable-id-text {
+  font-feature-settings: "ss01" on;
+  letter-spacing: 0.01em;
+}
+
+.copyable-id-icon {
+  opacity: 0.55;
+  transition: opacity 120ms, color 120ms;
+}
+
+.copyable-id-button:hover .copyable-id-icon {
+  opacity: 0.9;
+}
+
+.copyable-id-icon-copied {
+  color: #137a3a;
+  opacity: 1;
+}
+
+.copyable-id-compact .copyable-id-button {
+  font-size: 11px;
+  padding: 2px 6px;
+}
+
+/* Operations: keep audit-log row heights compact even with many chips.
+   Hides chips that overflow ~2 lines so rows stay scannable. */
+.operations-table .summary-cell {
+  max-height: 52px;
+  overflow: hidden;
+  position: relative;
+}
+
+.operations-table .summary-cell::after {
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0) 0%,
+    var(--surface) 80%
+  );
+  bottom: 0;
+  content: "";
+  height: 14px;
+  left: 0;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+}
+
 .metric span {
   color: var(--muted);
   display: block;

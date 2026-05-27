@@ -11,6 +11,7 @@ import {
 import { getMemoryUnits } from "../../api/client";
 import type { MemoryUnit } from "../../api/types";
 import { Badge, EmptyState, ErrorState, LoadingState } from "../../components/Status";
+import { CopyableId } from "../../components/CopyableId";
 import { TimeRangeFilter } from "../../components/TimeRangeFilter";
 import { formatTime } from "../../lib/format";
 import { apiTimeRange } from "../../lib/timeFilters";
@@ -59,7 +60,7 @@ export function MemoryUnitsPage() {
             >
               {row.original.text}
             </a>
-            <span className="memory-id">{row.original.unit_id}</span>
+            <CopyableId value={row.original.unit_id} variant="compact" />
           </div>
         ),
       },

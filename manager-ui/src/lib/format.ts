@@ -16,3 +16,14 @@ export function formatNumber(value: unknown) {
 export function jsonPreview(value: unknown) {
   return JSON.stringify(value ?? {}, null, 2);
 }
+
+/**
+ * Visually shorten a long opaque id while keeping head + tail recognizable.
+ * Example: truncateId("dlg_ff7a7dae8d6146d696698294") → "dlg_ff7a…698294"
+ */
+export function truncateId(value: string, head = 9, tail = 6) {
+  if (!value) return "";
+  if (value.length <= head + tail + 1) return value;
+  return `${value.slice(0, head)}…${value.slice(-tail)}`;
+}
+
