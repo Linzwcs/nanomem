@@ -1,6 +1,6 @@
 # Control Plane Boundary
 
-Status: draft
+Status: active
 
 ## Purpose
 
@@ -52,21 +52,30 @@ agent -> /v1/read    -> read pipeline -> rendered memory context
 The manager path is:
 
 ```text
-human -> /manager -> /manager/api/* -> NanoMemControlService / Store / Index / ReadPipeline
+human -> /manager -> /manager/api/* -> ControlFacade
+                                    -> NanoMemAdminService / NanoMemService.read()
 ```
 
-`retrieval-preview` is the only manager feature that should call the live
-`ReadPipeline`, because its job is to simulate runtime recall. Other manager
-queries should read authoritative records from the store and format audit
+`retrieval-preview` is the only manager feature that calls the live read
+pipeline, because its job is to simulate runtime recall. Other manager
+queries read authoritative records from the store and format audit
 payloads without changing runtime semantics.
 
 ## First-Version Role Model
 
-For local development, a single local operator role is acceptable. For hosted
-deployment, split permissions:
+For local development, a single local operator role is acceptable. The HTTP
+control plane only exposes inspection + retrieval preview + reindex; the
+heavier maintenance / privacy workflows (backup, export, retention,
+redaction, integrity) are CLI-only today and inherit local filesystem
+permissions. See `05-operations-and-privacy.md`.
 
-- Viewer: stats, memory list, operation logs, retrieval preview.
-- Operator: reindex, backup, export, retention preview.
-- Admin: redaction, delete, raw dialogue reveal, destructive retention apply.
+For a future hosted deployment, role separation will be required:
+
+- Viewer: stats, sessions, memory list, operation logs, retrieval preview.
+- Operator: + reindex through HTTP; backup / export / retention through
+  the operator's shell.
+- Admin: + redaction / delete / raw dialogue reveal (all currently behind
+  shell access).
 
 Network exposure without authentication is out of scope.
+

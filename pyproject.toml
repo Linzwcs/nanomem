@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nanomem"
-version = "0.3.0a6"
+version = "0.3.0a7"
 description = "Long-term personal memory storage and retrieval for agent harnesses."
 readme = "readme.md"
 requires-python = ">=3.10"

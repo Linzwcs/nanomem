@@ -1,84 +1,124 @@
 # React Frontend Architecture
 
-Status: active draft
+Status: active
 
-NanoMem Manager has outgrown the build-free single-file UI. The current app is
-useful as a local MVP, but memory review, evidence inspection, retrieval
-diagnostics, and maintenance workflows need explicit frontend boundaries.
+NanoMem Manager is a static React 19 + Vite 8 application. The source tree
+lives in `manager-ui/`; the build emits into `src/nanomem/admin/manager_ui/`
+so the Python HTTP server keeps serving `/manager` and `/manager/assets/*`
+from package resources. NanoMem does not add a second web server or a
+Next.js runtime for the local manager.
 
-## Technology Choice
-
-Use a static React application built by Vite. The source tree is:
+## Source Tree
 
 ```text
 manager-ui/
   package.json
   vite.config.ts
+  tsconfig.json
   src/
     api/
+      client.ts          fetch wrappers for /manager/api/*
+      types.ts           response shapes (MemoryUnit, SessionSummary, ...)
     app/
+      App.tsx            top-level route switch
+      routes.ts          useHashRoute hook + Route union
     components/
+      Shell.tsx          left sidebar + main surface
+      CollapsibleFilters.tsx   <details> filter strip + active-chip summary
+      CopyableId.tsx     truncated id chip with one-click copy
+      TimeRangeFilter.tsx      preset chips + start/end date inputs
+      Status.tsx         Badge / EmptyState / ErrorState / LoadingState
     features/
-      memory-units/
-      dialogues/
-      retrieval-preview/
-      operations/
-      index-health/
+      overview/                OverviewPage
+      sessions/                SessionsPage + SessionDetailPage
+      dialogue-windows/        DialogueWindowsPage
+      memory-units/            MemoryUnitsPage + MemoryUnitDetailPage
+      retrieval-preview/       RetrievalPreviewPage
+      operations/              OperationsPage
+      index-health/            IndexHealthPage
+    lib/
+      format.ts          formatTime / formatTimeShort / truncateId / ...
+      timeFilters.ts     local-date <-> ISO boundary helpers
     styles/
+      global.css         single-file CSS (no per-component modules)
 ```
 
-Build output should be copied into `src/nanomem/manager/assets/` so the Python
-HTTP server keeps serving `/manager` and `/manager/assets/*`. NanoMem should not
-add a second web server or a Next.js runtime for the local manager.
+`npm run build` runs `tsc` then `vite build` and writes
+`index.html` + `app.js` + `styles.css` into
+`../src/nanomem/admin/manager_ui/`. The Python package then ships those
+assets via its `package-data` declaration.
 
-Recommended libraries:
+## Runtime Stack
 
-- React + TypeScript for component structure and typed UI state.
-- TanStack Query for `/manager/api/*` server state, refresh, and error handling.
-- TanStack Table for sortable, filterable MemoryUnit and operation-log tables.
-- lucide-react for compact icon buttons.
-- Vitest and Testing Library for component tests.
-- Playwright for browser smoke tests once workflows stabilize.
+- React 19 + TypeScript 5.
+- TanStack Query for `/manager/api/*` server state, refresh, and error
+  handling. All list-page queries set
+  `placeholderData: keepPreviousData` so filter inputs do not unmount
+  while a refetch is in flight (fix for the focus-loss bug).
+- TanStack Table for the MemoryUnit table; other tables render inline
+  with hand-written rows when the column logic is simple.
+- lucide-react for icons.
+- Hash routes (`useHashRoute` in `app/routes.ts`). No History API, no
+  React Router.
+
+Test tooling: Vitest + Testing Library for component tests; Playwright is used
+for browser smoke flows in `/tmp/pw-driver/` style ad hoc scripts during
+development.
 
 ## Frontend Boundaries
 
-`api/` owns HTTP calls and response normalization. Components should not build
-URLs by hand.
+`api/` owns HTTP calls and response normalization. Components never build URLs
+by hand and never construct `URLSearchParams` for the `/manager/api/*`
+surface — that belongs in `api/client.ts`.
 
-`features/` owns domain workflows:
+`features/` owns per-route domain workflows:
 
-- `memory-units`: list, filters, review queues, detail route, evidence status.
-- `dialogues`: log-style source display and produced-unit navigation.
-- `retrieval-preview`: query form, ranked hits, ranked/rendered comparison,
-  skipped-due-to-budget diagnostics, and rendered context.
-- `operations`: operation logs, backup/export, retention and redaction previews.
-- `index-health`: backend name, active store count, index document count,
-  synced/stale state, last reindex timestamp, and rebuild action result.
+- `overview`: hero metric + sub-metrics + storage / top-namespaces panels.
+- `sessions`: capture-stream list + detail (message stream, windows,
+  produced units).
+- `dialogue-windows`: extraction lifecycle table.
+- `memory-units`: filtered review list + detail page (fact card +
+  lifecycle + source dialogue).
+- `retrieval-preview`: query form + Tuning disclosure + ranked table with
+  R/T score breakdown + rendered context with Copy button.
+- `operations`: audit log with single-line rows, status dot, summary `+N`
+  overflow.
+- `index-health`: hero metrics + backend details + compact Rebuild action.
 
-`components/` owns reusable UI primitives: page shell, toolbar, table, empty
-state, badges, time range controls, JSON preview, and confirm dialogs.
+`components/` owns reusable UI primitives. New components added in the recent
+UI overhaul:
+
+- `CollapsibleFilters` — wraps a `<details>` element around any filter input
+  grid. Summary row shows dismissable active-filter chips and a Clear all
+  button when filters are set. Auto-opens (via `useState(active.length > 0)`)
+  when the URL already has filters; otherwise stays closed.
+- `CopyableId` — monospace id chip with truncated middle ellipsis and a
+  one-click copy button. Has a `compact` variant for table cells.
 
 ## Visual Direction
 
-Manager is a control plane, not a landing page. Favor dense, quiet layouts:
+Manager is a control plane, not a landing page. The shipping conventions:
 
-- full-width app shell with left navigation and top filter bar;
-- table-first MemoryUnit review with stable row heights;
-- detail pages that show fact, metadata, and source dialogue as log entries;
-- badges for namespace, memory type, evidence, and lifecycle state;
-- URL-backed date range, namespace, type, owner, and text filters;
-- paginated lists that preserve filter state when navigating to detail pages;
-- no decorative hero sections, nested cards, or dashboard-heavy graphics.
+- Full-width app shell, left sidebar (collapsible), constrained main surface.
+- Table-first review pages with stable, dense rows.
+- Filter strips collapse by default; expand when a filter is set.
+- Detail pages prefer full-width cards over split column layouts.
+- Status dots beat full Badges in tight columns (Operations status).
+- Primary buttons are dark; secondary actions use `ghost-button`; rare
+  high-cost actions like Rebuild index use `ghost-button-compact` so they
+  do not compete with page titles.
+- URL-backed filter state on every list page.
 
-## Migration Plan
+## Migration Notes
 
-1. Keep `manager-ui/` as the editable source of the management console.
-2. Build directly into `src/nanomem/manager/assets/` with stable top-level
-   `index.html`, `app.js`, and `styles.css` outputs.
-3. Keep `src/nanomem/manager/assets/__init__.py` because those files are served
-   through Python package resources.
-4. Add a Playwright smoke test for `/manager`, memory list, detail source, and
-   retrieval preview.
+The package path moved across two refactors:
 
-The Control API should remain stable during the frontend rewrite. UI changes
-must not introduce new memory contracts.
+1. `nanomem.manager.assets` → `nanomem.ops.manager_assets` (v0.3.0a1).
+2. `nanomem.ops.manager_assets` → `nanomem.admin.manager_ui` (v0.3.0a5).
+
+`vite.config.ts` writes to the current path; the Python server reads it via
+`importlib.resources` against the `_MANAGER_ASSET_PACKAGE` constant in
+`transports/http/manager.py`.
+
+The Control API stays stable across UI changes — UI work never introduces
+new memory contracts. New API endpoints land in `03-control-api.md` first.

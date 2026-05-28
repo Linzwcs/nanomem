@@ -1,34 +1,48 @@
 # Control API
 
-Status: draft
+Status: active
 
-`/manager/api/*` is a control-plane API. It should observe, diagnose, and maintain
-the memory store without redefining capture/read behavior.
+`/manager/api/*` is a control-plane API. It observes, diagnoses, and triggers
+maintenance for the memory store. It must not redefine capture/read behavior or
+duplicate ranking, rendering, or redaction logic.
+
+`/admin/api/*` is a path alias that rewrites to `/manager/api/*`.
 
 ## Architecture
 
 ```text
 /manager/api/*
-  -> thin HTTP routing and serialization
-  -> NanoMemControlService for control-plane use cases
-  -> Store / Index / NanoMemService.read()
+  -> stdlib HTTP routing + JSON serialization (transports/http/manager.py)
+  -> ControlFacade  (service/facade.py)
+  -> NanoMemAdminService / NanoMemService.read()
+  -> store (sqlite) / active index / read pipeline
 ```
 
-HTTP handlers should only parse inputs, call services, and serialize results.
-They should not duplicate store, ranking, rendering, or redaction logic.
+HTTP handlers only parse inputs, call services, and serialize results. They
+never reach into store/index internals.
 
-## Observation Endpoints
+## Endpoint Inventory
+
+10 endpoints ship in the control plane today. The list below is authoritative
+against `src/nanomem/transports/http/manager.py`.
+
+### Observation
 
 ```text
 GET /manager/api/stats
-GET /manager/api/schema
-GET /manager/api/integrity
-GET /manager/api/index-health
+GET /manager/api/sessions
+GET /manager/api/sessions/{session_id}
+GET /manager/api/dialogue-windows
+GET /manager/api/memory-units
+GET /manager/api/memory-units/{unit_id}
+GET /manager/api/dialogues/{dialogue_id}
 GET /manager/api/operation-logs
 ```
 
-Observation endpoints are read-only. They should support selectors and
-pagination for large stores.
+All observation endpoints are read-only. List endpoints (`sessions`,
+`dialogue-windows`, `memory-units`, `operation-logs`) accept `limit`, `offset`,
+`page` and return `count` / `total_count` / `offset` / `limit` / `has_more` so
+the UI can paginate.
 
 `stats` includes index health fields for the active backend:
 
@@ -36,92 +50,86 @@ pagination for large stores.
 - `index_document_count`: documents visible to the active index when supported;
 - `index_health`: `synced`, `stale`, or `unknown`;
 - `index_unit_delta`: `active_unit_count - index_document_count`;
-- `last_reindex_at`: latest successful manager reindex operation timestamp.
+- `last_reindex_at`: latest successful manager reindex operation timestamp;
+- `top_owners`: top owner/namespace unit counts;
+- optional `applied_schema_migration_count` / `pending_schema_migration_count`.
 
-## Memory And Evidence Endpoints
-
-```text
-GET /manager/api/memory-units
-GET /manager/api/memory-units/{unit_id}
-GET /manager/api/memory-units/{unit_id}/source
-GET /manager/api/dialogues/{dialogue_id}
-GET /manager/api/dialogues/{dialogue_id}/produced-units
-```
-
-Memory list endpoints return canonical `MemoryUnit` fields. Detail endpoints may
-add derived audit fields such as `source_chunks`, but those fields must not
-change the stored memory model.
-
-`GET /manager/api/memory-units` supports:
+`memory-units` list supports:
 
 - selectors: `owner_id`, `namespace`, `memory_type`, `start`, `end`, `text`;
-- pagination: `limit`, `offset`, or one-based `page`;
-- ordering: `newest_first` by default, or `oldest_first`.
+- ordering: `newest_first` (default) or `oldest_first`.
 
-Responses include `count`, `total_count`, `offset`, `limit`, and `has_more` so
-the UI can paginate without loading the whole memory store.
+`sessions` list supports `order` (`recently_updated` default).
+
+`dialogue-windows` list supports `session_id`, `status`, `order`.
+
+`operation-logs` list supports `owner_id`, `namespace`, `operation_type`,
+`status`, `start`, `end`.
 
 Time selector semantics:
 
-- `memory-units.start` and `memory-units.end` filter `MemoryUnit.timestamp`;
-- `operation-logs.start` and `operation-logs.end` filter `OperationLog.created_at`;
+- `memory-units.start` / `end` filter `MemoryUnit.timestamp`;
+- `operation-logs.start` / `end` filter `OperationLog.created_at`;
 - `retrieval-preview.time_range` hard-filters candidate `MemoryUnit.timestamp`;
-- `retrieval-preview.query_time` is separate and only controls recency-aware
-  ranking policy.
+- `retrieval-preview.query_time` is separate and only controls the
+  recency-aware ranking policy.
 
-The API accepts ISO timestamp strings. The browser manager may expose date-only
-inputs, but it must convert those local calendar dates into explicit ISO start
-and end boundaries before calling the API. End dates are inclusive at the UI
-level and should be sent as the end of the selected local day.
+The API accepts ISO timestamp strings. The browser manager exposes date-only
+inputs but converts them into explicit ISO start/end boundaries before calling
+the API. End dates are inclusive at the UI level and sent as the end of the
+selected local day.
 
-Each source chunk should include:
+`memory-units/{unit_id}` returns the canonical `MemoryUnit` plus a derived
+`source_chunks` field. Each chunk resolves a `DialogueRef` and includes:
 
-- `status`: `ok`, `missing_dialogue`, `redacted_dialogue`,
-  `empty_range`, or `out_of_range_clamped`;
+- `status`: `ok`, `missing_dialogue`, `redacted_dialogue`, `empty_range`,
+  or `out_of_range_clamped`;
 - `range_label` and `resolved_range`;
 - `message_count` and `resolved_message_count`;
 - `raw_dialogue_available`;
-- `requires_explicit_reveal`.
+- `messages` (full or range-resolved, depending on extractor).
 
-## Diagnosis Endpoints
+`sessions/{session_id}` returns the session summary plus its dialogues,
+windows, ordered stream messages, produced units, and operation logs.
+
+### Diagnosis
 
 ```text
 POST /manager/api/retrieval-preview
 POST /manager/api/reindex
 ```
 
-`retrieval-preview` must call `NanoMemService.read()` so the result matches
-agent runtime behavior. It should mark logs as manager previews or allow preview
-logging to be disabled.
+`retrieval-preview` calls `NanoMemService.read()` directly so the result matches
+agent runtime behavior. The request payload exposes the same tuning controls
+the runtime read accepts: `owner_id`, `namespaces`, `query`, `query_time`,
+`time_range`, `max_units`, `context_budget_tokens`. The response includes
+`ranked_units` (with `score`, `score_breakdown`, `unit`), `context`
+(rendered text + token/unit counts), `stats` (candidate / ranked / rendered /
+skipped counts, per-unit token estimates), and the resolved `request`.
 
-Preview payloads should expose the same tuning controls used by runtime reads:
-`query_time`, `time_range`, `max_units`, and `context_budget_tokens`. Manager UI
-defaults may be opinionated, but the API request should keep these controls
-explicit in the payload.
+`reindex` rebuilds derived index state from the authoritative store. The
+response returns `indexed_unit_count`, `index_backend`, and supplemental
+`stats`. Manager-triggered reindex writes an operation log entry with
+operation type `reindex`.
 
-`reindex` rebuilds derived index state from the authoritative store. If partial
-reindex is introduced, the response must clearly say whether the active index
-was fully rebuilt or incrementally updated.
+## Out Of Scope For The HTTP Control Plane
 
-Manager-triggered reindex operations write an operation log entry with operation
-type `reindex`, affected count, backend name, and selector metadata.
-
-## Maintenance Endpoints
+Backup, export, retention preview/apply, and redaction are intentionally
+**not** exposed over HTTP. They live in the `nanomem` CLI:
 
 ```text
-POST /manager/api/backup
-POST /manager/api/export
-POST /manager/api/retention/preview
-POST /manager/api/retention/apply
-POST /manager/api/redactions/preview
-POST /manager/api/redactions/apply
+nanomem backup            -> sqlite snapshot
+nanomem export            -> JSON export of memory units / logs
+nanomem retention-preview / retention-apply
+nanomem log-retention-preview / log-retention-apply
+nanomem integrity         -> schema + index consistency check
 ```
 
-Every destructive or privacy-sensitive operation needs:
+Rationale (recorded in CHANGELOG 0.3.0a5): the prior `MaintenanceService`
+wrapper had no documented audience and no UI; operators wanting a scheduled
+workflow chain these per-task CLI subcommands in their own cron script.
+Re-introducing HTTP endpoints requires a documented control-plane consumer.
 
-- dry-run preview;
-- explicit confirmation on apply;
-- scoped selector;
-- affected counts and samples;
-- operation log entry;
-- clear statement about whether reindex is required afterward.
+A future reveal endpoint for raw dialogue content (`POST
+/manager/api/dialogues/{dialogue_id}/reveal`) remains on the privacy roadmap
+behind permission + audit logging — see `05-operations-and-privacy.md`.

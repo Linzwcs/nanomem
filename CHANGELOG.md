@@ -2,6 +2,99 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0a7] — 2026-05-28
+
+### Manager UI overhaul
+
+Four iteration rounds across the manager browser app. No data-plane or
+public Python contract changes — every change below is in `manager-ui/`
+or its bundled output (`src/nanomem/admin/manager_ui/`).
+
+#### Added
+
+- **`CollapsibleFilters` component.** Filter strips on Memory Units +
+  Operations now collapse behind a single summary row with dismissable
+  active-filter chips and a `Clear all` button. Auto-opens when the URL
+  already has filters. The dense 6-input grid that used to dominate
+  ~25% of the viewport is hidden by default.
+- **`CopyableId` component.** Truncated-middle id chip with a one-click
+  copy button (`unit_b7a3…bcb81b`). Used for unit / dialogue / oplog
+  ids across Memory Units, Dialogue Windows, Operations, and the
+  Memory Unit detail header. Has a `compact` variant for in-table use.
+- **Retrieval Preview redesign.**
+  - Form bisects into a compact primary row (Owner / Namespaces / Use
+    example / Run preview) plus a Tuning `<details>` disclosure that
+    collapses Budget tokens / Max units / Query time / TimeRange behind
+    a summary chip.
+  - Empty state renders a "Try a query" panel with up to three example
+    chips sampled from distinct stored owner+namespace pairs; clicking
+    a chip prefills and submits.
+  - Ranked table drops the redundant Scope and State columns. Score
+    column shows the overall score plus `R` (relevance) and `T` (recency)
+    sub-scores from `score_breakdown`. Kept rows get a green left bar;
+    cut rows render dimmed with a small `cut` pill in the tokens cell.
+  - Rendered Context gains a Copy button next to the budget badge.
+  - Cmd/Ctrl+Enter inside the Query textarea submits the form.
+- **Operations row compaction.**
+  - New `formatTimeShort` helper renders `MM/DD/YY HH:mm` single-line.
+  - Operation type + log id chip render inline; words like `capture` do
+    not wrap (`white-space: nowrap; flex-shrink: 0`).
+  - Status column is now a 9px colored dot (`status-dot-ok` green,
+    `status-dot-error/failed` red, default amber) — replaces the full
+    Badge and reclaims column width.
+  - Scope renders inline as `owner · namespace` (omits namespace when
+    `default`).
+  - Summary chips are capped at 3 per row with a muted `+N` overflow
+    indicator. Individual chips truncate at `max-width: 200px`.
+  - Row height drops from ~120px to ~38px.
+- **Memory Unit Detail redesign.** Drops the redundant right-side
+  Record/Value table (Owner / Namespace / Timestamp were already shown
+  in chip strip + fact card). Fact card spans full width with the
+  unit id as a `CopyableId` in its header. Meta grid adds Available at;
+  Retention until / Redacted at only render when set.
+- **Index Health button downgrade.** Rebuild index drops from the
+  default primary button (38px solid dark) to the new
+  `ghost-button-compact` tier (26px, matching the `synced` badge).
+- **Empty Metadata blocks.** Memory Unit Detail + Session Detail no
+  longer render an empty `{}` Metadata panel when the underlying
+  object has no metadata — the section drops entirely.
+
+#### Fixed
+
+- **Filter inputs lost focus after first keystroke.** When a list-page
+  filter input updated the URL hash, the new query key flipped
+  `useQuery`'s `isLoading` to true and the page's early
+  `if (isLoading) return <LoadingState />` unmounted the form. Add
+  `placeholderData: keepPreviousData` to all four list-page queries
+  (Memory Units, Operations, Dialogue Windows, Sessions) so the form
+  stays mounted and inputs keep focus across refetches.
+- **`Run preview` button was 4px taller than the inputs.** Pin
+  `.retrieval-actions button` to 34px so primary form actions line up
+  with the surrounding input fields.
+- **`Try a query` chips had unequal widths and gaps.** The
+  `grid-template-columns: repeat(auto-fit, minmax(220px, 1fr))` layout
+  gave the first chip 310px and the next two 348px with a 46px /
+  8px gap. Switch to `display: flex` with `flex: 1 1 220px` per chip
+  for a uniform 348/348/348px split with 8/8px gaps.
+- **Pre-existing pattern bug in Query time field.** The HTML-attribute
+  string `pattern="\\d{4}-..."` placed literal backslash-d in the DOM
+  pattern, so any user who edited the time field could not submit the
+  form (`Use example` happened to bypass form validation, which is why
+  the bug was invisible). The dead pattern is removed.
+
+### Docs
+
+- `docs/manager/` — full sweep: corrected asset paths to
+  `nanomem.admin.manager_ui`, replaced "Retrieval Lab" with
+  "Retrieval Preview", marked removed HTTP endpoints (backup, export,
+  retention, redactions, integrity, schema, source, produced-units)
+  as out of scope for the HTTP control plane (CLI-only per 0.3.0a5),
+  documented the new component primitives and patterns, marked done
+  items on the roadmap.
+- `docs/nanomem/15-web-management-console.md` — synced the high-level
+  product boundary doc with the manager docs; updated implemented
+  endpoint + page lists.
+
 ## [0.3.0a6] — 2026-05-26
 
 ### Removed (BREAKING)
