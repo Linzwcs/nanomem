@@ -1,11 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 
 import { getOperationLogs } from "../../api/client";
 import type { OperationLog } from "../../api/types";
+import { CollapsibleFilters, ActiveFilter } from "../../components/CollapsibleFilters";
 import { CopyableId } from "../../components/CopyableId";
 import { Badge, EmptyState, ErrorState, LoadingState } from "../../components/Status";
 import { TimeRangeFilter } from "../../components/TimeRangeFilter";
-import { formatTime } from "../../lib/format";
+import { formatTimeShort } from "../../lib/format";
 import { apiTimeRange } from "../../lib/timeFilters";
 
 export function OperationsPage() {
@@ -25,6 +26,7 @@ export function OperationsPage() {
         limit,
       });
     },
+    placeholderData: keepPreviousData,
   });
 
   if (logs.isLoading) return <LoadingState />;
@@ -43,95 +45,75 @@ export function OperationsPage() {
         <Badge>{logs.data?.count ?? rows.length}</Badge>
       </header>
 
-      <section className="filter-panel operations-filter">
-        <label>
-          Operation
-          <input
-            placeholder="capture, read, reindex"
-            value={filters.operation_type}
-            onChange={(event) =>
-              updateOperationFilters({ operation_type: event.target.value })
-            }
-          />
-        </label>
-        <label>
-          Status
-          <select
-            value={filters.status}
-            onChange={(event) => updateOperationFilters({ status: event.target.value })}
-          >
-            <option value="">any</option>
-            <option value="ok">ok</option>
-            <option value="error">error</option>
-          </select>
-        </label>
-        <label>
-          Owner
-          <input
-            placeholder="optional"
-            value={filters.owner_id}
-            onChange={(event) => updateOperationFilters({ owner_id: event.target.value })}
-          />
-        </label>
-        <label>
-          Namespace
-          <input
-            placeholder="optional"
-            value={filters.namespace}
-            onChange={(event) => updateOperationFilters({ namespace: event.target.value })}
-          />
-        </label>
-        <label>
-          Rows
-          <select
-            value={filters.limit}
-            onChange={(event) => updateOperationFilters({ limit: event.target.value })}
-          >
-            <option value="50">50</option>
-            <option value="100">100</option>
-            <option value="200">200</option>
-          </select>
-        </label>
-        <div className="filter-time">
-          <TimeRangeFilter
-            compact
-            value={{ start: filters.start, end: filters.end }}
-            onChange={(value) =>
-              updateOperationFilters({ start: value.start, end: value.end })
-            }
-          />
-        </div>
-        <div className="filter-actions">
-          <button
-            className="ghost-button"
-            onClick={() => {
-              window.location.hash = "#/operations";
-            }}
-            type="button"
-          >
-            Clear
-          </button>
-        </div>
-      </section>
+      <CollapsibleFilters
+        active={activeFilters}
+        emptyHint="All operation logs"
+        onClearAll={() => {
+          window.location.hash = "#/operations";
+        }}
+      >
+        <section className="filter-panel operations-filter">
+          <label>
+            Operation
+            <input
+              placeholder="capture, read, reindex"
+              value={filters.operation_type}
+              onChange={(event) =>
+                updateOperationFilters({ operation_type: event.target.value })
+              }
+            />
+          </label>
+          <label>
+            Status
+            <select
+              value={filters.status}
+              onChange={(event) => updateOperationFilters({ status: event.target.value })}
+            >
+              <option value="">any</option>
+              <option value="ok">ok</option>
+              <option value="error">error</option>
+            </select>
+          </label>
+          <label>
+            Owner
+            <input
+              placeholder="optional"
+              value={filters.owner_id}
+              onChange={(event) => updateOperationFilters({ owner_id: event.target.value })}
+            />
+          </label>
+          <label>
+            Namespace
+            <input
+              placeholder="optional"
+              value={filters.namespace}
+              onChange={(event) => updateOperationFilters({ namespace: event.target.value })}
+            />
+          </label>
+          <label>
+            Rows
+            <select
+              value={filters.limit}
+              onChange={(event) => updateOperationFilters({ limit: event.target.value })}
+            >
+              <option value="50">50</option>
+              <option value="100">100</option>
+              <option value="200">200</option>
+            </select>
+          </label>
+          <div className="filter-time">
+            <TimeRangeFilter
+              compact
+              value={{ start: filters.start, end: filters.end }}
+              onChange={(value) =>
+                updateOperationFilters({ start: value.start, end: value.end })
+              }
+            />
+          </div>
+        </section>
+      </CollapsibleFilters>
 
       <div className="results-strip operations-results-strip">
-        <div className="filter-chip-list">
-          {activeFilters.length === 0 ? (
-            <span className="filter-hint">All operation logs</span>
-          ) : (
-            activeFilters.map((filter) => (
-              <button
-                aria-label={`Clear ${filter.label}`}
-                className="filter-chip"
-                key={filter.label}
-                onClick={() => updateOperationFilters(filter.clear)}
-                type="button"
-              >
-                {filter.label}
-              </button>
-            ))
-          )}
-        </div>
         <span className="result-count">
           Showing {rows.length} of {limit}
         </span>
@@ -152,40 +134,54 @@ export function OperationsPage() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((log) => (
-                <tr key={log.log_id}>
-                  <td>
-                    <span className="time-cell">{formatTime(log.created_at)}</span>
-                  </td>
-                  <td>
-                    <div className="operation-cell">
-                      <strong>{log.operation_type}</strong>
-                      <CopyableId value={log.log_id} variant="compact" />
-                    </div>
-                  </td>
-                  <td>
-                    <Badge tone={log.status === "ok" ? "good" : "warn"}>
-                      {log.status}
-                    </Badge>
-                  </td>
-                  <td>
-                    <div className="scope-cell">
-                      <strong>{operationOwner(log)}</strong>
-                      <span>{operationNamespace(log)}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <div className="summary-cell">
-                      {summaryItems(log).map((item) => (
-                        <span className="summary-token" key={item.key}>
-                          <strong>{item.key}</strong>
-                          {item.value}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {rows.map((log) => {
+                const namespace = operationNamespace(log);
+                return (
+                  <tr key={log.log_id}>
+                    <td>
+                      <span className="time-cell time-cell-short">
+                        {formatTimeShort(log.created_at)}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="operation-cell-inline">
+                        <strong>{log.operation_type}</strong>
+                        <CopyableId value={log.log_id} variant="compact" />
+                      </div>
+                    </td>
+                    <td className="status-dot-cell">
+                      <span
+                        aria-label={log.status}
+                        className={`status-dot status-dot-${log.status}`}
+                        title={log.status}
+                      />
+                    </td>
+                    <td>
+                      <span className="scope-inline">
+                        <strong>{operationOwner(log)}</strong>
+                        {namespace && namespace !== "default" ? (
+                          <span className="scope-inline-ns">{namespace}</span>
+                        ) : null}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="summary-cell">
+                        {summaryItems(log, 3).map((item) => (
+                          <span className="summary-token" key={item.key}>
+                            <strong>{item.key}</strong>
+                            {item.value}
+                          </span>
+                        ))}
+                        {summaryOverflow(log, 3) > 0 ? (
+                          <span className="summary-overflow">
+                            +{summaryOverflow(log, 3)}
+                          </span>
+                        ) : null}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
@@ -232,26 +228,42 @@ function numberParam(value: string, fallback: number) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
-function operationActiveFilters(filters: OperationFilters, limit: number) {
-  const active: Array<{ label: string; clear: Partial<OperationFilters> }> = [];
+function operationActiveFilters(filters: OperationFilters, limit: number): ActiveFilter[] {
+  const active: ActiveFilter[] = [];
   if (filters.operation_type) {
     active.push({
       label: `Operation: ${filters.operation_type}`,
-      clear: { operation_type: "" },
+      onClear: () => updateOperationFilters({ operation_type: "" }),
     });
   }
-  if (filters.status) active.push({ label: `Status: ${filters.status}`, clear: { status: "" } });
+  if (filters.status) {
+    active.push({
+      label: `Status: ${filters.status}`,
+      onClear: () => updateOperationFilters({ status: "" }),
+    });
+  }
   if (filters.owner_id) {
-    active.push({ label: `Owner: ${filters.owner_id}`, clear: { owner_id: "" } });
+    active.push({
+      label: `Owner: ${filters.owner_id}`,
+      onClear: () => updateOperationFilters({ owner_id: "" }),
+    });
   }
   if (filters.namespace) {
-    active.push({ label: `Namespace: ${filters.namespace}`, clear: { namespace: "" } });
+    active.push({
+      label: `Namespace: ${filters.namespace}`,
+      onClear: () => updateOperationFilters({ namespace: "" }),
+    });
   }
-  if (limit !== 100) active.push({ label: `${limit} rows`, clear: { limit: "100" } });
+  if (limit !== 100) {
+    active.push({
+      label: `${limit} rows`,
+      onClear: () => updateOperationFilters({ limit: "100" }),
+    });
+  }
   if (filters.start || filters.end) {
     active.push({
       label: `${filters.start || "Any start"} to ${filters.end || "Any end"}`,
-      clear: { start: "", end: "" },
+      onClear: () => updateOperationFilters({ start: "", end: "" }),
     });
   }
   return active;
@@ -275,13 +287,18 @@ function operationNamespace(log: OperationLog) {
   );
 }
 
-function summaryItems(log: OperationLog) {
-  const entries = Object.entries(log.summary).slice(0, 5);
+function summaryItems(log: OperationLog, limit = 5) {
+  const entries = Object.entries(log.summary).slice(0, limit);
   if (entries.length === 0) return [{ key: "summary", value: "empty" }];
   return entries.map(([key, value]) => ({
     key,
     value: compactValue(value),
   }));
+}
+
+function summaryOverflow(log: OperationLog, limit: number) {
+  const total = Object.keys(log.summary).length;
+  return Math.max(0, total - limit);
 }
 
 function compactValue(value: unknown) {

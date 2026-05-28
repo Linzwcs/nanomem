@@ -3,6 +3,7 @@ import { ArrowLeft } from "lucide-react";
 
 import { getMemoryUnit } from "../../api/client";
 import type { SourceChunk } from "../../api/types";
+import { CopyableId } from "../../components/CopyableId";
 import { Badge, ErrorState, LoadingState } from "../../components/Status";
 import { formatTime, jsonPreview } from "../../lib/format";
 
@@ -46,54 +47,51 @@ export function MemoryUnitDetailPage({ unitId }: { unitId: string }) {
         <span className="result-count">{formatTime(unit.timestamp)}</span>
       </div>
 
-      <div className="detail-grid">
-        <section className="panel fact-panel">
-          <div className="fact-card-header">
-            <div>
-              <p className="eyebrow">Processed Fact</p>
-              <h2>{unit.memory_type}</h2>
-            </div>
+      <section className="panel fact-panel">
+        <div className="fact-card-header">
+          <div>
+            <p className="eyebrow">Processed Fact</p>
+            <h2>{unit.memory_type}</h2>
+          </div>
+          <div className="fact-card-meta">
+            <CopyableId value={unit.unit_id} />
             <Badge tone={unit.redacted_at ? "warn" : "good"}>
               {unit.redacted_at ? "redacted" : "active"}
             </Badge>
           </div>
-          <p className="fact-text">{unit.text}</p>
-          <div className="fact-meta-grid">
+        </div>
+        <p className="fact-text">{unit.text}</p>
+        <div className="fact-meta-grid">
+          <span>
+            <strong>Owner</strong>
+            {unit.scope.owner_id}
+          </span>
+          <span>
+            <strong>Namespace</strong>
+            {unit.scope.namespace ?? "default"}
+          </span>
+          <span>
+            <strong>Available at</strong>
+            {formatTime(unit.available_at)}
+          </span>
+          <span>
+            <strong>Source</strong>
+            {sourceChunks.length} {sourceChunks.length === 1 ? "dialogue" : "dialogues"}
+          </span>
+          {unit.retention_until ? (
             <span>
-              <strong>Owner</strong>
-              {unit.scope.owner_id}
+              <strong>Retention until</strong>
+              {formatTime(unit.retention_until)}
             </span>
+          ) : null}
+          {unit.redacted_at ? (
             <span>
-              <strong>Namespace</strong>
-              {unit.scope.namespace ?? "default"}
+              <strong>Redacted at</strong>
+              {formatTime(unit.redacted_at)}
             </span>
-            <span>
-              <strong>Source</strong>
-              {sourceChunks.length} {sourceChunks.length === 1 ? "dialogue" : "dialogues"}
-            </span>
-          </div>
-        </section>
-
-        <section className="panel table-panel">
-          <table className="data-table record-table">
-            <thead>
-              <tr>
-                <th>Record</th>
-                <th>Value</th>
-              </tr>
-            </thead>
-            <tbody>
-              <RecordRow label="Unit id" value={unit.unit_id} />
-              <RecordRow label="Owner" value={unit.scope.owner_id} />
-              <RecordRow
-                label="Namespace"
-                value={unit.scope.namespace ?? "default"}
-              />
-              <RecordRow label="Timestamp" value={formatTime(unit.timestamp)} />
-            </tbody>
-          </table>
-        </section>
-      </div>
+          ) : null}
+        </div>
+      </section>
 
       <section className="panel">
         <h2>Source Dialogue</h2>
@@ -126,10 +124,12 @@ export function MemoryUnitDetailPage({ unitId }: { unitId: string }) {
         </div>
       </section>
 
-      <section className="panel">
-        <h2>Metadata</h2>
-        <pre className="json-block">{jsonPreview(unit.metadata)}</pre>
-      </section>
+      {Object.keys(unit.metadata).length > 0 ? (
+        <section className="panel">
+          <h2>Metadata</h2>
+          <pre className="json-block">{jsonPreview(unit.metadata)}</pre>
+        </section>
+      ) : null}
     </section>
   );
 }
@@ -173,15 +173,4 @@ function SourceDialogueHeader({ chunk }: { chunk: SourceChunk }) {
 function sourceDialogueHref(sessionId: string, dialogueId: string) {
   const query = new URLSearchParams({ dialogue_id: dialogueId });
   return `#/sessions/${encodeURIComponent(sessionId)}?${query.toString()}`;
-}
-
-function RecordRow({ label, value }: { label: string; value: string }) {
-  return (
-    <tr>
-      <td>
-        <strong>{label}</strong>
-      </td>
-      <td>{value}</td>
-    </tr>
-  );
 }

@@ -41,15 +41,16 @@ export function IndexHealthPage() {
         <div className="header-actions">
           <Badge tone={healthTone}>{health}</Badge>
           <button
+            className="ghost-button ghost-button-compact"
             type="button"
             disabled={rebuild.isPending}
             onClick={() => rebuild.mutate()}
           >
             <span className="button-content">
               {rebuild.isPending ? (
-                <Loader2 aria-hidden="true" className="loading-spinner" size={16} />
+                <Loader2 aria-hidden="true" className="loading-spinner" size={12} />
               ) : (
-                <RefreshCw aria-hidden="true" size={16} />
+                <RefreshCw aria-hidden="true" size={12} />
               )}
               {rebuild.isPending ? "Rebuilding" : "Rebuild index"}
             </span>

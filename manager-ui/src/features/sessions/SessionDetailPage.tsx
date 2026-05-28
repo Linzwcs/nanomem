@@ -166,10 +166,12 @@ export function SessionDetailPage({
         </table>
       </section>
 
-      <section className="panel">
-        <h2>Metadata</h2>
-        <pre className="json-block">{jsonPreview(session.metadata)}</pre>
-      </section>
+      {Object.keys(session.metadata).length > 0 ? (
+        <section className="panel">
+          <h2>Metadata</h2>
+          <pre className="json-block">{jsonPreview(session.metadata)}</pre>
+        </section>
+      ) : null}
     </section>
   );
 }

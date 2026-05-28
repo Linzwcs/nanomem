@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   flexRender,
@@ -11,6 +11,7 @@ import {
 import { getMemoryUnits } from "../../api/client";
 import type { MemoryUnit } from "../../api/types";
 import { Badge, EmptyState, ErrorState, LoadingState } from "../../components/Status";
+import { CollapsibleFilters, ActiveFilter } from "../../components/CollapsibleFilters";
 import { CopyableId } from "../../components/CopyableId";
 import { TimeRangeFilter } from "../../components/TimeRangeFilter";
 import { formatTime } from "../../lib/format";
@@ -37,6 +38,7 @@ export function MemoryUnitsPage() {
         limit,
       });
     },
+    placeholderData: keepPreviousData,
   });
 
   useEffect(() => {
@@ -129,105 +131,85 @@ export function MemoryUnitsPage() {
         </Badge>
       </header>
 
-      <section className="filter-panel memory-filter-panel">
-        <label className="memory-search-field">
-          Search
-          <input
-            placeholder="Search memory text"
-            value={filters.text}
-            onChange={(event) => updateMemoryUnitFilter("text", event.target.value)}
-          />
-        </label>
-        <label>
-          Owner
-          <input
-            placeholder="user-sim"
-            value={filters.owner_id}
-            onChange={(event) => updateMemoryUnitFilter("owner_id", event.target.value)}
-          />
-        </label>
-        <label>
-          Namespace
-          <input
-            placeholder="all"
-            value={filters.namespace}
-            onChange={(event) => updateMemoryUnitFilter("namespace", event.target.value)}
-          />
-        </label>
-        <label>
-          Type
-          <input
-            placeholder="any"
-            value={filters.memory_type}
-            onChange={(event) =>
-              updateMemoryUnitFilter("memory_type", event.target.value)
-            }
-          />
-        </label>
-        <label>
-          Order
-          <select
-            value={filters.order}
-            onChange={(event) => updateMemoryUnitFilter("order", event.target.value)}
-          >
-            <option value="newest_first">Newest first</option>
-            <option value="oldest_first">Oldest first</option>
-          </select>
-        </label>
-        <label>
-          Rows
-          <select
-            value={filters.limit}
-            onChange={(event) => updateMemoryUnitFilter("limit", event.target.value)}
-          >
-            <option value="25">25</option>
-            <option value="50">50</option>
-            <option value="100">100</option>
-          </select>
-        </label>
-        <div className="filter-time">
-          <TimeRangeFilter
-            compact
-            value={{ start: filters.start, end: filters.end }}
-            onChange={(value) =>
-              updateMemoryUnitFilters({
-                start: value.start,
-                end: value.end,
-              })
-            }
-          />
-        </div>
-        <div className="filter-actions">
-          <button
-            className="ghost-button"
-            onClick={() => {
-              window.location.hash = "#/memory-units";
-            }}
-            type="button"
-          >
-            Clear
-          </button>
-        </div>
-      </section>
+      <CollapsibleFilters
+        active={activeFilters}
+        emptyHint="All active memory units"
+        onClearAll={() => {
+          window.location.hash = "#/memory-units";
+        }}
+      >
+        <section className="filter-panel memory-filter-panel">
+          <label className="memory-search-field">
+            Search
+            <input
+              placeholder="Search memory text"
+              value={filters.text}
+              onChange={(event) => updateMemoryUnitFilter("text", event.target.value)}
+            />
+          </label>
+          <label>
+            Owner
+            <input
+              placeholder="user-sim"
+              value={filters.owner_id}
+              onChange={(event) => updateMemoryUnitFilter("owner_id", event.target.value)}
+            />
+          </label>
+          <label>
+            Namespace
+            <input
+              placeholder="all"
+              value={filters.namespace}
+              onChange={(event) => updateMemoryUnitFilter("namespace", event.target.value)}
+            />
+          </label>
+          <label>
+            Type
+            <input
+              placeholder="any"
+              value={filters.memory_type}
+              onChange={(event) =>
+                updateMemoryUnitFilter("memory_type", event.target.value)
+              }
+            />
+          </label>
+          <label>
+            Order
+            <select
+              value={filters.order}
+              onChange={(event) => updateMemoryUnitFilter("order", event.target.value)}
+            >
+              <option value="newest_first">Newest first</option>
+              <option value="oldest_first">Oldest first</option>
+            </select>
+          </label>
+          <label>
+            Rows
+            <select
+              value={filters.limit}
+              onChange={(event) => updateMemoryUnitFilter("limit", event.target.value)}
+            >
+              <option value="25">25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </label>
+          <div className="filter-time">
+            <TimeRangeFilter
+              compact
+              value={{ start: filters.start, end: filters.end }}
+              onChange={(value) =>
+                updateMemoryUnitFilters({
+                  start: value.start,
+                  end: value.end,
+                })
+              }
+            />
+          </div>
+        </section>
+      </CollapsibleFilters>
 
       <div className="results-strip memory-results-strip">
-        <div className="filter-chip-list">
-          {activeFilters.length === 0 ? (
-            <span className="filter-hint">All active memory units</span>
-          ) : (
-            activeFilters.map((filter) => (
-              <button
-                aria-label={`Clear ${filter.label}`}
-                className="filter-chip"
-                key={filter.label}
-                onClick={() => updateMemoryUnitFilters(filter.clear)}
-                type="button"
-              >
-                {filter.label}
-              </button>
-            ))
-          )}
-        </div>
         <span className="result-count">
           Page {page} - {units.data?.total_count ?? 0} total
         </span>
@@ -356,28 +338,30 @@ function numberParam(value: string, fallback: number) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
-function memoryUnitActiveFilters(filters: MemoryUnitFilters, limit: number) {
-  const active: Array<{ label: string; clear: Partial<MemoryUnitFilters> }> = [];
-  if (filters.text) active.push({ label: `Search: ${filters.text}`, clear: { text: "" } });
+function memoryUnitActiveFilters(filters: MemoryUnitFilters, limit: number): ActiveFilter[] {
+  const active: ActiveFilter[] = [];
+  if (filters.text) {
+    active.push({ label: `Search: ${filters.text}`, onClear: () => updateMemoryUnitFilters({ text: "" }) });
+  }
   if (filters.owner_id) {
-    active.push({ label: `Owner: ${filters.owner_id}`, clear: { owner_id: "" } });
+    active.push({ label: `Owner: ${filters.owner_id}`, onClear: () => updateMemoryUnitFilters({ owner_id: "" }) });
   }
   if (filters.namespace) {
-    active.push({ label: `Namespace: ${filters.namespace}`, clear: { namespace: "" } });
+    active.push({ label: `Namespace: ${filters.namespace}`, onClear: () => updateMemoryUnitFilters({ namespace: "" }) });
   }
   if (filters.memory_type) {
-    active.push({ label: `Type: ${filters.memory_type}`, clear: { memory_type: "" } });
+    active.push({ label: `Type: ${filters.memory_type}`, onClear: () => updateMemoryUnitFilters({ memory_type: "" }) });
   }
   if (filters.order !== "newest_first") {
-    active.push({ label: "Oldest first", clear: { order: "newest_first" } });
+    active.push({ label: "Oldest first", onClear: () => updateMemoryUnitFilters({ order: "newest_first" }) });
   }
   if (limit !== 50) {
-    active.push({ label: `${limit} rows`, clear: { limit: "50" } });
+    active.push({ label: `${limit} rows`, onClear: () => updateMemoryUnitFilters({ limit: "50" }) });
   }
   if (filters.start || filters.end) {
     const start = filters.start || "Any start";
     const end = filters.end || "Any end";
-    active.push({ label: `${start} to ${end}`, clear: { start: "", end: "" } });
+    active.push({ label: `${start} to ${end}`, onClear: () => updateMemoryUnitFilters({ start: "", end: "" }) });
   }
   return active;
 }

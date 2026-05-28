@@ -9,6 +9,27 @@ export function formatTime(value: string | null | undefined) {
   }).format(date);
 }
 
+/**
+ * Single-line compact timestamp for dense audit tables, e.g. "5/27/26 17:36".
+ * Drops the verbose "May 27, 2026, 17:36" wrap to two lines.
+ */
+export function formatTimeShort(value: string | null | undefined) {
+  if (!value) return "none";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const dateText = new Intl.DateTimeFormat("en-US", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+  }).format(date);
+  const timeText = new Intl.DateTimeFormat("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+  return `${dateText} ${timeText}`;
+}
+
 export function formatNumber(value: unknown) {
   return typeof value === "number" ? value.toLocaleString("en-US") : String(value ?? "0");
 }
