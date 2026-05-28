@@ -140,7 +140,6 @@ transports/              wire formats
 
 admin/                   operator-facing tools
   cli/                   `nanomem` command-line
-  tui.py                 terminal dashboard
   manager_ui/            bundled HTML/CSS/JS for manager UI
 
 hosts/                   external-harness integration

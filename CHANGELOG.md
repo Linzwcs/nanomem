@@ -2,6 +2,63 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0a8] — 2026-05-28
+
+### Removed (BREAKING)
+
+- **`nanomem.admin.tui` module deleted** (~310 lines). Public symbols
+  `MonitorHealth`, `DashboardSnapshot`, `build_dashboard`,
+  `render_dashboard`, `run_dashboard_watch`, `_health_from_stats` no
+  longer exist. The module was self-marked `Status: experimental` and
+  had zero test coverage.
+- **`nanomem dashboard` CLI subcommand removed.** Along with every flag
+  it owned (`--limit`, `--watch`, `--interval`, `--iterations`,
+  `--no-clear`, `--retention-before` on `dashboard`).
+
+  Motivation: the React manager UI at `/manager` now covers everything
+  the terminal dashboard did — overview hero metrics, recent unit /
+  operation lists, index freshness, retention preview — and does it
+  better (collapsible filters, copyable ids, paginated tables, live
+  refetch via `keepPreviousData`). The dashboard was a 370-line
+  parallel surface that no longer earns its way.
+
+  Migration: replace `nanomem dashboard` with `nanomem-server` +
+  `open http://127.0.0.1:8765/manager`. The `--watch` use case
+  (ssh-attached operator) can be replicated by `watch -n 2 'curl -s
+  http://127.0.0.1:8765/manager/api/stats | jq'` until a dedicated
+  text replacement is requested.
+
+- **Dead CLI scope arguments removed** from `list`, `logs`,
+  `retention-preview`, `retention-apply`, `log-retention-preview`,
+  `log-retention-apply`: `--tenant-id`, `--agent-id`, `--project-id`,
+  `--session-id`. These were defined on the parsers but never read —
+  `MemoryScope` collapsed to `owner_id + namespace` a long time ago and
+  `_scope_from_args` only ever consumed `args.user_id`. Any caller
+  passing one of these flags was getting silent no-ops; they now error
+  with `unrecognized arguments` so the misconfiguration is loud.
+
+  `--session-id` and `--namespace` on `flush` are unaffected — those
+  are actually consumed.
+
+### Removed (internal)
+
+- `_csv` (dead helper, 0 callers).
+- `_unit_payload` (1-line wrapper around `asdict`, inlined).
+- `_scope_from_args` collapsed from 12 lines of `any((x,))` /
+  unreachable branches / hardcoded defaults to 4 lines with identical
+  behavior.
+- `MemoryUnit` import dropped from `admin/cli/main.py` (only used by
+  the deleted `_unit_payload`).
+
+Net delta: `src/nanomem/admin/cli/main.py` 747 → 647 lines (-100,
+~13%). `src/nanomem/admin/tui.py` -311 lines (file removed).
+
+### Process
+
+156 tests pass. Layering green. The `admin/` layer still ships two
+modules: `cli/` (operator command-line) and `manager_ui/` (bundled
+React assets served by `transports.http.manager`).
+
 ## [0.3.0a7] — 2026-05-28
 
 ### Manager UI overhaul

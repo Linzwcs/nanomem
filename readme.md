@@ -384,7 +384,6 @@ nanomem logs --config nanomem.json
 nanomem migrations --config nanomem.json
 nanomem integrity-check --config nanomem.json
 nanomem reindex --config nanomem.json
-nanomem dashboard --config nanomem.json
 
 nanomem backup  --config nanomem.json --output .nanomem/backups/backup.db
 nanomem export  --config nanomem.json --output .nanomem/exports/export.json
@@ -553,7 +552,6 @@ src/nanomem/
 
   admin/                 operator-facing tools
     cli/                 `nanomem` command-line
-    tui.py               terminal dashboard
     manager_ui/          bundled HTML/CSS/JS for the manager UI
 
   hosts/                 external-harness integration

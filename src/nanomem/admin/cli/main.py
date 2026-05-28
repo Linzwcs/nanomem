@@ -12,16 +12,11 @@ from nanomem.service.control import (
     RetentionPolicy,
 )
 from nanomem.core.config import NanoMemConfig, load_config
-from nanomem.core.contracts import FlushRequest, MemoryScope, MemoryUnit, TimeRange
+from nanomem.core.contracts import FlushRequest, MemoryScope, TimeRange
 from nanomem.service.factory import extractor_from_config, index_from_config
 from nanomem.hosts.plugins.codex import install_codex_hooks  # layering-exception: CLI install-codex-hooks subcommand invokes host plugin
 from nanomem.service.core import NanoMemService
 from nanomem.pipeline.storage.sqlite import SQLiteMemoryUnitStore
-from nanomem.admin.tui import (
-    build_dashboard,
-    render_dashboard,
-    run_dashboard_watch,
-)
 
 
 def main(argv: list[str] | None = None, *, stdout: TextIO | None = None) -> int:
@@ -68,8 +63,6 @@ def main(argv: list[str] | None = None, *, stdout: TextIO | None = None) -> int:
             return _log_retention_preview(control, args=args, stdout=output)
         if args.command == "log-retention-apply":
             return _log_retention_apply(control, args=args, stdout=output)
-        if args.command == "dashboard":
-            return _dashboard(control, args=args, stdout=output)
     finally:
         store.close()
     parser.error(f"unknown command: {args.command}")
@@ -86,11 +79,7 @@ def _parser() -> argparse.ArgumentParser:
 
     list_cmd = subparsers.add_parser("list", help="List units.")
     _add_db_or_config_args(list_cmd)
-    list_cmd.add_argument("--tenant-id")
     list_cmd.add_argument("--user-id")
-    list_cmd.add_argument("--agent-id")
-    list_cmd.add_argument("--project-id")
-    list_cmd.add_argument("--session-id")
     list_cmd.add_argument("--from", dest="start")
     list_cmd.add_argument("--to", dest="end")
     list_cmd.add_argument("--limit", type=int, default=20)
@@ -98,11 +87,7 @@ def _parser() -> argparse.ArgumentParser:
 
     logs = subparsers.add_parser("logs", help="List capture/read operation logs.")
     _add_db_or_config_args(logs)
-    logs.add_argument("--tenant-id")
     logs.add_argument("--user-id")
-    logs.add_argument("--agent-id")
-    logs.add_argument("--project-id")
-    logs.add_argument("--session-id")
     logs.add_argument(
         "--type",
         dest="operation_type",
@@ -191,38 +176,6 @@ def _parser() -> argparse.ArgumentParser:
         "--yes",
         action="store_true",
         help="Confirm deletion.",
-    )
-
-    dashboard = subparsers.add_parser(
-        "dashboard",
-        help="Render a read-only NanoMem terminal dashboard.",
-    )
-    _add_db_or_config_args(dashboard)
-    dashboard.add_argument("--limit", type=int, default=10)
-    dashboard.add_argument(
-        "--watch",
-        action="store_true",
-        help="Refresh the dashboard until interrupted.",
-    )
-    dashboard.add_argument(
-        "--interval",
-        type=float,
-        default=2.0,
-        help="Watch refresh interval in seconds.",
-    )
-    dashboard.add_argument(
-        "--iterations",
-        type=int,
-        help="Maximum watch refresh count. Useful for scripts and tests.",
-    )
-    dashboard.add_argument(
-        "--no-clear",
-        action="store_true",
-        help="Do not clear the terminal between watch refreshes.",
-    )
-    dashboard.add_argument(
-        "--retention-before",
-        help="Include a retention preview for units older than this value.",
     )
 
     codex_hooks = subparsers.add_parser(
@@ -393,7 +346,7 @@ def _list(
         limit=args.limit,
     )
     if args.json:
-        _write_json([_unit_payload(item) for item in units], stdout)
+        _write_json([asdict(item) for item in units], stdout)
         return 0
     for unit in units:
         refs = ",".join(ref.dialogue_id for ref in unit.dialogue_refs) or "none"
@@ -579,32 +532,6 @@ def _log_retention_apply(
     return 0
 
 
-def _dashboard(
-    control: NanoMemControlService,
-    *,
-    args: argparse.Namespace,
-    stdout: TextIO,
-) -> int:
-    if args.watch:
-        run_dashboard_watch(
-            control,
-            stdout=stdout,
-            limit=args.limit,
-            retention_before=args.retention_before,
-            interval_seconds=args.interval,
-            iterations=args.iterations,
-            clear_screen=not args.no_clear,
-        )
-        return 0
-    snapshot = build_dashboard(
-        control,
-        limit=args.limit,
-        retention_before=args.retention_before,
-    )
-    stdout.write(render_dashboard(snapshot))
-    return 0
-
-
 def _install_codex_hooks(
     args: argparse.Namespace,
     *,
@@ -632,11 +559,7 @@ def _add_retention_args(parser: argparse.ArgumentParser) -> None:
         required=True,
         help="Delete units older than this timestamp/date.",
     )
-    parser.add_argument("--tenant-id")
     parser.add_argument("--user-id")
-    parser.add_argument("--agent-id")
-    parser.add_argument("--project-id")
-    parser.add_argument("--session-id")
     parser.add_argument("--json", action="store_true", help="Emit JSON.")
 
 
@@ -647,11 +570,7 @@ def _add_log_retention_args(parser: argparse.ArgumentParser) -> None:
         required=True,
         help="Delete operation logs older than this timestamp/date.",
     )
-    parser.add_argument("--tenant-id")
     parser.add_argument("--user-id")
-    parser.add_argument("--agent-id")
-    parser.add_argument("--project-id")
-    parser.add_argument("--session-id")
     parser.add_argument("--type", dest="operation_type", choices=("capture", "read"))
     parser.add_argument("--json", action="store_true", help="Emit JSON.")
 
@@ -714,33 +633,14 @@ def _flush_scope_from_args(args: argparse.Namespace) -> MemoryScope | None:
 
 
 def _scope_from_args(args: argparse.Namespace) -> MemoryScope | None:
-    if not any(
-        (
-            args.user_id,
-        )
-    ):
-        return None
     if not args.user_id:
-        raise SystemExit("--user-id is required when scope filters are provided")
-    return MemoryScope(
-        owner_id=args.user_id,
-        namespace=None,
-    )
-
-
-def _unit_payload(unit: MemoryUnit) -> dict[str, object]:
-    return asdict(unit)
+        return None
+    return MemoryScope(owner_id=args.user_id)
 
 
 def _write_json(payload: object, stdout: TextIO) -> None:
     stdout.write(json.dumps(payload, ensure_ascii=False, sort_keys=True))
     stdout.write("\n")
-
-
-def _csv(items: tuple[str, ...]) -> str:
-    if not items:
-        return "none"
-    return ", ".join(items)
 
 
 if __name__ == "__main__":

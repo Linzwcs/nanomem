@@ -692,33 +692,13 @@ python -m nanomem.cli retention-preview --db path/to/nanomem.sqlite3 --before 20
 python -m nanomem.cli retention-apply --db path/to/nanomem.sqlite3 --before 2026-01-01 --yes
 python -m nanomem.cli log-retention-preview --db path/to/nanomem.sqlite3 --before 2026-01-01 --type read
 python -m nanomem.cli log-retention-apply --db path/to/nanomem.sqlite3 --before 2026-01-01 --type read --yes
-python -m nanomem.cli dashboard --db path/to/nanomem.sqlite3
-python -m nanomem.cli dashboard --db path/to/nanomem.sqlite3 --watch --interval 2
 ```
 
-TUI starts as a dependency-free read-only terminal dashboard over the same control
-service. It can later grow into an interactive curses/textual interface without
-changing the control service contract.
-
-- overview stats;
-- user/tenant counts;
-- recent capture/read operation logs;
-- recent units;
-- time-range filtered unit list;
-- index freshness and reindex status;
-- retention preview/apply status.
-
-The first dashboard is not a full interactive UI. It is a dependency-free
-terminal monitor that can render once or refresh in watch mode. The snapshot
-includes:
-
-- generation time;
-- monitor status;
-- index lag;
-- database counts;
-- recent operation logs with query, returned units, and response context;
-- recent units;
-- optional retention preview.
+The terminal dashboard / TUI subcommand was removed in v0.3.0a8 — the React
+manager UI at `/manager` now covers operator inspection (overview stats,
+recent units / logs, retention preview, index freshness). The control
+service contract remains the right extension point if a non-browser
+operator surface needs to come back later.
 
 Admin responsibilities:
 
@@ -967,8 +947,8 @@ units without requiring raw workspace ingestion.
 
 SQLite stores operation logs for both `capture` and `read`. Read logs include
 the query, resolved time range, ranked unit ids/scores/text, and the rendered
-context returned by NanoMem. These logs power the terminal dashboard and CLI
-inspection without becoming part of the agent-facing memory API.
+context returned by NanoMem. These logs power the manager UI Operations page
+and CLI inspection without becoming part of the agent-facing memory API.
 
 SQLite stores the database schema version in `PRAGMA user_version`. Admin stats
 surface both the current schema version and the latest schema version known by
@@ -1057,9 +1037,8 @@ First behavior:
 6. return ranked units and rendered evidence context.
 7. expose admin stats, list, and reindex through a CLI.
 8. support retention preview/apply for engineering lifecycle cleanup.
-9. render a read-only terminal dashboard from admin snapshots.
-10. support dashboard watch mode for real-time operational monitoring.
-11. expose minimal HTTP `/v1/health`, `/v1/capture`, and `/v1/read`.
+9. expose a React-based manager UI for operator inspection.
+10. expose minimal HTTP `/v1/health`, `/v1/capture`, and `/v1/read`.
 12. expose a thin SDK and OpenClaw/NanoBot-style lifecycle adapters.
 
 Do not expand adapters into agent framework responsibilities. They should map
