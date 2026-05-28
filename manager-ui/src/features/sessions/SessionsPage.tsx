@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { getSessions } from "../../api/client";
@@ -18,6 +18,7 @@ export function SessionsPage() {
         page,
         limit,
       }),
+    placeholderData: keepPreviousData,
   });
 
   if (sessions.isLoading) return <LoadingState />;

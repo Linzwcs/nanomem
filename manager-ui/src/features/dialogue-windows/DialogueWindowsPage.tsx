@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { getDialogueWindows } from "../../api/client";
@@ -21,6 +21,7 @@ export function DialogueWindowsPage() {
         page,
         limit,
       }),
+    placeholderData: keepPreviousData,
   });
 
   if (windows.isLoading) return <LoadingState />;
