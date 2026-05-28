@@ -1,8 +1,15 @@
-import { FormEvent, useState } from "react";
+import {
+  FormEvent,
+  KeyboardEvent,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Loader2, Search, Sparkles } from "lucide-react";
+import { Check, ClipboardCopy, Loader2, Search, Sparkles } from "lucide-react";
 
 import { getMemoryUnits, previewRetrieval } from "../../api/client";
+import { MemoryUnit } from "../../api/types";
 import { Badge, EmptyState, ErrorState } from "../../components/Status";
 import { TimeRangeFilter } from "../../components/TimeRangeFilter";
 import { formatNumber, formatTime } from "../../lib/format";
@@ -12,6 +19,8 @@ import {
   timeRangePayload,
 } from "../../lib/timeFilters";
 
+type TimeRangeInput = { start: string; end: string };
+
 export function RetrievalPreviewPage() {
   const [ownerId, setOwnerId] = useState("");
   const [namespaces, setNamespaces] = useState("");
@@ -19,26 +28,68 @@ export function RetrievalPreviewPage() {
   const [budget, setBudget] = useState("600");
   const [maxUnits, setMaxUnits] = useState("10");
   const [queryTime, setQueryTime] = useState(nowDateTimeInputValue());
-  const [memoryRange, setMemoryRange] = useState({ start: "", end: "" });
+  const [memoryRange, setMemoryRange] = useState<TimeRangeInput>({ start: "", end: "" });
+  const [contextCopied, setContextCopied] = useState(false);
   const preview = useMutation({ mutationFn: previewRetrieval });
+  const formRef = useRef<HTMLFormElement | null>(null);
 
-  // Sample one stored memory unit to seed the form. The first unit's
-  // owner/namespace + first few words of its text become an instant
-  // "this is what a working query looks like" example.
+  // Sample a handful of stored units, then dedupe by owner+namespace so
+  // example chips cover distinct scopes — gives a first-run user real
+  // queries they can run against actual data with one click.
   const sample = useQuery({
-    queryKey: ["retrieval-preview-sample"],
-    queryFn: () => getMemoryUnits({ limit: 1 }),
+    queryKey: ["retrieval-preview-examples"],
+    queryFn: () => getMemoryUnits({ limit: 8 }),
     staleTime: 30_000,
   });
-  const seed = sample.data?.units?.[0];
+  const examples = useMemo<MemoryUnit[]>(() => {
+    const seen = new Set<string>();
+    const out: MemoryUnit[] = [];
+    for (const unit of sample.data?.units ?? []) {
+      const key = `${unit.scope.owner_id}/${unit.scope.namespace ?? ""}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(unit);
+      if (out.length >= 3) break;
+    }
+    return out;
+  }, [sample.data]);
+  const seed = examples[0] ?? null;
 
-  function applyExample() {
-    if (!seed) return;
-    setOwnerId(seed.scope.owner_id);
-    setNamespaces(seed.scope.namespace ?? "");
-    setQuery(seed.text.split(/[.!?\n]/)[0]?.slice(0, 80) ?? seed.text);
-    setQueryTime(nowDateTimeInputValue());
+  function runPreview(payload: {
+    owner_id: string;
+    namespace: string | null;
+    query: string;
+    time: TimeRangeInput;
+    queryTime: string;
+  }) {
+    preview.mutate({
+      owner_id: payload.owner_id,
+      namespaces: payload.namespace ? [payload.namespace] : null,
+      query: payload.query,
+      query_time: localDateTimeToIso(payload.queryTime),
+      time_range: timeRangePayload(payload.time),
+      max_units: Number(maxUnits),
+      context_budget_tokens: Number(budget),
+    });
+  }
+
+  function applyExample(unit: MemoryUnit, autoRun: boolean) {
+    const sampleQuery = unit.text.split(/[.!?\n]/)[0]?.slice(0, 80) ?? unit.text;
+    const nowValue = nowDateTimeInputValue();
+    setOwnerId(unit.scope.owner_id);
+    setNamespaces(unit.scope.namespace ?? "");
+    setQuery(sampleQuery);
+    setQueryTime(nowValue);
     setMemoryRange({ start: "", end: "" });
+    if (autoRun) {
+      runPreview({
+        owner_id: unit.scope.owner_id,
+        namespace: unit.scope.namespace ?? null,
+        query: sampleQuery,
+        time: { start: "", end: "" },
+        queryTime: nowValue,
+      });
+    }
   }
 
   function submit(event: FormEvent) {
@@ -58,6 +109,25 @@ export function RetrievalPreviewPage() {
     });
   }
 
+  function handleQueryKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+      event.preventDefault();
+      formRef.current?.requestSubmit();
+    }
+  }
+
+  async function copyContext() {
+    const text = preview.data?.context.text;
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setContextCopied(true);
+      window.setTimeout(() => setContextCopied(false), 1100);
+    } catch {
+      /* clipboard not available */
+    }
+  }
+
   return (
     <section className="page-stack">
       <header className="page-header memory-page-header">
@@ -68,94 +138,141 @@ export function RetrievalPreviewPage() {
         <Badge tone="muted">read path</Badge>
       </header>
 
-      <form className="filter-panel retrieval-filter-panel" onSubmit={submit}>
-        <label>
-          Owner
-          <input
-            placeholder="user-sim"
-            value={ownerId}
-            onChange={(event) => setOwnerId(event.target.value)}
+      <form
+        className="filter-panel retrieval-form"
+        onSubmit={submit}
+        ref={formRef}
+      >
+        <div className="retrieval-row retrieval-row-primary">
+          <label className="retrieval-field-owner">
+            Owner
+            <input
+              placeholder="user-sim"
+              value={ownerId}
+              onChange={(event) => setOwnerId(event.target.value)}
+              required
+            />
+          </label>
+          <label className="retrieval-field-ns">
+            Namespaces
+            <input
+              placeholder="personal, work"
+              value={namespaces}
+              onChange={(event) => setNamespaces(event.target.value)}
+            />
+          </label>
+          <div className="retrieval-actions">
+            {seed ? (
+              <button
+                type="button"
+                className="ghost-button"
+                onClick={() => applyExample(seed, false)}
+                title={`Prefill from ${seed.scope.owner_id}${seed.scope.namespace ? "/" + seed.scope.namespace : ""}`}
+              >
+                <span className="button-content">
+                  <Sparkles aria-hidden="true" size={14} />
+                  Use example
+                </span>
+              </button>
+            ) : null}
+            <button type="submit" disabled={preview.isPending}>
+              <span className="button-content">
+                {preview.isPending ? (
+                  <Loader2 aria-hidden="true" className="loading-spinner" size={16} />
+                ) : (
+                  <Search aria-hidden="true" size={16} />
+                )}
+                {preview.isPending ? "Running" : "Run preview"}
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <label className="retrieval-field-query">
+          Query
+          <textarea
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={handleQueryKeyDown}
+            placeholder="What do you want to retrieve about this owner? (⌘/Ctrl + Enter to run)"
             required
           />
         </label>
-        <label>
-          Namespaces
-          <input
-            placeholder="personal, work"
-            value={namespaces}
-            onChange={(event) => setNamespaces(event.target.value)}
-          />
-        </label>
-        <label>
-          Budget tokens
-          <input value={budget} onChange={(event) => setBudget(event.target.value)} type="number" min="1" />
-        </label>
-        <label>
-          Max units
-          <input
-            value={maxUnits}
-            onChange={(event) => setMaxUnits(event.target.value)}
-            type="number"
-            min="1"
-          />
-        </label>
-        <label>
-          Query time
-          <input
-            inputMode="numeric"
-            maxLength={16}
-            pattern="\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}"
-            placeholder="YYYY-MM-DDTHH:mm"
-            title="YYYY-MM-DDTHH:mm"
-            type="text"
-            value={queryTime}
-            onChange={(event) => setQueryTime(event.target.value)}
-          />
-        </label>
-        <label className="retrieval-query-field">
-          Query
-          <textarea value={query} onChange={(event) => setQuery(event.target.value)} required />
-        </label>
-        <div className="filter-time retrieval-time-filter">
-          <TimeRangeFilter compact value={memoryRange} onChange={setMemoryRange} />
-        </div>
-        <div className="filter-actions">
-          {seed ? (
-            <button
-              type="button"
-              className="ghost-button"
-              onClick={applyExample}
-              title={`Prefill from ${seed.scope.owner_id}${seed.scope.namespace ? "/" + seed.scope.namespace : ""}`}
-            >
-              <span className="button-content">
-                <Sparkles aria-hidden="true" size={14} />
-                Use example
-              </span>
-            </button>
-          ) : null}
-          <button type="submit" disabled={preview.isPending}>
-            <span className="button-content">
-              {preview.isPending ? (
-                <Loader2 aria-hidden="true" className="loading-spinner" size={16} />
-              ) : (
-                <Search aria-hidden="true" size={16} />
-              )}
-              {preview.isPending ? "Running" : "Run preview"}
+
+        <details className="retrieval-tuning">
+          <summary>
+            <span className="retrieval-tuning-label">Tuning</span>
+            <span className="retrieval-tuning-summary">
+              {budget} tokens · {maxUnits} units · {queryTime || "now"} · {summarizeRange(memoryRange)}
             </span>
-          </button>
-        </div>
+          </summary>
+          <div className="retrieval-tuning-grid">
+            <label>
+              Budget tokens
+              <input
+                value={budget}
+                onChange={(event) => setBudget(event.target.value)}
+                type="number"
+                min="1"
+              />
+            </label>
+            <label>
+              Max units
+              <input
+                value={maxUnits}
+                onChange={(event) => setMaxUnits(event.target.value)}
+                type="number"
+                min="1"
+              />
+            </label>
+            <label>
+              Query time
+              <input
+                inputMode="numeric"
+                maxLength={16}
+                placeholder="YYYY-MM-DDTHH:mm"
+                title="YYYY-MM-DDTHH:mm"
+                type="text"
+                value={queryTime}
+                onChange={(event) => setQueryTime(event.target.value)}
+              />
+            </label>
+            <div className="retrieval-tuning-time">
+              <TimeRangeFilter compact value={memoryRange} onChange={setMemoryRange} />
+            </div>
+          </div>
+        </details>
       </form>
 
-      <div className="results-strip">
-        <div className="filter-chip-list">
-          <span className="filter-hint">
-            Preview uses the same ranking and render budget as agent reads.
-          </span>
-        </div>
-        <span className="result-count">
-          {budget} tokens / {maxUnits} units
-        </span>
-      </div>
+      {!preview.data && !preview.error && examples.length > 0 ? (
+        <section className="panel retrieval-empty">
+          <div className="retrieval-empty-head">
+            <h2>Try a query</h2>
+            <p className="muted-line">
+              Click an example below to prefill and run — same ranking and render budget
+              the agent sees.
+            </p>
+          </div>
+          <div className="retrieval-example-grid">
+            {examples.map((unit) => (
+              <button
+                type="button"
+                className="retrieval-example-chip"
+                key={unit.unit_id}
+                onClick={() => applyExample(unit, true)}
+              >
+                <span className="retrieval-example-scope">
+                  {unit.scope.owner_id}
+                  {unit.scope.namespace ? <em>/{unit.scope.namespace}</em> : null}
+                </span>
+                <span className="retrieval-example-text">
+                  {truncateText(unit.text, 96)}
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {preview.error && <ErrorState error={preview.error} />}
       {preview.data && (
@@ -193,10 +310,8 @@ export function RetrievalPreviewPage() {
                   <tr>
                     <th>Rank</th>
                     <th>Memory</th>
-                    <th>Scope</th>
                     <th>Score</th>
                     <th>Tokens</th>
-                    <th>State</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -207,10 +322,18 @@ export function RetrievalPreviewPage() {
                     const tokenEstimate =
                       preview.data?.stats.ranked_token_estimates?.find(
                         (estimate) => estimate.unit_id === item.unit.unit_id,
-                      )?.render_line_tokens ?? "unknown";
+                      )?.render_line_tokens ?? null;
+                    const parts = pickScoreParts(item.score_breakdown);
                     return (
-                      <tr key={item.unit.unit_id}>
-                        <td>#{item.rank}</td>
+                      <tr
+                        className={
+                          rendered ? "ranked-row-kept" : "ranked-row-cut"
+                        }
+                        key={item.unit.unit_id}
+                      >
+                        <td>
+                          <span className="rank-marker">#{item.rank}</span>
+                        </td>
                         <td>
                           <div className="memory-cell">
                             <a
@@ -224,21 +347,47 @@ export function RetrievalPreviewPage() {
                             </a>
                             <span className="memory-id">
                               {formatTime(item.unit.timestamp)}
+                              {item.unit.scope.namespace ? (
+                                <span className="memory-cell-ns">
+                                  · {item.unit.scope.namespace}
+                                </span>
+                              ) : null}
                             </span>
                           </div>
                         </td>
                         <td>
-                          <div className="scope-cell">
-                            <strong>{item.unit.scope.owner_id}</strong>
-                            <span>{item.unit.scope.namespace ?? "default"}</span>
+                          <div className="score-cell">
+                            <strong>{item.score.toFixed(3)}</strong>
+                            {parts ? (
+                              <span className="score-parts">
+                                {parts.relevance !== null ? (
+                                  <span title="relevance">
+                                    <em>R</em>
+                                    {parts.relevance.toFixed(2)}
+                                  </span>
+                                ) : null}
+                                {parts.recency !== null ? (
+                                  <span title="recency">
+                                    <em>T</em>
+                                    {parts.recency.toFixed(2)}
+                                  </span>
+                                ) : null}
+                              </span>
+                            ) : null}
                           </div>
                         </td>
-                        <td>{item.score.toFixed(3)}</td>
-                        <td>{tokenEstimate}</td>
                         <td>
-                          <Badge tone={rendered ? "good" : "warn"}>
-                            {rendered ? "rendered" : "skipped"}
-                          </Badge>
+                          <span className="token-cell">
+                            {tokenEstimate ?? "—"}
+                            {rendered ? null : (
+                              <span
+                                className="token-cell-hint"
+                                title="Not rendered — ranked but budget exhausted"
+                              >
+                                cut
+                              </span>
+                            )}
+                          </span>
                         </td>
                       </tr>
                     );
@@ -257,9 +406,27 @@ export function RetrievalPreviewPage() {
                   {preview.data.context.token_count} tokens
                 </p>
               </div>
-              <Badge>
-                budget {preview.data.stats.context_budget_tokens ?? "none"}
-              </Badge>
+              <div className="context-panel-actions">
+                <Badge>
+                  budget {preview.data.stats.context_budget_tokens ?? "none"}
+                </Badge>
+                <button
+                  type="button"
+                  className="ghost-button"
+                  onClick={copyContext}
+                  disabled={!preview.data.context.text}
+                  title="Copy rendered context"
+                >
+                  <span className="button-content">
+                    {contextCopied ? (
+                      <Check aria-hidden="true" size={14} />
+                    ) : (
+                      <ClipboardCopy aria-hidden="true" size={14} />
+                    )}
+                    {contextCopied ? "Copied" : "Copy"}
+                  </span>
+                </button>
+              </div>
             </div>
             <pre className="context-block">{preview.data.context.text}</pre>
           </section>
@@ -281,7 +448,7 @@ function Metric({ label, value }: { label: string; value: unknown }) {
 function previewSummaryItems(
   ownerId: string,
   namespaces: string,
-  memoryRange: { start: string; end: string },
+  memoryRange: TimeRangeInput,
 ) {
   const items = [`Owner: ${ownerId}`];
   if (namespaces.trim()) items.push(`Namespaces: ${namespaces}`);
@@ -291,4 +458,25 @@ function previewSummaryItems(
     items.push("All memory time");
   }
   return items;
+}
+
+function summarizeRange(range: TimeRangeInput) {
+  if (!range.start && !range.end) return "all time";
+  if (range.start && range.end) return `${range.start} → ${range.end}`;
+  if (range.start) return `since ${range.start}`;
+  return `until ${range.end}`;
+}
+
+function truncateText(value: string, max: number) {
+  const trimmed = value.trim();
+  if (trimmed.length <= max) return trimmed;
+  return `${trimmed.slice(0, max - 1).trimEnd()}…`;
+}
+
+function pickScoreParts(breakdown: Record<string, unknown> | undefined) {
+  if (!breakdown) return null;
+  const relevance = typeof breakdown.relevance === "number" ? breakdown.relevance : null;
+  const recency = typeof breakdown.recency === "number" ? breakdown.recency : null;
+  if (relevance === null && recency === null) return null;
+  return { relevance, recency };
 }

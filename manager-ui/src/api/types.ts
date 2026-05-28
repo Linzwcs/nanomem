@@ -214,6 +214,7 @@ export type RetrievalPreviewResponse = {
     score: number;
     retrieval_text: string;
     unit: MemoryUnit;
+    score_breakdown?: Record<string, unknown>;
   }>;
   context: {
     text: string;
